@@ -21,3 +21,21 @@ cabal.project.local
 cabal.project.local~
 .HTF/
 .ghc.environment.*
+
+# file da ignorare per latex
+*.aux
+*.dvi
+*.log
+*.out
+*.synctex.gz
+
+# file da ignorare in git per ogni maintainer
+# ================   igor  ================
+parte 1
+parte 2
+hsaltro
+
+# ================   red   ================
+
+
+# ================ talissa ================
