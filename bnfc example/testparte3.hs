@@ -1,10 +1,6 @@
 {-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE DeriveFoldable #-}
---from happy and alex
-import System.IO ( stdin, hGetContents )
-import System.Environment ( getArgs, getProgName )
-import System.Exit ( exitFailure, exitSuccess )
 
+--from happy and alex
 import AbsBNF
 import LexBNF
 import ParBNF
@@ -31,7 +27,7 @@ a = Node 1 [
 
 annotate' :: Tree a -> Integer -> Tree (Integer,a)
 annotate' (Leaf x) h = Leaf (h,x)
-annotate' (Node x ts) h = Node (h,x) (map (\x-> annotate' x (h+1)) ts)
+annotate' (Node x ts) h = Node (h,x) $ (\x-> annotate' x (h+1)) <$> ts
 
 annotate :: Tree a -> Tree (Integer,a)
 annotate ts = annotate' ts 0
@@ -40,12 +36,9 @@ annotate ts = annotate' ts 0
 fromBad (Bad x) = x
 fromOk (Ok x) = x
 
-
 -- ID from TreeLex => Tree
-changeType' [] = []
-changeType' (x:xs) = (changeType x):(changeType' xs)
 changeType (LeafL y) = Leaf y
-changeType (TreeL x xs) = Node x (changeType' xs)
+changeType (TreeL x xs) = Node x (map changeType xs)
 
     
 
@@ -54,32 +47,4 @@ combine str = let partial = (pTreeLex . tokens) str in
         case partial of
             (Bad x) -> x
             (Ok x) -> show $ (annotate . changeType ) x
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
