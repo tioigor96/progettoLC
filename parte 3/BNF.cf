@@ -1,0 +1,19 @@
+TreeD.      TreeLexD ::= Double Integer "(" [TreeLexD] ")" ;
+LeafD.      TreeLexD ::= Double Integer ;
+
+(:[]).      [TreeLexD] ::= TreeLexD ;
+(:).        [TreeLexD] ::= TreeLexD [TreeLexD] ;
+
+
+-- ex: 2.3 21  (1.1 2 1.2 3 ( 2.1 2 2.2 3 ))
+
+
+
+-- sistemare!
+TreeIL.      TreeLexI ::= Integer "," Integer "(" [TreeLexI] ")" ;
+LeafIL.      TreeLexI ::= Integer "," Integer ;  
+separator nonempty TreeLexI "," ;
+
+-- data Tree a = Leaf (a,Integer,Integer) | Node (a,Integer,Integer) [Tree a] deriving (Show, Eq)
+
+
