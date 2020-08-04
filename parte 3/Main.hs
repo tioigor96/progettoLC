@@ -46,6 +46,7 @@ fromTLI2Tree (LeafI d w) h = Leaf (fromInteger d) w h
 fromTLI2Tree (TreeI d w ts) h = Node (fromInteger d) w h $ (\x-> fromTLI2Tree x (h+1)) <$> ts
 
 
+
 maximalWeight :: Tree a -> Integer
-maximalWeight (Leaf _ _ p) = p
-maximalWeight (Node _ x y (ts)) =maximum(map (+y) (map maximalWeight (ts)))
+maximalWeight (Leaf _ p _) = p
+maximalWeight (Node _ x y (ts)) =maximum(map (+x) (map maximalWeight (ts)))
