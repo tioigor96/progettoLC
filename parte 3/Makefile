@@ -31,7 +31,7 @@ clean:
 	rm -f SkelBNF.hi
 	rm -f SkelBNF.hs
 	rm -f SkelBNF.o
-	rm -f Test*
+	rm -f Test
 	rm -f TestBNF.hs
 	rm -f Test.hi
 	rm -f Test.o
