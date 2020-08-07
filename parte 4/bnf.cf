@@ -1,15 +1,23 @@
-Init.          S ::= [Import] [Section];
+Init.       S ::= [Import] [Section] [C] ;
 
-Sect.         Section ::=   "<" "section" "name" "=" [CS]  NameSection ">" [CS] [Field] "</"   "section"   ">" [CS];
-Fld.          Field ::=   "<" "field" "name"   "="   NameField   ">"   Value   "</"   "field"   ">"  ;
+Imp.        Import ::= "<" [C] "import" [C] ">" [C] NameFile [C] "</" [C] "import" [C] ">" ;
 
-(:[]).        [Field] ::= Field ;
-(:).          [Field] ::= Field [Field] ;
+Sect.       Section ::= "<" [C] "section" [C] "name" [C] "=" [C] NameSection [C] ">" [Field] "</" [C] "section" [C] ">" ;
 
-(:[]).        [Section] ::= Section ;
-(:).          [Section] ::= Section [Section] ;
 
-separator Import "";
+Fld.        Field ::= "<" [C] "field" [C] "name" [C] "=" [C] NameField [C] ">" [C] Value [C] "</" [C] "field" [C] ">";
+
+-- (:[]).      [Section] ::= Section ;
+-- (:).        [Section] ::= Section [Section] ;
+
+-- (:[]).      [Field] ::= Field ;
+-- (:).        [Field] ::= Field [Field] ;
+
+
+separator Import "" ;
+separator nonempty Section "" ;
+separator nonempty Field "";
+separator C "" ;
 
 Val.        Value ::= String;
 ValI.       Value ::= Integer;
@@ -18,25 +26,15 @@ ValB.       Value ::= TBool;
 ValV.       Value ::= VariableLocal;
 ValG.       Value ::= VariableGlobal;
 
-token VariableLocal ('$'letter(letter|digit|'_')*);
-token VariableGlobal ('$'letter(letter|digit|'_')*'.'letter(letter|digit|'_')*);
+VTrue.      TBool ::= "true"; 
+VFalse.     TBool ::= "false";
 
-NFile.        NameFile ::= Ident;
-NField.       NameField ::= Ident;
-NSection.     NameSection ::= Ident;
+NFile.      NameFile ::= Ident;
+NField.     NameField ::= Ident;
+NSection.   NameSection ::= Ident;
 
-Imp.          Import ::= "<" "import" ">" NameFile "</" "import" ">";
-
-
-
+token VariableLocal ('$'letter(letter|digit|'_')*) ;
+token VariableGlobal ('$'letter(letter|digit|'_')*'.'letter(letter|digit|'_')*) ;
 token C '#'(char - ('\n'))*'\n' ;
+-- token VFName ('/')?((letter|digit|'-'|'_'|'.')+('.''.''/'|'/')*)+ ;
 
-
-VTrue.         TBool ::= "true"; 
-VFalse.        TBool ::= "false";
-
-
-Csa.          CS::= C;
-[].           [CS]::="";
-(:[]).        [CS]::=CS;
-(:).          [CS]::= CS[CS];
