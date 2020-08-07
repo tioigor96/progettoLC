@@ -29,6 +29,9 @@ cabal.project.local~
 *.out
 *.synctex.gz
 
+#zip da ignorare
+parte 3/ProgettoLC parte3 Gruppo2.zip
+
 # file da ignorare in git per ogni maintainer
 # ================   igor  ================
 parte 1
