@@ -1,0 +1,38 @@
+Init.          S ::= [Import] [Section];
+
+Sect.         Section ::=   "<" "section" "name" "=" C  NameSection ">" C [Field] "</"   "section"   ">" C ;
+Fld.          Field ::=   "<" "field" "name"   "="   NameField   ">"   Value   "</"   "field"   ">"  ;
+
+(:[]).        [Field] ::= Field ;
+(:).          [Field] ::= Field [Field] ;
+
+(:[]).        [Section] ::= Section ;
+(:).          [Section] ::= Section [Section] ;
+
+separator Import "";
+
+Val.        Value ::= String;
+ValI.       Value ::= Integer;
+ValD.       Value ::= Double;
+ValB.       Value ::= TBool;
+ValV.       Value ::= VariableLocal;
+ValG.       Value ::= VariableGlobal;
+
+token VariableLocal ('$'letter(letter|digit|'_')*);
+token VariableGlobal ('$'letter(letter|digit|'_')*'.'letter(letter|digit|'_')*);
+
+NFile.        NameFile ::= Ident;
+NField.       NameField ::= Ident;
+NSection.     NameSection ::= Ident;
+
+Imp.          Import ::= "<" "import" ">" NameFile "</" "import" ">";
+
+--comment "#";
+--Com.         C ::= "#" String;
+--ComVoid.     C ::= "";
+
+token C '#'(char - ('\n'))*'\n';
+
+
+VTrue.         TBool ::= "true"; 
+VFalse.        TBool ::= "false";
