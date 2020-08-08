@@ -12,10 +12,17 @@ import ErrM
 data Tree a = Leaf a | Node a [Tree a] deriving (Show, Eq)
 
 
-instance Functor Tree where
-    fmap f (Leaf x) = Leaf $ f x
-    fmap f (Node x ts) = Node (f x) (map (\x -> fmap f x) ts)
+-- fmap f (Leaf x) = Leaf $ f x
+-- fmap f (Node x ts) = Node (f x) (map (\x -> fmap f x) ts)
 
+-- treefold :: ( Eq a , Show a ) = > (a - >[ b ] - > b ) -> b -> Tree a -> b
+-- treefold f z Void = z
+-- treefold f z ( Node x []) = f x [ z ]
+-- treefold f z ( Node x ts ) = f x $ fmap ( treefold f z ) ts
+
+treefoldr :: ( Eq a , Show a ) = > (a - >b - > c ) - >c - >(c - >b - > b ) - >b - > Tree a - > c
+treefoldr f zf g zg Void = zf
+treefoldr f zf g zg ( Node x xs ) = f x $ foldr ( g . treefoldr f zf g zg ) zg xs
 {-
 a = Node 1 [
         Node 2 [ Leaf 21, Leaf 22, Leaf 23, Leaf 24 ],
@@ -33,8 +40,8 @@ annotate :: Tree a -> Tree (Integer,a)
 annotate ts = annotate' ts 0
 
 -- OCIO QUA! UNWRAP ERR WRAPPING
-fromBad (Bad x) = x
-fromOk (Ok x) = x
+-- fromBad (Bad x) = x
+-- fromOk (Ok x) = x
 
 -- ID from TreeLex => Tree
 changeType (LeafL y) = Leaf y
@@ -47,4 +54,16 @@ combine str = let partial = (pTreeLex . tokens) str in
         case partial of
             (Bad x) -> x
             (Ok x) -> show $ (annotate . changeType ) x
+
+
+maxPathWeight :: ( Ord a , Num a ) = > Tree a -> a
+maxPathWeight t = snd $ treefoldr aggr1 (0 ,( -1)) aggr2 (0 ,0 ,( -1)) t
+    where
+    aggr1 x ( whmx , whsmx , wmx ) = ( x + whmx , max wmx ( x + whmx + whsmx ))
+    aggr2 ( wh , w ) ( whmx , whsmx , wmx )
+        | wh <= whsmx = ( whmx , whsmx , nwmx )
+        | wh <= whmx = ( whmx , wh , nwmx )
+        | otherwise = ( wh , whmx , nwmx )
+        where nwmx = max w wmx
+
 

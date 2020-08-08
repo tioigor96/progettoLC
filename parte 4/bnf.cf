@@ -2,17 +2,10 @@ Init.       S ::= [Import] [Section] [C] ;
 
 Imp.        Import ::= "<" [C] "import" [C] ">" [C] NameFile [C] "</" [C] "import" [C] ">" ;
 
-Sect.       Section ::= "<" [C] "section" [C] "name" [C] "=" [C] NameSection [C] ">" [Field] "</" [C] "section" [C] ">" ;
+Sect.       Section ::= "<" [C] "section" [C] "name" [C] "=" [C] NameSection [C] ">"[C] [Field] [C]"</" [C] "section" [C] ">" ;
 
 
 Fld.        Field ::= "<" [C] "field" [C] "name" [C] "=" [C] NameField [C] ">" [C] Value [C] "</" [C] "field" [C] ">";
-
--- (:[]).      [Section] ::= Section ;
--- (:).        [Section] ::= Section [Section] ;
-
--- (:[]).      [Field] ::= Field ;
--- (:).        [Field] ::= Field [Field] ;
-
 
 separator Import "" ;
 separator nonempty Section "" ;
@@ -29,12 +22,14 @@ ValG.       Value ::= VariableGlobal;
 VTrue.      TBool ::= "true"; 
 VFalse.     TBool ::= "false";
 
-NFile.      NameFile ::= Ident;
+NFile.      NameFile ::= VFName;
 NField.     NameField ::= Ident;
 NSection.   NameSection ::= Ident;
 
 token VariableLocal ('$'letter(letter|digit|'_')*) ;
 token VariableGlobal ('$'letter(letter|digit|'_')*'.'letter(letter|digit|'_')*) ;
+
 token C '#'(char - ('\n'))*'\n' ;
--- token VFName ('/')?((letter|digit|'-'|'_'|'.')+('.''.''/'|'/')*)+ ;
+
+token VFName ('/'|'.')?((letter|digit|'-'|'_'|'.')+('.''.''/'|'/')*)+ ;
 
