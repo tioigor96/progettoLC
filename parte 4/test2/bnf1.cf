@@ -1,0 +1,51 @@
+Init.       S ::= [CS] "<" DivIS ;
+
+DivIm.      DivIS ::= [CS] "import" Import ;
+DivSe.      DivIS ::= [CS] "section" SectionP ; 
+
+Imp.        Import ::=  [CS] ">" [CS] NameFile [CS] "</" [CS] "import" [CS] ">" S ;
+
+SectPart.   SectionP ::= [CS] "name" [CS] "=" [CS] NameSection [CS] ">" [CS] "<" [CS] "field" Fields;
+
+SectF.      SectionF ::= [CS] "<" [CS] "section" SectionP ;
+SectT.      SectionF ::= [CS];
+
+Fld.        Fields ::= [CS] "name" [CS] "=" [CS] NameField [CS] ">" [CS] Value [CS] "</" [CS] "field" [CS] ">" FieldT;
+FldT.       FieldT ::= [CS] "<" [CS] "field" Fields;
+FldTS.       FieldT ::=  [CS] "</" [CS] "section" [CS] ">" SectionF ;
+
+-- (:[]).      [Section] ::= Section ;
+-- (:).        [Section] ::= Section [Section] ;
+
+-- (:[]).      [Field] ::= Field ;
+-- (:).        [Field] ::= Field [Field] ;
+
+Csa.          CS::= C;
+-- [].           [CS]::= ;
+-- (:[]).        [CS]::= CS;
+-- (:).          [CS]::= CS "" [CS];
+
+-- separator Import "" ;
+-- separator nonempty Section "" ;
+-- separator nonempty Field "";
+separator CS "" ;
+
+Val.        Value ::= String;
+ValI.       Value ::= Integer;
+ValD.       Value ::= Double;
+ValB.       Value ::= TBool;
+ValV.       Value ::= VariableLocal;
+ValG.       Value ::= VariableGlobal;
+
+VTrue.      TBool ::= "true"; 
+VFalse.     TBool ::= "false";
+
+NFile.      NameFile ::= Ident;
+NField.     NameField ::= Ident;
+NSection.   NameSection ::= Ident;
+
+-- token VFName ('/')?((letter|digit|'-'|'_'|'.')+('.''.''/'|'/')*)+ ;
+token VariableLocal ('$'letter(letter|digit|'_')*) ;
+token VariableGlobal ('$'letter(letter|digit|'_')*'.'letter(letter|digit|'_')*) ;
+token C '#'(char - ('\n'))*'\n' ;
+
