@@ -12,33 +12,28 @@
 #include "Printer.h"
 #include "Absyn.h"
 
-int main(int argc, char ** argv)
-{
-  FILE *input;
-  S parse_tree;
-  if (argc > 1) 
-  {
-    input = fopen(argv[1], "r");
-    if (!input)
-    {
-      fprintf(stderr, "Error opening input file.\n");
-      exit(1);
-    }
-  }
-  else input = stdin;
-  /* The default entry point is used. For other options see Parser.h */
-  parse_tree = pS(input);
-  if (parse_tree)
-  {
+int main(int argc, char **argv) {
+    FILE *input;
+    S parse_tree;
+    if (argc > 1) {
+        input = fopen(argv[1], "r");
+        if (!input) {
+            fprintf(stderr, "Error opening input file.\n");
+            exit(1);
+        }
+    } else input = stdin;
+    /* The default entry point is used. For other options see Parser.h */
+    parse_tree = pS(input);
+    if (parse_tree) {
 //    printf("\nParse Succesful!\n");
 //    printf("\n[Abstract Syntax]\n");
 //    printf("%s\n\n", showS(parse_tree));
 //    printf("[Linearized Tree]\n");
-    printf(" ");    //per sistemare lo spazio in testa!
-    printf("%s\n\n", printS(parse_tree));
-    return 0;
-  }
-  
-  return 1;
+        printf(" ");    //per sistemare lo spazio in testa!
+        printf("%s\n\n", printS(parse_tree));
+        return 0;
+    }
+
+    return 1;
 }
 
