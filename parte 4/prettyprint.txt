@@ -1,0 +1,56 @@
+<import>file1cnf# questo e un commento
+</import>
+<section name = # questo e un commento
+nomesez1 >
+# questo e un commento
+<field name=var1 > 3</field >
+<field name =var2>"non dire gatto" 
+</field>
+<field name= var3>$var1</field >
+</section ># questo e un commento
+<section
+name=nomesez2>
+<field
+name=
+miao
+>true</field>
+</section>
+<section name=nomesez3>
+<field name=miao>$nomesez1.var3</field>
+<field name=var1>false</field>
+</section>
+
+
+======== pretty print ===============
+ # questo e un commento
+ < import >
+	 file1cnf 
+ </ import >
+ # questo e un commento
+ < section name  = nomesez1 >
+ # questo e un commento
+ 	< field name  = var1 >
+		 3
+	</ field  >  
+ 	< field name  = var2 >
+		 "non dire gatto"
+	</ field  >  
+ 	< field name  = var3 >
+		 $var1 
+	</ field  >  
+ </ section >
+ # questo e un commento
+ < section name  = nomesez2 >
+ 	< field name  = miao >
+		 true 
+	</ field  >  
+ </ section >
+ < section name  = nomesez3 >
+ 	< field name  = miao >
+		 $nomesez1.var3 
+	</ field  >  
+ 	< field name  = var1 >
+		 false 
+	</ field  >  
+ </ section >
+
