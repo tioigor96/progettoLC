@@ -7,7 +7,7 @@ FLEX_OPTS = -Pbnf1
 BISON = bison
 BISON_OPTS = -t -pbnf1
 
-OBJS = Absyn.o Lexer.o Parser.o Printer.o
+OBJS = Absyn.o Lexer.o Parser.o Printer.o env.o
 
 .PHONY: clean distclean
 
@@ -44,3 +44,5 @@ Printer.o: Printer.c Printer.h Absyn.h
 Test.o: Test.c Parser.h Printer.h Absyn.h
 	${CC} ${CCFLAGS} -c Test.c
 
+env.o:  env.c env.h Absyn.h
+	${CC} ${CCFLAGS} -c env.c

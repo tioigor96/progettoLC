@@ -11,6 +11,7 @@
 #include "Parser.h"
 #include "Printer.h"
 #include "Absyn.h"
+#include "env.h"
 
 int main(int argc, char **argv) {
     FILE *input;
@@ -31,6 +32,7 @@ int main(int argc, char **argv) {
 //    printf("[Linearized Tree]\n");
         printf(" ");    //per sistemare lo spazio in testa!
         printf("%s\n\n", printS(parse_tree));
+        printEnv(envs);
         return 0;
     }
 

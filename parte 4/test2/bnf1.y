@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "Absyn.h"
+#include "env.h"
 #define initialize_lexer bnf1_initialize_lexer
 extern int yyparse(void);
 extern int yylex(void);
@@ -227,7 +228,9 @@ ListCS reverseListCS(ListCS l)
   return prev;
 }
 
-
+// definizione var ausiliarie
+char *fnamefield=NULL,
+     *fvalue=NULL;
 %}
 
 %union
@@ -297,12 +300,38 @@ DivIS : ListCS _SYMB_6 Import { $$ = make_DivIm(reverseListCS($1), $3); YY_RESUL
 ;
 Import : ListCS _SYMB_1 ListCS NameFile ListCS _SYMB_2 ListCS _SYMB_6 ListCS _SYMB_1 S { $$ = make_Imp(reverseListCS($1), reverseListCS($3), $4, reverseListCS($5), reverseListCS($7), reverseListCS($9), $11); YY_RESULT_Import_= $$; } 
 ;
-SectionP : ListCS _SYMB_7 ListCS _SYMB_3 ListCS NameSection ListCS _SYMB_1 ListCS _SYMB_0 ListCS _SYMB_5 Fields { $$ = make_SectPart(reverseListCS($1), reverseListCS($3), reverseListCS($5), $6, reverseListCS($7), reverseListCS($9), reverseListCS($11), $13); YY_RESULT_SectionP_= $$; } 
+SectionP :  ListCS _SYMB_7 ListCS _SYMB_3 ListCS NameSection ListCS _SYMB_1 ListCS _SYMB_0 ListCS _SYMB_5 Fields 
+            { 
+                NameSection ns=$6;
+                // printf("1\n");
+                char *nome=strdup(ns->u.nsection_.ident_);
+                envs=addEnv(nome,envs);
+                // printf("%p\n",vars);                
+                envs->vars = vars;
+                vars = NULL;
+                $$ = make_SectPart(reverseListCS($1), reverseListCS($3), 
+                                   reverseListCS($5), ns, reverseListCS($7), 
+                                   reverseListCS($9), reverseListCS($11), $13);
+                YY_RESULT_SectionP_= $$;
+            } 
 ;
 SectionF : ListCS _SYMB_0 ListCS _SYMB_8 SectionP { $$ = make_SectF(reverseListCS($1), reverseListCS($3), $5); YY_RESULT_SectionF_= $$; } 
   | ListCS { $$ = make_SectT(reverseListCS($1)); YY_RESULT_SectionF_= $$; }
 ;
-Fields : ListCS _SYMB_7 ListCS _SYMB_3 ListCS NameField ListCS _SYMB_1 ListCS Value ListCS _SYMB_2 ListCS _SYMB_5 ListCS _SYMB_1 FieldT { $$ = make_Fld(reverseListCS($1), reverseListCS($3), reverseListCS($5), $6, reverseListCS($7), reverseListCS($9), $10, reverseListCS($11), reverseListCS($13), reverseListCS($15), $17); YY_RESULT_Fields_= $$; } 
+Fields :    ListCS _SYMB_7 ListCS _SYMB_3 ListCS NameField ListCS _SYMB_1 ListCS Value ListCS _SYMB_2 ListCS _SYMB_5 ListCS _SYMB_1 FieldT 
+            { 
+                $$ = make_Fld(reverseListCS($1), reverseListCS($3), 
+                                reverseListCS($5), $6, reverseListCS($7), 
+                                reverseListCS($9), $10, reverseListCS($11), 
+                                reverseListCS($13), reverseListCS($15), $17);
+                YY_RESULT_Fields_= $$; 
+                // printf("2\n");
+                fnamefield=strdup(YY_RESULT_Fields_->u.fld_.namefield_->u.nfield_.ident_);
+                fvalue=strValue(YY_RESULT_Fields_->u.fld_.value_);
+                vars = addVar(vars,fnamefield,fvalue);
+                //printf("%p\n",vars);
+                
+            } 
 ;
 FieldT : ListCS _SYMB_0 ListCS _SYMB_5 Fields { $$ = make_FldT(reverseListCS($1), reverseListCS($3), $5); YY_RESULT_FieldT_= $$; } 
   | ListCS _SYMB_2 ListCS _SYMB_8 ListCS _SYMB_1 SectionF { $$ = make_FldTS(reverseListCS($1), reverseListCS($3), reverseListCS($5), $7); YY_RESULT_FieldT_= $$; }
@@ -312,20 +341,60 @@ CS : _SYMB_12 { $$ = make_Csa($1); YY_RESULT_CS_= $$; };
 ListCS : /* empty */ { $$ = 0; YY_RESULT_ListCS_= $$; } 
   | ListCS CS { $$ = make_ListCS($2, $1); YY_RESULT_ListCS_= $$; }
 ;
-Value : _STRING_ { $$ = make_Val($1); YY_RESULT_Value_= $$; } 
-  | _INTEGER_ { $$ = make_ValI($1); YY_RESULT_Value_= $$; }
-  | _DOUBLE_ { $$ = make_ValD(atof($1)); YY_RESULT_Value_= $$; }
-  | TBool { $$ = make_ValB($1); YY_RESULT_Value_= $$; }
-  | _SYMB_10 { $$ = make_ValV($1); YY_RESULT_Value_= $$; }
-  | _SYMB_11 { $$ = make_ValG($1); YY_RESULT_Value_= $$; }
+Value :     _STRING_ 
+            { 
+                $$ = make_Val($1); 
+                YY_RESULT_Value_= $$;
+            }
+             
+          | _INTEGER_ 
+            { 
+                $$ = make_ValI($1); 
+                YY_RESULT_Value_= $$;
+            }
+            
+          | _DOUBLE_ 
+            { 
+                $$ = make_ValD(atof($1)); 
+                YY_RESULT_Value_= $$;
+            }
+          | TBool { $$ = make_ValB($1); YY_RESULT_Value_= $$; }
+          
+          | _SYMB_10 
+            { 
+                $$ = make_ValV($1); 
+                YY_RESULT_Value_= $$;
+            }
+            
+          | _SYMB_11 
+            { 
+                $$ = make_ValG($1); 
+                YY_RESULT_Value_= $$;
+            }
 ;
-TBool : _SYMB_9 { $$ = make_VTrue(); YY_RESULT_TBool_= $$; } 
-  | _SYMB_4 { $$ = make_VFalse(); YY_RESULT_TBool_= $$; }
+
+TBool :     _SYMB_9 
+            { 
+                $$ = make_VTrue(); 
+                YY_RESULT_TBool_= $$;
+            } 
+          | _SYMB_4 
+            { 
+                $$ = make_VFalse(); 
+                YY_RESULT_TBool_= $$;
+            }
 ;
+
 NameFile : _IDENT_ { $$ = make_NFile($1); YY_RESULT_NameFile_= $$; } 
 ;
-NameField : _IDENT_ { $$ = make_NField($1); YY_RESULT_NameField_= $$; } 
+
+NameField : _IDENT_ 
+            { 
+                $$ = make_NField($1); 
+                YY_RESULT_NameField_= $$;
+            } 
 ;
+
 NameSection : _IDENT_ { $$ = make_NSection($1); YY_RESULT_NameSection_= $$; } 
 ;
 

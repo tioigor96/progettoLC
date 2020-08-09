@@ -408,13 +408,15 @@ void ppFields(Fields _p_, int _i_) {
             renderS("\t< field name");
             renderC('=');
             ppNameField(_p_->u.fld_.namefield_, 0);
-            renderS(">\n\t\t");
+            renderC('>');
             ppListCS(_p_->u.fld_.listcs_5, 0);
+            renderS("\n\t\t");
             ppValue(_p_->u.fld_.value_, 0);
+            renderC('\n');
             ppListCS(_p_->u.fld_.listcs_6, 0);
             ppListCS(_p_->u.fld_.listcs_7, 0);
             ppListCS(_p_->u.fld_.listcs_8, 0);
-            renderS("\n\t</");
+            renderS("\t</");
             renderS("field");
             renderC('>');
             renderC('\n');
