@@ -301,10 +301,14 @@ Import : ListCS _SYMB_1 ListCS NameFile ListCS _SYMB_2 ListCS _SYMB_6 ListCS _SY
 SectionP :  ListCS _SYMB_7 ListCS _SYMB_3 ListCS NameSection ListCS _SYMB_1 ListCS _SYMB_0 ListCS _SYMB_5 Fields 
             { 
                 NameSection ns=$6;
-                // printf("1\n");
                 char *nome=strdup(ns->u.nsection_.ident_);
-                envs=addEnv(nome,envs);
-                // printf("%p\n",vars);                
+                env *find = getEnv(envs, nome);
+                if(find){
+                    fprintf(stderr,"Error: duplicate declaration of %s! Parsing abortition!\n",
+                    nome);
+                    exit(1);
+                }
+                envs=addEnv(nome,envs);               
                 envs->vars = vars;
                 vars = NULL;
                 $$ = make_SectPart(reverseListCS($1), reverseListCS($3), 
@@ -325,7 +329,14 @@ Fields :    ListCS _SYMB_7 ListCS _SYMB_3 ListCS NameField ListCS _SYMB_1 ListCS
                 YY_RESULT_Fields_= $$;
                 char *fnamefield=strdup(YY_RESULT_Fields_->u.fld_.namefield_->u.nfield_.ident_);
                 char *fvalue=strValue(YY_RESULT_Fields_->u.fld_.value_);
-                vars = addVar(vars,fnamefield,fvalue);
+                var *find = getVar(vars,fnamefield);
+                if(find) {
+                    fprintf(stderr,"Warning: duplicate declaration of %s\n",
+                    fnamefield);
+                }
+                if(!find) {
+                    vars = addVar(vars,fnamefield,fvalue);
+                }
                 
             } 
 ;

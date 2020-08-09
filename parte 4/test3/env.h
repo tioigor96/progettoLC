@@ -38,7 +38,7 @@ var *addVar(var *vars, char *name, char *value);
 
 env *getEnv(env *env, char *name);
 
-var *getVar(env *env, char *name);
+var *getVar(var *vars, char *name);
 
 void printEnv(env *env);
 

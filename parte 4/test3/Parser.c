@@ -698,9 +698,9 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   294,   294,   296,   297,   299,   301,   316,   317,   319,
-     332,   333,   335,   337,   338,   340,   341,   342,   343,   344,
-     345,   347,   348,   350,   352,   354
+       0,   294,   294,   296,   297,   299,   301,   320,   321,   323,
+     343,   344,   346,   348,   349,   351,   352,   353,   354,   355,
+     356,   358,   359,   361,   363,   365
 };
 #endif
 
@@ -1547,10 +1547,14 @@ yyreduce:
 #line 302 "bnf1.y" /* yacc.c:1646  */
     { 
                 NameSection ns=(yyvsp[-7].namesection_);
-                // printf("1\n");
                 char *nome=strdup(ns->u.nsection_.ident_);
-                envs=addEnv(nome,envs);
-                // printf("%p\n",vars);                
+                env *find = getEnv(envs, nome);
+                if(find){
+                    fprintf(stderr,"Error: duplicate declaration of %s! Parsing abortition!\n",
+                    nome);
+                    exit(1);
+                }
+                envs=addEnv(nome,envs);               
                 envs->vars = vars;
                 vars = NULL;
                 (yyval.sectionp_) = make_SectPart(reverseListCS((yyvsp[-12].listcs_)), reverseListCS((yyvsp[-10].listcs_)), 
@@ -1558,23 +1562,23 @@ yyreduce:
                                    reverseListCS((yyvsp[-4].listcs_)), reverseListCS((yyvsp[-2].listcs_)), (yyvsp[0].fields_));
                 YY_RESULT_SectionP_= (yyval.sectionp_);
             }
-#line 1562 "Parser.c" /* yacc.c:1646  */
+#line 1566 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 7:
-#line 316 "bnf1.y" /* yacc.c:1646  */
+#line 320 "bnf1.y" /* yacc.c:1646  */
     { (yyval.sectionf_) = make_SectF(reverseListCS((yyvsp[-4].listcs_)), reverseListCS((yyvsp[-2].listcs_)), (yyvsp[0].sectionp_)); YY_RESULT_SectionF_= (yyval.sectionf_); }
-#line 1568 "Parser.c" /* yacc.c:1646  */
+#line 1572 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 8:
-#line 317 "bnf1.y" /* yacc.c:1646  */
+#line 321 "bnf1.y" /* yacc.c:1646  */
     { (yyval.sectionf_) = make_SectT(reverseListCS((yyvsp[0].listcs_))); YY_RESULT_SectionF_= (yyval.sectionf_); }
-#line 1574 "Parser.c" /* yacc.c:1646  */
+#line 1578 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 9:
-#line 320 "bnf1.y" /* yacc.c:1646  */
+#line 324 "bnf1.y" /* yacc.c:1646  */
     { 
                 (yyval.fields_) = make_Fld(reverseListCS((yyvsp[-16].listcs_)), reverseListCS((yyvsp[-14].listcs_)), 
                                 reverseListCS((yyvsp[-12].listcs_)), (yyvsp[-11].namefield_), reverseListCS((yyvsp[-10].listcs_)), 
@@ -1583,110 +1587,117 @@ yyreduce:
                 YY_RESULT_Fields_= (yyval.fields_);
                 char *fnamefield=strdup(YY_RESULT_Fields_->u.fld_.namefield_->u.nfield_.ident_);
                 char *fvalue=strValue(YY_RESULT_Fields_->u.fld_.value_);
-                vars = addVar(vars,fnamefield,fvalue);
+                var *find = getVar(vars,fnamefield);
+                if(find) {
+                    fprintf(stderr,"Warning: duplicate declaration of %s\n",
+                    fnamefield);
+                }
+                if(!find) {
+                    vars = addVar(vars,fnamefield,fvalue);
+                }
                 
             }
-#line 1590 "Parser.c" /* yacc.c:1646  */
+#line 1601 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 10:
-#line 332 "bnf1.y" /* yacc.c:1646  */
+#line 343 "bnf1.y" /* yacc.c:1646  */
     { (yyval.fieldt_) = make_FldT(reverseListCS((yyvsp[-4].listcs_)), reverseListCS((yyvsp[-2].listcs_)), (yyvsp[0].fields_)); YY_RESULT_FieldT_= (yyval.fieldt_); }
-#line 1596 "Parser.c" /* yacc.c:1646  */
+#line 1607 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 11:
-#line 333 "bnf1.y" /* yacc.c:1646  */
+#line 344 "bnf1.y" /* yacc.c:1646  */
     { (yyval.fieldt_) = make_FldTS(reverseListCS((yyvsp[-6].listcs_)), reverseListCS((yyvsp[-4].listcs_)), reverseListCS((yyvsp[-2].listcs_)), (yyvsp[0].sectionf_)); YY_RESULT_FieldT_= (yyval.fieldt_); }
-#line 1602 "Parser.c" /* yacc.c:1646  */
+#line 1613 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 12:
-#line 335 "bnf1.y" /* yacc.c:1646  */
+#line 346 "bnf1.y" /* yacc.c:1646  */
     { (yyval.cs_) = make_Csa((yyvsp[0].string_)); YY_RESULT_CS_= (yyval.cs_); }
-#line 1608 "Parser.c" /* yacc.c:1646  */
+#line 1619 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 13:
-#line 337 "bnf1.y" /* yacc.c:1646  */
+#line 348 "bnf1.y" /* yacc.c:1646  */
     { (yyval.listcs_) = 0; YY_RESULT_ListCS_= (yyval.listcs_); }
-#line 1614 "Parser.c" /* yacc.c:1646  */
+#line 1625 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 14:
-#line 338 "bnf1.y" /* yacc.c:1646  */
+#line 349 "bnf1.y" /* yacc.c:1646  */
     { (yyval.listcs_) = make_ListCS((yyvsp[0].cs_), (yyvsp[-1].listcs_)); YY_RESULT_ListCS_= (yyval.listcs_); }
-#line 1620 "Parser.c" /* yacc.c:1646  */
+#line 1631 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 15:
-#line 340 "bnf1.y" /* yacc.c:1646  */
+#line 351 "bnf1.y" /* yacc.c:1646  */
     { (yyval.value_) = make_Val((yyvsp[0].string_)); YY_RESULT_Value_= (yyval.value_); }
-#line 1626 "Parser.c" /* yacc.c:1646  */
+#line 1637 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 16:
-#line 341 "bnf1.y" /* yacc.c:1646  */
+#line 352 "bnf1.y" /* yacc.c:1646  */
     { (yyval.value_) = make_ValI((yyvsp[0].int_)); YY_RESULT_Value_= (yyval.value_); }
-#line 1632 "Parser.c" /* yacc.c:1646  */
+#line 1643 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 17:
-#line 342 "bnf1.y" /* yacc.c:1646  */
+#line 353 "bnf1.y" /* yacc.c:1646  */
     { (yyval.value_) = make_ValD((yyvsp[0].double_)); YY_RESULT_Value_= (yyval.value_); }
-#line 1638 "Parser.c" /* yacc.c:1646  */
+#line 1649 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 18:
-#line 343 "bnf1.y" /* yacc.c:1646  */
+#line 354 "bnf1.y" /* yacc.c:1646  */
     { (yyval.value_) = make_ValB((yyvsp[0].tbool_)); YY_RESULT_Value_= (yyval.value_); }
-#line 1644 "Parser.c" /* yacc.c:1646  */
+#line 1655 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 19:
-#line 344 "bnf1.y" /* yacc.c:1646  */
+#line 355 "bnf1.y" /* yacc.c:1646  */
     { (yyval.value_) = make_ValV((yyvsp[0].string_)); YY_RESULT_Value_= (yyval.value_); }
-#line 1650 "Parser.c" /* yacc.c:1646  */
+#line 1661 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 20:
-#line 345 "bnf1.y" /* yacc.c:1646  */
+#line 356 "bnf1.y" /* yacc.c:1646  */
     { (yyval.value_) = make_ValG((yyvsp[0].string_)); YY_RESULT_Value_= (yyval.value_); }
-#line 1656 "Parser.c" /* yacc.c:1646  */
+#line 1667 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 21:
-#line 347 "bnf1.y" /* yacc.c:1646  */
+#line 358 "bnf1.y" /* yacc.c:1646  */
     { (yyval.tbool_) = make_VTrue(); YY_RESULT_TBool_= (yyval.tbool_); }
-#line 1662 "Parser.c" /* yacc.c:1646  */
+#line 1673 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 22:
-#line 348 "bnf1.y" /* yacc.c:1646  */
+#line 359 "bnf1.y" /* yacc.c:1646  */
     { (yyval.tbool_) = make_VFalse(); YY_RESULT_TBool_= (yyval.tbool_); }
-#line 1668 "Parser.c" /* yacc.c:1646  */
+#line 1679 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 23:
-#line 350 "bnf1.y" /* yacc.c:1646  */
+#line 361 "bnf1.y" /* yacc.c:1646  */
     { (yyval.namefile_) = make_NFile((yyvsp[0].string_)); YY_RESULT_NameFile_= (yyval.namefile_); }
-#line 1674 "Parser.c" /* yacc.c:1646  */
+#line 1685 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 24:
-#line 352 "bnf1.y" /* yacc.c:1646  */
+#line 363 "bnf1.y" /* yacc.c:1646  */
     { (yyval.namefield_) = make_NField((yyvsp[0].string_)); YY_RESULT_NameField_= (yyval.namefield_); }
-#line 1680 "Parser.c" /* yacc.c:1646  */
+#line 1691 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 25:
-#line 354 "bnf1.y" /* yacc.c:1646  */
+#line 365 "bnf1.y" /* yacc.c:1646  */
     { (yyval.namesection_) = make_NSection((yyvsp[0].string_)); YY_RESULT_NameSection_= (yyval.namesection_); }
-#line 1686 "Parser.c" /* yacc.c:1646  */
+#line 1697 "Parser.c" /* yacc.c:1646  */
     break;
 
 
-#line 1690 "Parser.c" /* yacc.c:1646  */
+#line 1701 "Parser.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
