@@ -13,6 +13,10 @@
 #include "Absyn.h"
 #include "env.h"
 
+//#ifdef YYDEBUG
+//bnf1debug=1;
+//#endif
+
 int main(int argc, char **argv) {
     FILE *input;
     S parse_tree;

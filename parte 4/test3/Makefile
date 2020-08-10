@@ -5,7 +5,7 @@ FLEX = flex
 FLEX_OPTS = -Pbnf1
 
 BISON = bison
-BISON_OPTS = -t -pbnf1
+BISON_OPTS = -t -pbnf1 --debug
 
 OBJS = Absyn.o Lexer.o Parser.o Printer.o env.o
 
@@ -14,7 +14,7 @@ OBJS = Absyn.o Lexer.o Parser.o Printer.o env.o
 all: Testbnf1
 
 clean:
-	rm -f *.o Testbnf1 bnf1.aux bnf1.log bnf1.pdf bnf1.dvi bnf1.ps bnf1
+	rm -f *.o Testbnf1 bnf1.aux bnf1.log bnf1.pdf bnf1.dvi bnf1.ps bnf1 Parser.c Lexer.c
 
 distclean: clean
 	rm -f Absyn.h Absyn.c Test.c Parser.c Parser.h Lexer.c Skeleton.c Skeleton.h Printer.c Printer.h Makefile bnf1.l bnf1.y bnf1.tex 

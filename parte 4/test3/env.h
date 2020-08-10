@@ -27,6 +27,7 @@ typedef struct _env env;
 
 extern env *envs;
 extern var *vars;
+extern int depth;
 
 env *make_env(char *name);
 

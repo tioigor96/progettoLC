@@ -44,6 +44,7 @@ typedef union
 #define _INTEGER_ 274
 #define _DOUBLE_ 275
 #define _IDENT_ 276
+#define FEOF 277
 
 extern YYSTYPE yylval;
 S pS(FILE *inp);
