@@ -7,6 +7,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "Parser.h"
 #include "Printer.h"
@@ -17,26 +19,92 @@
 //bnf1debug=1;
 //#endif
 
-int main(int argc, char **argv) {
-    FILE *input;
-    S parse_tree;
-    if (argc > 1) {
-        input = fopen(argv[1], "r");
-        if (!input) {
-            fprintf(stderr, "Error opening input file.\n");
+FILE *input = NULL;
+
+char printFile = 0;
+int fo = -1;
+char printen = 0;
+char *filename = NULL;
+
+void analizeParms(int argc, char **argv) {
+
+    int i;
+    int match;
+    for (i = 1; i < argc; i++) {
+        match = 0;
+        if (strcmp("-i", argv[i]) == 0) { //set input
+            input = fopen(argv[++i], "r");
+            if (!input) {
+                fprintf(stderr, "Error opening input file.\n");
+                exit(1);
+            }
+            filename = argv[i];
+            match = 1;
+        }
+
+        if (strcmp("-o", argv[i]) == 0) {       //redirect output
+            printFile = 1;
+            fo = open(argv[++i], O_WRONLY | O_CREAT | O_TRUNC, 0666);
+            if (fo < 0) {
+                fprintf(stderr, "Error opening output file.\n");
+                exit(1);
+            }
+
+            match = 1;
+        }
+
+        if (strcmp("-e", argv[i]) == 0) {
+            printen = 1;
+            match = 1;
+        }
+
+        if (!match) {       //never match a option
+            fprintf(stderr, "Option %s was not recognized!\n", argv[i]);
+            fprintf(stderr, "Usage:\n");
+            fprintf(stderr, "\tparte4 {[-i FileIn] | [-o FileOut] | [-e]}\n");
+            fprintf(stderr, "\t\t-i FileIn: if set as source the specified file;\n");
+            fprintf(stderr, "\t\t\tSpecify if the source is STDIN or a file;\n");
+            fprintf(stderr, "\t\t-o FileOut: print the pretty print file in the specified file;\n");
+            fprintf(stderr, "\t\t-e: print in the stdout sections and fields read in the input.\n");
+
             exit(1);
         }
-    } else input = stdin;
-    /* The default entry point is used. For other options see Parser.h */
+
+    }
+
+    if (!input) {            //set input from stdin
+        input = stdin;
+    }
+
+}
+
+
+int main(int argc, char **argv) {
+    analizeParms(argc, argv);
+
+    S parse_tree;
+
     parse_tree = pS(input);
     if (parse_tree) {
-//    printf("\nParse Succesful!\n");
-//    printf("\n[Abstract Syntax]\n");
-//    printf("%s\n\n", showS(parse_tree));
-//    printf("[Linearized Tree]\n");
-        printf(" ");    //per sistemare lo spazio in testa!
-        printf("%s\n\n", printS(parse_tree));
-        printEnv(envs);
+
+        int realstd;
+        if (printFile) {  //switch stdout to file
+            realstd = dup(STDOUT_FILENO);
+            printf("Parse correctly finish! Print to \"%s\".\n\n", filename);
+            dup2(fo, STDOUT_FILENO);
+        }
+
+        printf(" %s\n\n", printS(parse_tree));
+
+        if (printFile) { //switch from file to stdout
+            dup2(realstd, STDOUT_FILENO);
+            close(fo);
+        }
+
+        if (printen) {
+            printf("\t====  environment  ====\n");
+            printEnv(envs);
+        }
         return 0;
     }
 
