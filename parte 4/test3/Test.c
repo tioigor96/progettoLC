@@ -38,7 +38,6 @@ void analizeParms(int argc, char **argv) {
                 fprintf(stderr, "Error opening input file.\n");
                 exit(1);
             }
-            filename = argv[i];
             match = 1;
         }
 
@@ -49,7 +48,7 @@ void analizeParms(int argc, char **argv) {
                 fprintf(stderr, "Error opening output file.\n");
                 exit(1);
             }
-
+            filename = argv[i];
             match = 1;
         }
 

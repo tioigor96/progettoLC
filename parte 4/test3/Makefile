@@ -13,6 +13,9 @@ OBJS = Absyn.o Lexer.o Parser.o Printer.o env.o
 
 all: Testbnf1
 
+demo: all
+	./Testbnf1 -e -i ti2.conf -o prettyprint.conf
+
 clean:
 	rm -f *.o Testbnf1 bnf1.aux bnf1.log bnf1.pdf bnf1.dvi bnf1.ps bnf1 Parser.c Lexer.c
 
