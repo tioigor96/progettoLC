@@ -36,24 +36,23 @@ IDENT [a-zA-Z0-9'_]
 %START YYINITIAL COMMENT CHAR CHARESC CHAREND STRING ESCAPED
 %%
 
-<YYINITIAL>"<"      	 {printf("SYMB0\n");return _SYMB_0;}
-<YYINITIAL>">"      	 {printf("SYMB1\n");return _SYMB_1;}
-<YYINITIAL>"</"      	 {printf("SYMB2\n");return _SYMB_2;}
-<YYINITIAL>"="      	 {printf("SYMB3\n");return _SYMB_3;}
-<YYINITIAL>"false"      	{ printf("SYMB4\n");return _SYMB_4;}
-<YYINITIAL>"field"      	 {printf("SYMB5\n");return _SYMB_5;}
-<YYINITIAL>"import"      	 {printf("SYMB6\n");return _SYMB_6;}
-<YYINITIAL>"name"      	 {printf("SYMB7\n");return _SYMB_7;}
-<YYINITIAL>"section"      	 {printf("SYMB8\n");return _SYMB_8;}
-<YYINITIAL>"true"      	 {printf("SYMB9\n");return _SYMB_9;}
+<YYINITIAL>"<"      	 {return _SYMB_0;}
+<YYINITIAL>">"      	 {return _SYMB_1;}
+<YYINITIAL>"</"      	 {return _SYMB_2;}
+<YYINITIAL>"="      	 {return _SYMB_3;}
+<YYINITIAL>"false"      	{return _SYMB_4;}
+<YYINITIAL>"field"      	 {return _SYMB_5;}
+<YYINITIAL>"import"      	 {return _SYMB_6;}
+<YYINITIAL>"name"      	 {return _SYMB_7;}
+<YYINITIAL>"section"      	 {return _SYMB_8;}
+<YYINITIAL>"true"      	 {return _SYMB_9;}
 
-<YYINITIAL>\${LETTER}({LETTER}|{DIGIT}|\_)*     	{printf("idLoc\n"); yylval.string_ = strdup(yytext); return _SYMB_10;}
-<YYINITIAL>\${LETTER}({LETTER}|{DIGIT}|\_)*\.{LETTER}({LETTER}|{DIGIT}|\_)*     	{printf("idGL\n"); yylval.string_ = strdup(yytext); printf("SYMB11\n");return _SYMB_11;}
-<YYINITIAL>\#[^\n]*\n     	 {printf("SYMBcomm\n");yylval.string_ = strdup(yytext); return _SYMB_12;}
-<YYINITIAL>{LETTER}{IDENT}*      	 {printf("ident"); yylval.string_ = strdup(yytext); return _IDENT_;}
+<YYINITIAL>\${LETTER}({LETTER}|{DIGIT}|\_)*     	{yylval.string_ = strdup(yytext); return _SYMB_10;}
+<YYINITIAL>\${LETTER}({LETTER}|{DIGIT}|\_)*\.{LETTER}({LETTER}|{DIGIT}|\_)*     	{yylval.string_ = strdup(yytext); return _SYMB_11;}
+<YYINITIAL>\#[^\n]*\n     	 {yylval.string_ = strdup(yytext); return _SYMB_12;}
+<YYINITIAL>{LETTER}{IDENT}*      	 {yylval.string_ = strdup(yytext); return _IDENT_;}
 <YYINITIAL>(\/|\.)+(({LETTER}|{DIGIT}|\-|\_|\.)+(\.\.\/|\/)*)+ {
     	yylval.string_ = strdup(yytext);
-    	printf("namefile\n");
     	FILE *f=fopen(yylval.string_,"r");
     	if(!f){
     	   fprintf(stderr,"File %s not exist! Abort.\n",yytext);
@@ -62,62 +61,37 @@ IDENT [a-zA-Z0-9'_]
     	
     	yypush_buffer_state(yy_create_buffer( f, YY_BUF_SIZE ));
     	depth++;
-    	/*
-    	int len=fseek(f,0,SEEK_END);
-    	char *extFile=calloc(len,sizeof(char));
-    	fseek(f,0,SEEK_SET);
-    	
-    	fread(extFile,sizeof(char),len,f);
-    	fclose(f);
-    	
-    	//yyscan_t scanner;
-        YY_BUFFER_STATE buf;
-        //yylex_init( &scanner );
-    	
-    	buf = yy_scan_string(extFile);
-    	yyparse();
-    	
-    	yy_delete_buffer(buf);
-    	//yylex_destroy(scanner);
-    	*/
     	
     	BEGIN YYINITIAL;
     	return _SYMB_13;
     }
 <YYINITIAL>"\""      	 BEGIN STRING;
 <STRING>\\      	 BEGIN ESCAPED;
-<STRING>\"      	 {printf("SYMBstring\n");yylval.string_ = strdup(YY_PARSED_STRING); YY_BUFFER_RESET(); BEGIN YYINITIAL; return _STRING_;}
-<STRING>.      	 YY_BUFFER_APPEND(yytext);
+<STRING>\"      	 {yylval.string_ = strdup(YY_PARSED_STRING); YY_BUFFER_RESET(); BEGIN YYINITIAL; return _STRING_;}
+<STRING>.      	     YY_BUFFER_APPEND(yytext);
 <ESCAPED>n      	 YY_BUFFER_APPEND("\n"); BEGIN STRING;
 <ESCAPED>\"      	 YY_BUFFER_APPEND("\""); BEGIN STRING ;
 <ESCAPED>\\      	 YY_BUFFER_APPEND("\\"); BEGIN STRING;
 <ESCAPED>t       	 YY_BUFFER_APPEND("\t"); BEGIN STRING;
 <ESCAPED>.       	 YY_BUFFER_APPEND(yytext); BEGIN STRING;
-<YYINITIAL>{DIGIT}+"."{DIGIT}+("e"(\-)?{DIGIT}+)?      	 {printf("SYMBdouble\n");yylval.double_ = atof(yytext); return _DOUBLE_;}
-<YYINITIAL>{DIGIT}+      	 {printf("SYMBint\n");yylval.int_ = atoi(yytext); return _INTEGER_;}
+<YYINITIAL>{DIGIT}+"."{DIGIT}+("e"(\-)?{DIGIT}+)?      	 {yylval.double_ = atof(yytext); return _DOUBLE_;}
+<YYINITIAL>{DIGIT}+      	 {yylval.int_ = atoi(yytext); return _INTEGER_;}
 
 \n ++yy_mylinenumber ;
 <YYINITIAL>[ \t\r\n\f]      	 /* ignore white space. */;
-<YYINITIAL>.      	 {printf("SYMBerror\n");return _ERROR_;}
+<YYINITIAL>.      	 {return _ERROR_;}
 
 <YYINITIAL><<EOF>>     {
-                printf("culo!\n"); 
                 
                 if(depth>0){
                     yypop_buffer_state();
                     depth--;
-                    return FEOF;
+                    //return FEOF;
+                } else {
+                    BEGIN EXITALL;
                 }
-                BEGIN EXITALL;
                 return FEOF;
-                
-                //if ( !YY_CURRENT_BUFFER )
-                //{
-                //    yyterminate();
-                //}
-                
-                //yyterminate(); 
-                
+               
                 
             }
 

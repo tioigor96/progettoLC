@@ -877,80 +877,79 @@ do_action:	/* This label is used only to access EOF actions. */
 case 1:
 YY_RULE_SETUP
 #line 39 "bnf1.l"
-{printf("SYMB0\n");return _SYMB_0;}
+{return _SYMB_0;}
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
 #line 40 "bnf1.l"
-{printf("SYMB1\n");return _SYMB_1;}
+{return _SYMB_1;}
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
 #line 41 "bnf1.l"
-{printf("SYMB2\n");return _SYMB_2;}
+{return _SYMB_2;}
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
 #line 42 "bnf1.l"
-{printf("SYMB3\n");return _SYMB_3;}
+{return _SYMB_3;}
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
 #line 43 "bnf1.l"
-{ printf("SYMB4\n");return _SYMB_4;}
+{return _SYMB_4;}
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
 #line 44 "bnf1.l"
-{printf("SYMB5\n");return _SYMB_5;}
+{return _SYMB_5;}
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
 #line 45 "bnf1.l"
-{printf("SYMB6\n");return _SYMB_6;}
+{return _SYMB_6;}
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
 #line 46 "bnf1.l"
-{printf("SYMB7\n");return _SYMB_7;}
+{return _SYMB_7;}
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
 #line 47 "bnf1.l"
-{printf("SYMB8\n");return _SYMB_8;}
+{return _SYMB_8;}
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
 #line 48 "bnf1.l"
-{printf("SYMB9\n");return _SYMB_9;}
+{return _SYMB_9;}
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
 #line 50 "bnf1.l"
-{printf("idLoc\n"); yylval.string_ = strdup(bnf1text); return _SYMB_10;}
+{yylval.string_ = strdup(bnf1text); return _SYMB_10;}
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
 #line 51 "bnf1.l"
-{printf("idGL\n"); yylval.string_ = strdup(bnf1text); printf("SYMB11\n");return _SYMB_11;}
+{yylval.string_ = strdup(bnf1text); return _SYMB_11;}
 	YY_BREAK
 case 13:
 /* rule 13 can match eol */
 YY_RULE_SETUP
 #line 52 "bnf1.l"
-{printf("SYMBcomm\n");yylval.string_ = strdup(bnf1text); return _SYMB_12;}
+{yylval.string_ = strdup(bnf1text); return _SYMB_12;}
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
 #line 53 "bnf1.l"
-{printf("ident"); yylval.string_ = strdup(bnf1text); return _IDENT_;}
+{yylval.string_ = strdup(bnf1text); return _IDENT_;}
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
 #line 54 "bnf1.l"
 {
     	yylval.string_ = strdup(bnf1text);
-    	printf("namefile\n");
     	FILE *f=fopen(yylval.string_,"r");
     	if(!f){
     	   fprintf(stderr,"File %s not exist! Abort.\n",bnf1text);
@@ -959,24 +958,6 @@ YY_RULE_SETUP
     	
     	bnf1push_buffer_state(bnf1_create_buffer(f,YY_BUF_SIZE ));
     	depth++;
-    	/*
-    	int len=fseek(f,0,SEEK_END);
-    	char *extFile=calloc(len,sizeof(char));
-    	fseek(f,0,SEEK_SET);
-    	
-    	fread(extFile,sizeof(char),len,f);
-    	fclose(f);
-    	
-    	//yyscan_t scanner;
-        YY_BUFFER_STATE buf;
-        //bnf1lex_init(&scanner );
-    	
-    	buf = bnf1_scan_string(extFile);
-    	yyparse();
-    	
-    	bnf1_delete_buffer(buf);
-    	//bnf1lex_destroy(scanner);
-    	*/
     	
     	BEGIN YYINITIAL;
     	return _SYMB_13;
@@ -984,109 +965,102 @@ YY_RULE_SETUP
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 87 "bnf1.l"
+#line 68 "bnf1.l"
 BEGIN STRING;
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 88 "bnf1.l"
+#line 69 "bnf1.l"
 BEGIN ESCAPED;
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 89 "bnf1.l"
-{printf("SYMBstring\n");yylval.string_ = strdup(YY_PARSED_STRING); YY_BUFFER_RESET(); BEGIN YYINITIAL; return _STRING_;}
+#line 70 "bnf1.l"
+{yylval.string_ = strdup(YY_PARSED_STRING); YY_BUFFER_RESET(); BEGIN YYINITIAL; return _STRING_;}
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 90 "bnf1.l"
+#line 71 "bnf1.l"
 YY_BUFFER_APPEND(bnf1text);
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 91 "bnf1.l"
+#line 72 "bnf1.l"
 YY_BUFFER_APPEND("\n"); BEGIN STRING;
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 92 "bnf1.l"
+#line 73 "bnf1.l"
 YY_BUFFER_APPEND("\""); BEGIN STRING ;
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 93 "bnf1.l"
+#line 74 "bnf1.l"
 YY_BUFFER_APPEND("\\"); BEGIN STRING;
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 94 "bnf1.l"
+#line 75 "bnf1.l"
 YY_BUFFER_APPEND("\t"); BEGIN STRING;
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 95 "bnf1.l"
+#line 76 "bnf1.l"
 YY_BUFFER_APPEND(bnf1text); BEGIN STRING;
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 96 "bnf1.l"
-{printf("SYMBdouble\n");yylval.double_ = atof(bnf1text); return _DOUBLE_;}
+#line 77 "bnf1.l"
+{yylval.double_ = atof(bnf1text); return _DOUBLE_;}
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 97 "bnf1.l"
-{printf("SYMBint\n");yylval.int_ = atoi(bnf1text); return _INTEGER_;}
+#line 78 "bnf1.l"
+{yylval.int_ = atoi(bnf1text); return _INTEGER_;}
 	YY_BREAK
 case 27:
 /* rule 27 can match eol */
 YY_RULE_SETUP
-#line 99 "bnf1.l"
+#line 80 "bnf1.l"
 ++yy_mylinenumber ;
 	YY_BREAK
 case 28:
 /* rule 28 can match eol */
 YY_RULE_SETUP
-#line 100 "bnf1.l"
+#line 81 "bnf1.l"
 /* ignore white space. */;
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 101 "bnf1.l"
-{printf("SYMBerror\n");return _ERROR_;}
+#line 82 "bnf1.l"
+{return _ERROR_;}
 	YY_BREAK
 case YY_STATE_EOF(YYINITIAL):
-#line 103 "bnf1.l"
+#line 84 "bnf1.l"
 {
-                printf("culo!\n"); 
                 
                 if(depth>0){
                     bnf1pop_buffer_state();
                     depth--;
-                    return FEOF;
+                    //return FEOF;
+                } else {
+                    BEGIN EXITALL;
                 }
-                BEGIN EXITALL;
                 return FEOF;
-                
-                //if ( !YY_CURRENT_BUFFER )
-                //{
-                //    yyterminate();
-                //}
-                
-                //yyterminate(); 
-                
+               
                 
             }
 	YY_BREAK
 case YY_STATE_EOF(EXITALL):
-#line 124 "bnf1.l"
+#line 98 "bnf1.l"
 yyterminate(); //return EOF;
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 126 "bnf1.l"
+#line 100 "bnf1.l"
 ECHO;
 	YY_BREAK
-#line 1090 "Lexer.c"
+#line 1064 "Lexer.c"
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(COMMENT):
 case YY_STATE_EOF(CHAR):
@@ -2093,7 +2067,7 @@ void bnf1free (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 126 "bnf1.l"
+#line 100 "bnf1.l"
 
 
 void initialize_lexer(FILE *inp) { bnf1restart(inp); BEGIN YYINITIAL; }

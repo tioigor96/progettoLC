@@ -364,7 +364,7 @@ extern int bnf1debug;
 
 union YYSTYPE
 {
-#line 239 "bnf1.y" /* yacc.c:355  */
+#line 238 "bnf1.y" /* yacc.c:355  */
 
   int int_;
   char char_;
@@ -702,9 +702,9 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   302,   302,   304,   305,   307,   349,   369,   373,   384,
-     405,   406,   408,   410,   411,   413,   414,   415,   416,   417,
-     418,   420,   421,   423,   432,   435
+       0,   301,   301,   303,   304,   306,   313,   332,   337,   344,
+     364,   365,   367,   369,   370,   372,   373,   374,   375,   376,
+     377,   379,   380,   382,   390,   392
 };
 #endif
 
@@ -1524,72 +1524,36 @@ yyreduce:
   switch (yyn)
     {
         case 2:
-#line 302 "bnf1.y" /* yacc.c:1646  */
-    { printf("passo in S\n"); (yyval.s_) = make_Init(reverseListCS((yyvsp[-2].listcs_)), (yyvsp[0].divis_)); YY_RESULT_S_= (yyval.s_); }
+#line 301 "bnf1.y" /* yacc.c:1646  */
+    { (yyval.s_) = make_Init(reverseListCS((yyvsp[-2].listcs_)), (yyvsp[0].divis_)); YY_RESULT_S_= (yyval.s_); }
 #line 1530 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 3:
-#line 304 "bnf1.y" /* yacc.c:1646  */
-    { (yyval.divis_) = make_DivIm(reverseListCS((yyvsp[-2].listcs_)), (yyvsp[0].import_)); YY_RESULT_DivIS_= (yyval.divis_); printf("passo in DIVIS import\n");}
+#line 303 "bnf1.y" /* yacc.c:1646  */
+    { (yyval.divis_) = make_DivIm(reverseListCS((yyvsp[-2].listcs_)), (yyvsp[0].import_)); YY_RESULT_DivIS_= (yyval.divis_); }
 #line 1536 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 4:
-#line 305 "bnf1.y" /* yacc.c:1646  */
-    { (yyval.divis_) = make_DivSe(reverseListCS((yyvsp[-2].listcs_)), (yyvsp[0].sectionp_)); YY_RESULT_DivIS_= (yyval.divis_); printf("passo in DIVIS section\n");}
+#line 304 "bnf1.y" /* yacc.c:1646  */
+    { (yyval.divis_) = make_DivSe(reverseListCS((yyvsp[-2].listcs_)), (yyvsp[0].sectionp_)); YY_RESULT_DivIS_= (yyval.divis_); }
 #line 1542 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 5:
-#line 308 "bnf1.y" /* yacc.c:1646  */
-    { 
-            printf("passo in import\n");
+#line 307 "bnf1.y" /* yacc.c:1646  */
+    {
                 NameFile nf = (yyvsp[-7].namefile_);
-                //char *path = strdup(nf->u.nfile_.vfname_);
-                /*printf("%s\n",path);
-                FILE *file = fopen(path,"r");
-                if (!file) {
-                    fprintf(stderr, "Error opening input file.\n");
-                    exit(1);
-                }
-                
-                pS(file);*/
-        /*FILE *f=fopen(path,"r");
-    	if(!f){
-    	   fprintf(stderr,"File %s not exist! Abort.\n",path);
-    	   yyterminate();
-    	}
-    	
-    	int len=fseek(f,0,SEEK_END);
-    	char *extFile=calloc(len,sizeof(char));
-    	fseek(f,0,SEEK_SET);
-    	
-    	fread(extFile,sizeof(char),len,f);
-    	fclose(f);
-    	
-    	//yyscan_t scanner;
-        YY_BUFFER_STATE buf;
-        //yylex_init( &scanner );
-    	
-    	buf = yy_scan_string(extFile);
-    	yyparse();
-    	
-    	yy_delete_buffer(buf);
-    	//yylex_destroy(scanner);*/
-                               
                 (yyval.import_) = make_Imp(reverseListCS((yyvsp[-10].listcs_)), reverseListCS((yyvsp[-8].listcs_)), nf, reverseListCS((yyvsp[-6].listcs_)), reverseListCS((yyvsp[-4].listcs_)), reverseListCS((yyvsp[-2].listcs_)), (yyvsp[0].s_));
                 YY_RESULT_Import_= (yyval.import_);
-                
-                //fclose(file);
              }
-#line 1587 "Parser.c" /* yacc.c:1646  */
+#line 1552 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 6:
-#line 350 "bnf1.y" /* yacc.c:1646  */
-    { 
-                printf("passo in namesection\n");
+#line 314 "bnf1.y" /* yacc.c:1646  */
+    {
                 NameSection ns=(yyvsp[-7].namesection_);
                 char *nome=strdup(ns->u.nsection_.ident_);
                 env *find = getEnv(envs, nome);
@@ -1606,35 +1570,30 @@ yyreduce:
                                    reverseListCS((yyvsp[-4].listcs_)), reverseListCS((yyvsp[-2].listcs_)), (yyvsp[0].fields_));
                 YY_RESULT_SectionP_= (yyval.sectionp_);
             }
-#line 1610 "Parser.c" /* yacc.c:1646  */
+#line 1574 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 7:
-#line 369 "bnf1.y" /* yacc.c:1646  */
+#line 332 "bnf1.y" /* yacc.c:1646  */
     { 
                 (yyval.sectionf_) = make_SectF(reverseListCS((yyvsp[-4].listcs_)), reverseListCS((yyvsp[-2].listcs_)), (yyvsp[0].sectionp_)); 
                 YY_RESULT_SectionF_= (yyval.sectionf_); 
-                printf("passo in sectionF1\n");}
-#line 1619 "Parser.c" /* yacc.c:1646  */
+            }
+#line 1583 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 8:
-#line 374 "bnf1.y" /* yacc.c:1646  */
+#line 338 "bnf1.y" /* yacc.c:1646  */
     { 
-                printf("passo in sectionF2\n");
                 (yyval.sectionf_) = make_SectT(reverseListCS((yyvsp[-1].listcs_)));
                 YY_RESULT_SectionF_= (yyval.sectionf_);
-                
-                //if(depth==0)
-                    //YYACCEPT;
             }
-#line 1632 "Parser.c" /* yacc.c:1646  */
+#line 1592 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 9:
-#line 385 "bnf1.y" /* yacc.c:1646  */
+#line 345 "bnf1.y" /* yacc.c:1646  */
     { 
-                printf("passo in FIELDS\n");
                 (yyval.fields_) = make_Fld(reverseListCS((yyvsp[-16].listcs_)), reverseListCS((yyvsp[-14].listcs_)), 
                                 reverseListCS((yyvsp[-12].listcs_)), (yyvsp[-11].namefield_), reverseListCS((yyvsp[-10].listcs_)), 
                                 reverseListCS((yyvsp[-8].listcs_)), (yyvsp[-7].value_), reverseListCS((yyvsp[-6].listcs_)), 
@@ -1652,114 +1611,112 @@ yyreduce:
                 }
                 
             }
-#line 1656 "Parser.c" /* yacc.c:1646  */
+#line 1615 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 10:
-#line 405 "bnf1.y" /* yacc.c:1646  */
-    { (yyval.fieldt_) = make_FldT(reverseListCS((yyvsp[-4].listcs_)), reverseListCS((yyvsp[-2].listcs_)), (yyvsp[0].fields_)); YY_RESULT_FieldT_= (yyval.fieldt_); printf("passo in fieldT1\n");}
-#line 1662 "Parser.c" /* yacc.c:1646  */
+#line 364 "bnf1.y" /* yacc.c:1646  */
+    { (yyval.fieldt_) = make_FldT(reverseListCS((yyvsp[-4].listcs_)), reverseListCS((yyvsp[-2].listcs_)), (yyvsp[0].fields_)); YY_RESULT_FieldT_= (yyval.fieldt_);}
+#line 1621 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 11:
-#line 406 "bnf1.y" /* yacc.c:1646  */
-    { (yyval.fieldt_) = make_FldTS(reverseListCS((yyvsp[-6].listcs_)), reverseListCS((yyvsp[-4].listcs_)), reverseListCS((yyvsp[-2].listcs_)), (yyvsp[0].sectionf_)); YY_RESULT_FieldT_= (yyval.fieldt_); printf("passo in fieldT2\n");}
-#line 1668 "Parser.c" /* yacc.c:1646  */
+#line 365 "bnf1.y" /* yacc.c:1646  */
+    { (yyval.fieldt_) = make_FldTS(reverseListCS((yyvsp[-6].listcs_)), reverseListCS((yyvsp[-4].listcs_)), reverseListCS((yyvsp[-2].listcs_)), (yyvsp[0].sectionf_)); YY_RESULT_FieldT_= (yyval.fieldt_); }
+#line 1627 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 12:
-#line 408 "bnf1.y" /* yacc.c:1646  */
-    { (yyval.cs_) = make_Csa((yyvsp[0].string_)); YY_RESULT_CS_= (yyval.cs_); printf("passo in commento\n");}
-#line 1674 "Parser.c" /* yacc.c:1646  */
+#line 367 "bnf1.y" /* yacc.c:1646  */
+    { (yyval.cs_) = make_Csa((yyvsp[0].string_)); YY_RESULT_CS_= (yyval.cs_); }
+#line 1633 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 13:
-#line 410 "bnf1.y" /* yacc.c:1646  */
-    { (yyval.listcs_) = 0; YY_RESULT_ListCS_= (yyval.listcs_); printf("passo in lista commenti vuota\n");}
-#line 1680 "Parser.c" /* yacc.c:1646  */
+#line 369 "bnf1.y" /* yacc.c:1646  */
+    { (yyval.listcs_) = 0; YY_RESULT_ListCS_= (yyval.listcs_); }
+#line 1639 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 14:
-#line 411 "bnf1.y" /* yacc.c:1646  */
-    { (yyval.listcs_) = make_ListCS((yyvsp[0].cs_), (yyvsp[-1].listcs_)); YY_RESULT_ListCS_= (yyval.listcs_); printf("passo in lista commenti cr\n");}
-#line 1686 "Parser.c" /* yacc.c:1646  */
+#line 370 "bnf1.y" /* yacc.c:1646  */
+    { (yyval.listcs_) = make_ListCS((yyvsp[0].cs_), (yyvsp[-1].listcs_)); YY_RESULT_ListCS_= (yyval.listcs_); }
+#line 1645 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 15:
-#line 413 "bnf1.y" /* yacc.c:1646  */
-    { (yyval.value_) = make_Val((yyvsp[0].string_)); YY_RESULT_Value_= (yyval.value_); printf("passo in value string\n");}
-#line 1692 "Parser.c" /* yacc.c:1646  */
+#line 372 "bnf1.y" /* yacc.c:1646  */
+    { (yyval.value_) = make_Val((yyvsp[0].string_)); YY_RESULT_Value_= (yyval.value_); }
+#line 1651 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 16:
-#line 414 "bnf1.y" /* yacc.c:1646  */
-    { (yyval.value_) = make_ValI((yyvsp[0].int_)); YY_RESULT_Value_= (yyval.value_); printf("passo in value integer\n");}
-#line 1698 "Parser.c" /* yacc.c:1646  */
+#line 373 "bnf1.y" /* yacc.c:1646  */
+    { (yyval.value_) = make_ValI((yyvsp[0].int_)); YY_RESULT_Value_= (yyval.value_); }
+#line 1657 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 17:
-#line 415 "bnf1.y" /* yacc.c:1646  */
-    { (yyval.value_) = make_ValD((yyvsp[0].double_)); YY_RESULT_Value_= (yyval.value_); printf("passo in value duoble\n");}
-#line 1704 "Parser.c" /* yacc.c:1646  */
+#line 374 "bnf1.y" /* yacc.c:1646  */
+    { (yyval.value_) = make_ValD((yyvsp[0].double_)); YY_RESULT_Value_= (yyval.value_); }
+#line 1663 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 18:
-#line 416 "bnf1.y" /* yacc.c:1646  */
-    { (yyval.value_) = make_ValB((yyvsp[0].tbool_)); YY_RESULT_Value_= (yyval.value_); printf("passo in tbool\n");}
-#line 1710 "Parser.c" /* yacc.c:1646  */
+#line 375 "bnf1.y" /* yacc.c:1646  */
+    { (yyval.value_) = make_ValB((yyvsp[0].tbool_)); YY_RESULT_Value_= (yyval.value_); }
+#line 1669 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 19:
-#line 417 "bnf1.y" /* yacc.c:1646  */
-    { (yyval.value_) = make_ValV((yyvsp[0].string_)); YY_RESULT_Value_= (yyval.value_); printf("passo in value varloc\n");}
-#line 1716 "Parser.c" /* yacc.c:1646  */
+#line 376 "bnf1.y" /* yacc.c:1646  */
+    { (yyval.value_) = make_ValV((yyvsp[0].string_)); YY_RESULT_Value_= (yyval.value_); }
+#line 1675 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 20:
-#line 418 "bnf1.y" /* yacc.c:1646  */
-    { (yyval.value_) = make_ValG((yyvsp[0].string_)); YY_RESULT_Value_= (yyval.value_); printf("passo invalue varg\n");}
-#line 1722 "Parser.c" /* yacc.c:1646  */
+#line 377 "bnf1.y" /* yacc.c:1646  */
+    { (yyval.value_) = make_ValG((yyvsp[0].string_)); YY_RESULT_Value_= (yyval.value_); }
+#line 1681 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 21:
-#line 420 "bnf1.y" /* yacc.c:1646  */
-    { (yyval.tbool_) = make_VTrue(); YY_RESULT_TBool_= (yyval.tbool_); printf("passo in vtrue\n");}
-#line 1728 "Parser.c" /* yacc.c:1646  */
+#line 379 "bnf1.y" /* yacc.c:1646  */
+    { (yyval.tbool_) = make_VTrue(); YY_RESULT_TBool_= (yyval.tbool_); }
+#line 1687 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 22:
-#line 421 "bnf1.y" /* yacc.c:1646  */
-    { (yyval.tbool_) = make_VFalse(); YY_RESULT_TBool_= (yyval.tbool_); printf("passo in vfalse\n");}
-#line 1734 "Parser.c" /* yacc.c:1646  */
+#line 380 "bnf1.y" /* yacc.c:1646  */
+    { (yyval.tbool_) = make_VFalse(); YY_RESULT_TBool_= (yyval.tbool_); }
+#line 1693 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 23:
-#line 424 "bnf1.y" /* yacc.c:1646  */
-    { 
-            printf("sono in namefile!\n");
+#line 383 "bnf1.y" /* yacc.c:1646  */
+    {
                 S s = (yyvsp[0].s_);
                 
                 (yyval.namefile_) = make_NFile((yyvsp[-1].string_));
                 YY_RESULT_NameFile_= (yyval.namefile_);
             }
-#line 1746 "Parser.c" /* yacc.c:1646  */
+#line 1704 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 24:
-#line 432 "bnf1.y" /* yacc.c:1646  */
-    { printf("mi piace essere ubriaco !\n");
-(yyval.namefield_) = make_NField((yyvsp[0].string_)); YY_RESULT_NameField_= (yyval.namefield_); }
-#line 1753 "Parser.c" /* yacc.c:1646  */
+#line 390 "bnf1.y" /* yacc.c:1646  */
+    { (yyval.namefield_) = make_NField((yyvsp[0].string_)); YY_RESULT_NameField_= (yyval.namefield_); }
+#line 1710 "Parser.c" /* yacc.c:1646  */
     break;
 
   case 25:
-#line 435 "bnf1.y" /* yacc.c:1646  */
-    { printf("mi piace essere ubriaco e non capire i token!\n"); (yyval.namesection_) = make_NSection((yyvsp[0].string_)); YY_RESULT_NameSection_= (yyval.namesection_); }
-#line 1759 "Parser.c" /* yacc.c:1646  */
+#line 392 "bnf1.y" /* yacc.c:1646  */
+    { (yyval.namesection_) = make_NSection((yyvsp[0].string_)); YY_RESULT_NameSection_= (yyval.namesection_); }
+#line 1716 "Parser.c" /* yacc.c:1646  */
     break;
 
 
-#line 1763 "Parser.c" /* yacc.c:1646  */
+#line 1720 "Parser.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires

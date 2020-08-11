@@ -233,7 +233,6 @@ ListCS reverseListCS(ListCS l)
 
 %}
 
-// %verbose
 
 %union
 {
@@ -299,56 +298,20 @@ ListCS reverseListCS(ListCS l)
 
 %start S
 %%
-S : ListCS _SYMB_0 DivIS { printf("passo in S\n"); $$ = make_Init(reverseListCS($1), $3); YY_RESULT_S_= $$; } 
+S : ListCS _SYMB_0 DivIS { $$ = make_Init(reverseListCS($1), $3); YY_RESULT_S_= $$; } 
 ;
-DivIS : ListCS _SYMB_6 Import { $$ = make_DivIm(reverseListCS($1), $3); YY_RESULT_DivIS_= $$; printf("passo in DIVIS import\n");} 
-  | ListCS _SYMB_8 SectionP { $$ = make_DivSe(reverseListCS($1), $3); YY_RESULT_DivIS_= $$; printf("passo in DIVIS section\n");}
+DivIS : ListCS _SYMB_6 Import { $$ = make_DivIm(reverseListCS($1), $3); YY_RESULT_DivIS_= $$; } 
+  | ListCS _SYMB_8 SectionP { $$ = make_DivSe(reverseListCS($1), $3); YY_RESULT_DivIS_= $$; }
 ;
 Import :    ListCS _SYMB_1 ListCS NameFile ListCS _SYMB_2 ListCS _SYMB_6 ListCS _SYMB_1 S 
-            { 
-            printf("passo in import\n");
+            {
                 NameFile nf = $4;
-                //char *path = strdup(nf->u.nfile_.vfname_);
-                /*printf("%s\n",path);
-                FILE *file = fopen(path,"r");
-                if (!file) {
-                    fprintf(stderr, "Error opening input file.\n");
-                    exit(1);
-                }
-                
-                pS(file);*/
-        /*FILE *f=fopen(path,"r");
-    	if(!f){
-    	   fprintf(stderr,"File %s not exist! Abort.\n",path);
-    	   yyterminate();
-    	}
-    	
-    	int len=fseek(f,0,SEEK_END);
-    	char *extFile=calloc(len,sizeof(char));
-    	fseek(f,0,SEEK_SET);
-    	
-    	fread(extFile,sizeof(char),len,f);
-    	fclose(f);
-    	
-    	//yyscan_t scanner;
-        YY_BUFFER_STATE buf;
-        //yylex_init( &scanner );
-    	
-    	buf = yy_scan_string(extFile);
-    	yyparse();
-    	
-    	yy_delete_buffer(buf);
-    	//yylex_destroy(scanner);*/
-                               
                 $$ = make_Imp(reverseListCS($1), reverseListCS($3), nf, reverseListCS($5), reverseListCS($7), reverseListCS($9), $11);
                 YY_RESULT_Import_= $$;
-                
-                //fclose(file);
              } 
 ;
 SectionP :  ListCS _SYMB_7 ListCS _SYMB_3 ListCS NameSection ListCS _SYMB_1 ListCS _SYMB_0 ListCS _SYMB_5 Fields 
-            { 
-                printf("passo in namesection\n");
+            {
                 NameSection ns=$6;
                 char *nome=strdup(ns->u.nsection_.ident_);
                 env *find = getEnv(envs, nome);
@@ -369,21 +332,17 @@ SectionP :  ListCS _SYMB_7 ListCS _SYMB_3 ListCS NameSection ListCS _SYMB_1 List
 SectionF :  ListCS _SYMB_0 ListCS _SYMB_8 SectionP { 
                 $$ = make_SectF(reverseListCS($1), reverseListCS($3), $5); 
                 YY_RESULT_SectionF_= $$; 
-                printf("passo in sectionF1\n");} 
+            }
+             
           | ListCS FEOF 
             { 
-                printf("passo in sectionF2\n");
                 $$ = make_SectT(reverseListCS($1));
                 YY_RESULT_SectionF_= $$;
-                
-                //if(depth==0)
-                    //YYACCEPT;
             }
 ;
 
 Fields :    ListCS _SYMB_7 ListCS _SYMB_3 ListCS NameField ListCS _SYMB_1 ListCS Value ListCS _SYMB_2 ListCS _SYMB_5 ListCS _SYMB_1 FieldT 
             { 
-                printf("passo in FIELDS\n");
                 $$ = make_Fld(reverseListCS($1), reverseListCS($3), 
                                 reverseListCS($5), $6, reverseListCS($7), 
                                 reverseListCS($9), $10, reverseListCS($11), 
@@ -402,36 +361,34 @@ Fields :    ListCS _SYMB_7 ListCS _SYMB_3 ListCS NameField ListCS _SYMB_1 ListCS
                 
             } 
 ;
-FieldT : ListCS _SYMB_0 ListCS _SYMB_5 Fields { $$ = make_FldT(reverseListCS($1), reverseListCS($3), $5); YY_RESULT_FieldT_= $$; printf("passo in fieldT1\n");} 
-  | ListCS _SYMB_2 ListCS _SYMB_8 ListCS _SYMB_1 SectionF { $$ = make_FldTS(reverseListCS($1), reverseListCS($3), reverseListCS($5), $7); YY_RESULT_FieldT_= $$; printf("passo in fieldT2\n");}
+FieldT : ListCS _SYMB_0 ListCS _SYMB_5 Fields { $$ = make_FldT(reverseListCS($1), reverseListCS($3), $5); YY_RESULT_FieldT_= $$;} 
+  | ListCS _SYMB_2 ListCS _SYMB_8 ListCS _SYMB_1 SectionF { $$ = make_FldTS(reverseListCS($1), reverseListCS($3), reverseListCS($5), $7); YY_RESULT_FieldT_= $$; }
 ;
-CS : _SYMB_12 { $$ = make_Csa($1); YY_RESULT_CS_= $$; printf("passo in commento\n");} 
+CS : _SYMB_12 { $$ = make_Csa($1); YY_RESULT_CS_= $$; } 
 ;
-ListCS : /* empty */ { $$ = 0; YY_RESULT_ListCS_= $$; printf("passo in lista commenti vuota\n");} 
-  | ListCS CS { $$ = make_ListCS($2, $1); YY_RESULT_ListCS_= $$; printf("passo in lista commenti cr\n");}
+ListCS : /* empty */ { $$ = 0; YY_RESULT_ListCS_= $$; } 
+  | ListCS CS { $$ = make_ListCS($2, $1); YY_RESULT_ListCS_= $$; }
 ;
-Value : _STRING_ { $$ = make_Val($1); YY_RESULT_Value_= $$; printf("passo in value string\n");} 
-  | _INTEGER_ { $$ = make_ValI($1); YY_RESULT_Value_= $$; printf("passo in value integer\n");}
-  | _DOUBLE_ { $$ = make_ValD($1); YY_RESULT_Value_= $$; printf("passo in value duoble\n");}
-  | TBool { $$ = make_ValB($1); YY_RESULT_Value_= $$; printf("passo in tbool\n");}
-  | _SYMB_10 { $$ = make_ValV($1); YY_RESULT_Value_= $$; printf("passo in value varloc\n");}
-  | _SYMB_11 { $$ = make_ValG($1); YY_RESULT_Value_= $$; printf("passo invalue varg\n");}
+Value : _STRING_ { $$ = make_Val($1); YY_RESULT_Value_= $$; } 
+  | _INTEGER_ { $$ = make_ValI($1); YY_RESULT_Value_= $$; }
+  | _DOUBLE_ { $$ = make_ValD($1); YY_RESULT_Value_= $$; }
+  | TBool { $$ = make_ValB($1); YY_RESULT_Value_= $$; }
+  | _SYMB_10 { $$ = make_ValV($1); YY_RESULT_Value_= $$; }
+  | _SYMB_11 { $$ = make_ValG($1); YY_RESULT_Value_= $$; }
 ;
-TBool : _SYMB_9 { $$ = make_VTrue(); YY_RESULT_TBool_= $$; printf("passo in vtrue\n");} 
-  | _SYMB_4 { $$ = make_VFalse(); YY_RESULT_TBool_= $$; printf("passo in vfalse\n");}
+TBool : _SYMB_9 { $$ = make_VTrue(); YY_RESULT_TBool_= $$; } 
+  | _SYMB_4 { $$ = make_VFalse(); YY_RESULT_TBool_= $$; }
 ;
 NameFile :  _SYMB_13 S 
-            { 
-            printf("sono in namefile!\n");
+            {
                 S s = $2;
                 
                 $$ = make_NFile($1);
                 YY_RESULT_NameFile_= $$;
             }
 ;
-NameField : _IDENT_ { printf("mi piace essere ubriaco !\n");
-$$ = make_NField($1); YY_RESULT_NameField_= $$; } 
+NameField : _IDENT_ { $$ = make_NField($1); YY_RESULT_NameField_= $$; } 
 ;
-NameSection : _IDENT_ { printf("mi piace essere ubriaco e non capire i token!\n"); $$ = make_NSection($1); YY_RESULT_NameSection_= $$; } 
+NameSection : _IDENT_ { $$ = make_NSection($1); YY_RESULT_NameSection_= $$; } 
 ;
 
