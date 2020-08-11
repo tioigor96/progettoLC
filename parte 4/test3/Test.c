@@ -123,6 +123,10 @@ void verifyEnv(env *env1) {
                         fprintf(stderr, "Error! not exist field name \"%s\" in \"%s\" section!\n", v->value, e->name);
                         exit(1);
                     }
+
+                    //riferimento esiste
+                    free(v->value);
+                    v->value = var1->value;
                 }
             }
         }
