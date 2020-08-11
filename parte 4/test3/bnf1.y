@@ -350,6 +350,7 @@ Fields :    ListCS _SYMB_7 ListCS _SYMB_3 ListCS NameField ListCS _SYMB_1 ListCS
                 YY_RESULT_Fields_= $$;
                 char *fnamefield=strdup(YY_RESULT_Fields_->u.fld_.namefield_->u.nfield_.ident_);
                 char *fvalue=strValue(YY_RESULT_Fields_->u.fld_.value_);
+
                 var *find = getVar(vars,fnamefield);
                 if(find) {
                     fprintf(stderr,"Warning: duplicate declaration of %s\n",

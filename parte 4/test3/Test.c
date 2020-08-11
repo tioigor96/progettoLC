@@ -77,6 +77,58 @@ void analizeParms(int argc, char **argv) {
 
 }
 
+void verifyEnv(env *env1) {
+    env *e = env1;
+    for (; e; e = e->next) {
+        var *v = e->vars;
+        for (; v; v = v->next) {
+
+            char *fvalue = v->value;
+
+            if (fvalue[0] == '$') {
+                char *varname = strchr(fvalue, '.');
+                if (varname) {  //var glob
+                    int len = strlen(fvalue) - strlen(varname);
+                    char *envname = calloc(len, sizeof(char));
+                    memcpy(envname, fvalue + 1, len - 1);
+                    envname[len] = 0;
+                    varname++;
+
+                    env *env1 = getEnv(envs, envname);
+
+                    if (!env1) {
+                        fprintf(stderr, "Error! not exist section name \"%s\" at \"%s\"!\n", envname, v->value);
+                        exit(1);
+                    }
+
+                    var *var1 = getVar(env1->vars, varname);
+
+                    if (!var1) {
+                        fprintf(stderr, "Error! not exist field name \"%s\" at \"%s\"!\n", varname, v->value);
+                        exit(1);
+                    }
+
+                    //riferimento esiste
+                    free(v->value);
+                    v->value = var1->value;
+
+                } else {  //var loc
+                    var *var1 = e->vars;
+                    char *varname = calloc(strlen(v->value) - 1, sizeof(char));
+                    memcpy(varname, v->value + 1, strlen(v->value) - 1);
+
+                    var1 = getVar(var1, varname);
+
+                    if (!var1) {
+                        fprintf(stderr, "Error! not exist field name \"%s\" in \"%s\" section!\n", v->value, e->name);
+                        exit(1);
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 int main(int argc, char **argv) {
     analizeParms(argc, argv);
@@ -85,6 +137,8 @@ int main(int argc, char **argv) {
 
     parse_tree = pS(input);
     if (parse_tree) {
+
+        verifyEnv(envs);
 
         int realstd;
         if (printFile) {  //switch stdout to file
