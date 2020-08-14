@@ -1,0 +1,87 @@
+comment "--";
+
+Prog.          Program ::= Block;
+
+-----------
+--BLOCCHI--
+-----------
+Blk.           Block ::= [Statement] ;
+BlkDiv.        Block ::= [Statement] DivStm [Statement] ;
+
+--il ; è opzionale, si può mettere uno spazio o un a capo
+separator Statement "" ;
+token DivStm ('\n'|';');
+
+------------
+--STATEMENT-
+------------
+
+Stm.           Statement ::= NameVar "=" Value;
+StmArr.        Statement ::= NameVar "=" "{" [Element] "}";     --array che tipo elementi?
+StmTab.        Statement ::= NameVar "[" Integer "]" "=" Value;
+StmExp.        Statement ::= NameVar "=" Exp;
+StmWhile.      Statement ::= While;
+StmRepeat.     Statement ::= Repeat;
+StmIf.         Statement ::= If;
+
+token NameVar (letter)(letter|digit|'_')* ;
+
+-----------
+---CICLI---
+-----------
+
+LoopW.         While ::= "while" BoolExp "do" Block "end";
+LoopR.         Repeat ::= "repeat" Block "until" BoolExp;
+LoopIf.        If ::= "if" BoolExp "then" Block [Elseif] [Else] "end";
+
+Els.           Else ::= "else" Block;
+ElseIf.        Elseif ::= "elseif" BoolExp "then" Block;
+
+separator Elseif "";
+separator Else "";
+
+--------------
+--ESPRESSIONI-
+--------------
+
+ExprssI.    Exp ::= Integer;
+ExprssD.    Exp ::= Double;
+ExprssVar.  Exp ::= NameVar;
+ExprssOp.   Exp ::= Exp Operator Exp;
+
+ExpB.      BoolExp ::= Exp;
+ExpB1.     BoolExp ::= TBool;
+ExpB2.     BoolExp ::= Exp BoolOp Exp;
+ExpB3.     BoolExp ::= Exp BoolOp TBool;
+
+token BoolOp ('>'|'>''='|'<'|'<''='|'!''='|'=''=');
+token Operator ('+'|'-'|'*'|'/'|'%'|'^'|'-');
+
+VTrue.      TBool ::= "true"; 
+VFalse.     TBool ::= "false";
+
+-------------
+---TABELLE---
+-------------
+
+separator Element ",";
+ElementSingleI.     Element ::= Integer;
+ElementSingleD.     Element ::= Double;
+ElementSingleS.     Element ::= String;
+
+
+-------------
+---VALORI----
+-------------
+
+ValS.       Value ::= String;
+ValLS.      Value ::= LongStrings;
+ValI.       Value ::= Integer;
+ValD.       Value ::= Double;
+ValB.       Value ::= TBool;
+ValTab.     Value ::= Table;
+
+--TODO:  [===[ ... ]===]
+token LongStrings ('\''(char - ('\n'))*'\'') | (('[''['(char - ('\n'))*('\n'(char - ('\n'))*))*']'']');
+token Table ('{''}'); 
+
