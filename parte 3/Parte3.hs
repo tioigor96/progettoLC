@@ -65,5 +65,3 @@ maximalWeight (Left x) = Left x
 maximalWeight (Right (Right x)) = Right (maximalWeight' x)
 maximalWeight (Right (Left x)) = Right (maximalWeight' x)
 
-
-

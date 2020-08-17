@@ -94,14 +94,14 @@ void verifyEnv(env *env1) {
                     envname[len] = 0;
                     varname++;
 
-                    env *env1 = getEnv(envs, envname);
+                    env *lim = getEnv(env1, envname);
 
-                    if (!env1) {
+                    if (!lim) {
                         fprintf(stderr, "Error! not exist section name \"%s\" at \"%s\"!\n", envname, v->value);
                         exit(1);
                     }
 
-                    var *var1 = getVar(env1->vars, varname);
+                    var *var1 = getVar(lim->vars, varname);
 
                     if (!var1) {
                         fprintf(stderr, "Error! not exist field name \"%s\" at \"%s\"!\n", varname, v->value);

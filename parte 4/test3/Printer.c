@@ -563,7 +563,7 @@ void ppValue(Value _p_, int _i_) {
 
                 env *env1 = getEnv(envs, envname);
                 var *var1 = getVar(env1->vars, varname);
-                
+
                 ppIdent(var1->value,0);
             }
 
