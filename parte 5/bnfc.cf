@@ -1,0 +1,159 @@
+comment "--";
+
+rules BasicType ::= "bool" | "char" | "float" | "int" | "string" | "void" ;
+Prog.          Program ::= Block;
+
+-----------
+--BLOCCHI--
+-----------
+Blk.           Block ::= [Statement] ;
+BlkDiv.        Block ::= [Statement] DivStm [Statement] ;
+
+--il ; è opzionale, si può mettere uno spazio o un a capo
+separator Statement "" ;
+token DivStm ('\n'|';');
+
+-------------
+----LEXP-----
+-------------
+
+Pointer.  LExp ::= "*" RExp;
+IdNew.    LExp ::= NVar;
+IdOLD.    LExp ::= OVar;
+ArrayEl.  LExp ::= NameVar "[" RExp "]" ;
+NewArray. LExp ::= CompoundType NameVar;
+
+NewVariable.  NVar ::= BasicType NameVar;
+OldVariable.  OVar ::= NameVar;
+
+-------------
+----REXP-----
+-------------
+
+ValueBool.       RExp ::= BoolExp;
+ValueArrayEl.    RExp ::= NameVar "[" Integer "]";
+ValueFunc.       RExp ::= Func; 
+Expression.      RExp ::= Exp;
+
+------------
+--FUNCTIONS && PARAMETERS-
+------------
+FunctionCall.   Func ::= NameFunc "(" [RExp] ")";
+separator RExp ",";
+
+FunctionDeclaration. FuncDecl ::= BasicType NameFunc "(" [Parameters] ")" [FuncStatement] "end";
+
+
+ParamBasic.      Parameters ::= BasicType NameVar;
+ParamCompound.   Parameters ::= CompoundType NameVar;
+separator Parameters ",";
+
+NormalStmt.      FuncStatement ::= Statement;
+RVar.            FuncStatement ::= "return" RExp;
+
+separator FuncStatement "";
+
+
+
+token NameFunc (letter | digit)(letter | digit | '-')*;
+
+------------
+--STATEMENT-
+------------
+
+Stm.           Statement ::=  LExp "="  RExp;
+StmWhile.      Statement ::= While;
+StmRepeat.     Statement ::= Repeat;
+StmIf.         Statement ::= If;
+Procedure.     Statement ::= Func;
+FDecl.         Statement ::= FuncDecl;
+
+
+
+token NameVar (letter)(letter|digit|'_')* ;
+
+
+BasTyp.     Type ::= BasicType ;
+
+CompType.   Type ::= CompoundType ;
+ArrDef.     CompoundType ::= Type "[" Integer "]" ;
+ArrUnDef.   CompoundType ::= Type "["  "]" ;
+PType.      CompoundType ::= Type "*" ;
+
+-----------
+---CICLI---
+-----------
+
+LoopW.         While ::= "while" BoolExp "do" Block "end";
+LoopR.         Repeat ::= "repeat" Block "until" BoolExp;
+LoopIfElse.    If ::= "if" BoolExp "then" Block [Elseif] Else "end";
+LoopIf.        If ::= "if" BoolExp "then" Block [Elseif]  "end";
+ElseV.         Else ::= "else" Block;
+
+ElseifList.    Elseif ::= "elseif" BoolExp "then" Block;
+
+separator Elseif "";
+--separator Else "";
+
+--------------
+--ESPRESSIONI-
+--------------
+
+
+Add.        Exp ::= Exp "+" Exp1 ;
+Sub.        Exp ::= Exp "-" Exp1 ;
+
+Mul.        Exp1 ::= Exp2 "*" Exp3 ;
+Div.        Exp1 ::= Exp2 "/" Exp3 ;
+Mod.        Exp1 ::= Exp2 "%" Exp3 ;
+
+Pow.        Exp3 ::= Exp4 "^" Exp3 ;
+
+Neg.        Exp4 ::= "-" Exp5 ;
+
+rules       Exp5 ::= Integer | NameVar | Double;
+coercions Exp 5;
+
+
+
+
+
+Or.         BoolExp ::= BoolExp "or" BoolExp1;
+And.        BoolExp1 ::= BoolExp1 "and" BoolExp2;
+Not.        BoolExp2 ::= "not" BoolExp3;
+
+Eq.         BoolExp4 ::= Exp "==" Exp ;
+Neq.        BoolExp4 ::= Exp "!=" Exp ;
+Lt.         BoolExp4 ::= Exp "<"  Exp ;
+LtE.        BoolExp4 ::= Exp "<=" Exp ;
+Gt.         BoolExp4 ::= Exp ">"  Exp ;
+GtE.        BoolExp4 ::= Exp ">=" Exp ;
+
+rules       BoolExp5 ::= "true" | "false";
+coercions BoolExp 5 ;
+
+-------------
+----ARRAY----
+-------------
+
+separator Element ",";
+ElementI.     Element ::= Integer;
+ElementD.     Element ::= Double;
+ElementS.     Element ::= String;
+ElementC.     Element ::= Char;
+ElementB.     Element ::= BoolExp5;
+ElementA.     Element ::= Array;
+ElementAF.    Element ::= "{" [Element] "}";    
+
+
+-------------
+---VALORI----
+-------------
+
+ValS.       Value ::= String;
+ValB.       Value ::= BoolExp5;
+ValTab.     Value ::= Array;
+ValChar.    Value ::= Char;
+
+
+token Array ('{''}');
