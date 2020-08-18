@@ -24,9 +24,20 @@ StmWhile.      Statement ::= While;
 StmRepeat.     Statement ::= Repeat;
 StmIf.         Statement ::= If;
 Procedure.     Statement ::= Func;
+FunctWrite.    Statement ::= FuncWrite;
+FunctRead.     Statement ::= FuncRead;
 FDecl.         Statement ::= FuncDecl;
 
 
+WriteI.    FuncWrite ::= "writeInt" "(" Integer ")";
+WriteF.    FuncWrite ::= "writeFloat" "(" Double ")";
+WriteC.    FuncWrite ::= "writeChar" "(" Char ")";
+WriteS.    FuncWrite ::= "writeString" "(" String ")";
+
+ReadI.     FuncRead ::= "readInt" "(" Integer ")";
+ReadF.     FuncRead ::= "readFloat" "(" Double ")";
+ReadC.     FuncRead ::= "readChar" "(" Char ")";
+ReadS.     FuncRead ::= "readString" "(" String ")";
 
 
 -------------
@@ -42,15 +53,15 @@ NewArray. LExp ::= CompoundType NameVar;
 NewVariable.  NVar ::= BasicType NameVar;
 OldVariable.  OVar ::= NameVar;
 
-token NameVar (letter)(letter|digit|'_')*;
-token NameFunc (upper)(letter|digit|'_')*;
+token NameVar (letter|'_'lower)(letter|digit|'_')*;
+--token NameFunc (letter|'_')(letter|digit|'_')*;
 ------------
 --FUNCTIONS && PARAMETERS-
 ------------
-FunctionCall.   Func ::= NameFunc "(" [RExp] ")";
+FunctionCall.   Func ::= NameVar "(" [RExp] ")";
 separator RExp ",";
 
-FunctionDeclaration. FuncDecl ::= BasicType NameFunc "(" [Parameters] ")" [FuncStatement] "end";
+FunctionDeclaration. FuncDecl ::= BasicType "function" NameVar "(" [Parameters] ")" [FuncStatement] "end";
 
 
 ParamBasic.      Parameters ::= BasicType NameVar;
