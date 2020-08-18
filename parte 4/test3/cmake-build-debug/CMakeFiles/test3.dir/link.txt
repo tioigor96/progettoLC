@@ -1,1 +1,0 @@
-/usr/bin/cc -g   CMakeFiles/test3.dir/Absyn.c.o CMakeFiles/test3.dir/env.c.o CMakeFiles/test3.dir/Lexer.c.o CMakeFiles/test3.dir/Parser.c.o CMakeFiles/test3.dir/Printer.c.o CMakeFiles/test3.dir/Skeleton.c.o CMakeFiles/test3.dir/Test.c.o  -o test3 
