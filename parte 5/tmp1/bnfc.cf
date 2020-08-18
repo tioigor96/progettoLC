@@ -1,5 +1,5 @@
-rules BasicType ::= "bool" | "char" | "float" | "int" | "string" | "void" ;
-rules Boolean ::= "true" | "false";
+comment "--";
+
 Prog.          Program ::= Block;
 
 -----------
@@ -12,6 +12,23 @@ BlkDiv.        Block ::= [Statement] DivStm [Statement] ;
 separator Statement "";
 token DivStm ('\n'|';');
 
+rules BasicType ::= "bool" | "char" | "float" | "int" | "string" | "void" ;
+rules Boolean ::= "true" | "false";
+
+------------
+--STATEMENT-
+------------
+
+Stm.           Statement ::= LExp "=" RExp;
+StmWhile.      Statement ::= While;
+StmRepeat.     Statement ::= Repeat;
+StmIf.         Statement ::= If;
+Procedure.     Statement ::= Func;
+FDecl.         Statement ::= FuncDecl;
+
+
+
+
 -------------
 ----LEXP-----
 -------------
@@ -19,42 +36,31 @@ token DivStm ('\n'|';');
 Pointer.  LExp ::= "*" RExp;
 IdNew.    LExp ::= NVar;
 IdOLD.    LExp ::= OVar;
-ArrayEl.  LExp ::= Ident "[" RExp "]" ;
-NewArray. LExp ::= CompoundType Ident;
+ArrayEl.  LExp ::= NameVar "[" RExp "]" ;
+NewArray. LExp ::= CompoundType NameVar;
 
-NewVariable.  NVar ::= BasicType Ident;
-OldVariable.  OVar ::= Ident;
+NewVariable.  NVar ::= BasicType NameVar;
+OldVariable.  OVar ::= NameVar;
 
-
-
+token NameVar (letter)(letter|digit|'_')*;
+token NameFunc (upper)(letter|digit|'_')*;
 ------------
 --FUNCTIONS && PARAMETERS-
 ------------
-FunctionCall.   Func ::= Ident "(" [RExp] ")";
+FunctionCall.   Func ::= NameFunc "(" [RExp] ")";
 separator RExp ",";
 
-FunctionDeclaration. FuncDecl ::= BasicType Ident "(" [Parameters] ")" [FuncStatement] "end";
+FunctionDeclaration. FuncDecl ::= BasicType NameFunc "(" [Parameters] ")" [FuncStatement] "end";
 
 
-ParamBasic.      Parameters ::= BasicType Ident;
-ParamCompound.   Parameters ::= CompoundType Ident;
+ParamBasic.      Parameters ::= BasicType NameVar;
+ParamCompound.   Parameters ::= CompoundType NameVar;
 separator Parameters ",";
 
 NormalStmt.      FuncStatement ::= Statement;
 RVar.            FuncStatement ::= "return" RExp;
 
 separator FuncStatement "";
-
-------------
---STATEMENT-
-------------
-
-Stm.           Statement ::=  LExp "="  RExp;
-StmWhile.      Statement ::= While;
-StmRepeat.     Statement ::= Repeat;
-StmIf.         Statement ::= If;
-Procedure.     Statement ::= Func;
-FDecl.         Statement ::= FuncDecl;
 
 
 BasTyp.     Type ::= BasicType ;
@@ -106,7 +112,7 @@ Neg.        RExp8 ::= "-" RExp9 ;
 FCall.      RExp9 ::= Func;
 
 ValInt.        RExp10 ::= Integer;
-ValVariable.   RExp10 ::= Ident;
+ValVariable.   RExp10 ::= NameVar;
 ValDouble.     RExp10 ::= Double;
 ValString.     RExp10 ::= String;
 ValChar.       RExp10 ::= Char;
