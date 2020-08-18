@@ -1,6 +1,5 @@
-comment "--";
-
 rules BasicType ::= "bool" | "char" | "float" | "int" | "string" | "void" ;
+rules Boolean ::= "true" | "false";
 Prog.          Program ::= Block;
 
 -----------
@@ -10,7 +9,7 @@ Blk.           Block ::= [Statement] ;
 BlkDiv.        Block ::= [Statement] DivStm [Statement] ;
 
 --il ; è opzionale, si può mettere uno spazio o un a capo
-separator Statement "" ;
+separator Statement "";
 token DivStm ('\n'|';');
 
 -------------
@@ -20,42 +19,31 @@ token DivStm ('\n'|';');
 Pointer.  LExp ::= "*" RExp;
 IdNew.    LExp ::= NVar;
 IdOLD.    LExp ::= OVar;
-ArrayEl.  LExp ::= NameVar "[" RExp "]" ;
-NewArray. LExp ::= CompoundType NameVar;
+ArrayEl.  LExp ::= Ident "[" RExp "]" ;
+NewArray. LExp ::= CompoundType Ident;
 
-NewVariable.  NVar ::= BasicType NameVar;
-OldVariable.  OVar ::= NameVar;
+NewVariable.  NVar ::= BasicType Ident;
+OldVariable.  OVar ::= Ident;
 
--------------
-----REXP-----
--------------
 
-ValueBool.       RExp ::= BoolExp;
-ValueArrayEl.    RExp ::= NameVar "[" Integer "]";
-ValueFunc.       RExp ::= Func; 
-Expression.      RExp ::= Exp;
 
 ------------
 --FUNCTIONS && PARAMETERS-
 ------------
-FunctionCall.   Func ::= NameFunc "(" [RExp] ")";
+FunctionCall.   Func ::= Ident "(" [RExp] ")";
 separator RExp ",";
 
-FunctionDeclaration. FuncDecl ::= BasicType NameFunc "(" [Parameters] ")" [FuncStatement] "end";
+FunctionDeclaration. FuncDecl ::= BasicType Ident "(" [Parameters] ")" [FuncStatement] "end";
 
 
-ParamBasic.      Parameters ::= BasicType NameVar;
-ParamCompound.   Parameters ::= CompoundType NameVar;
+ParamBasic.      Parameters ::= BasicType Ident;
+ParamCompound.   Parameters ::= CompoundType Ident;
 separator Parameters ",";
 
 NormalStmt.      FuncStatement ::= Statement;
 RVar.            FuncStatement ::= "return" RExp;
 
 separator FuncStatement "";
-
-
-
-token NameFunc (letter | digit)(letter | digit | '-')*;
 
 ------------
 --STATEMENT-
@@ -69,10 +57,6 @@ Procedure.     Statement ::= Func;
 FDecl.         Statement ::= FuncDecl;
 
 
-
-token NameVar (letter)(letter|digit|'_')* ;
-
-
 BasTyp.     Type ::= BasicType ;
 
 CompType.   Type ::= CompoundType ;
@@ -81,56 +65,56 @@ ArrUnDef.   CompoundType ::= Type "["  "]" ;
 PType.      CompoundType ::= Type "*" ;
 
 -----------
----CICLI---
+---CONTROLLO FLUSSO---
 -----------
 
-LoopW.         While ::= "while" BoolExp "do" Block "end";
-LoopR.         Repeat ::= "repeat" Block "until" BoolExp;
-LoopIfElse.    If ::= "if" BoolExp "then" Block [Elseif] Else "end";
-LoopIf.        If ::= "if" BoolExp "then" Block [Elseif]  "end";
+LoopW.         While ::= "while" RExp "do" Block "end";
+LoopR.         Repeat ::= "repeat" Block "until" RExp;
+LoopIfElse.    If ::= "if" RExp "then" Block [Elseif] Else "end";
+LoopIf.        If ::= "if" RExp "then" Block [Elseif]  "end";
 ElseV.         Else ::= "else" Block;
 
-ElseifList.    Elseif ::= "elseif" BoolExp "then" Block;
+ElseifList.    Elseif ::= "elseif" RExp "then" Block;
 
 separator Elseif "";
---separator Else "";
 
 --------------
---ESPRESSIONI-
+--RIGHT EXPRESSIONS-
 --------------
 
+token MulDivPer ('*'|'/'|'%');
 
-Add.        Exp ::= Exp "+" Exp1 ;
-Sub.        Exp ::= Exp "-" Exp1 ;
+Or.         RExp ::= RExp "or" RExp1;
+And.        RExp ::= RExp1 "and" RExp2;
+Not.        RExp2 ::= "not" RExp3;
 
-Mul.        Exp1 ::= Exp2 "*" Exp3 ;
-Div.        Exp1 ::= Exp2 "/" Exp3 ;
-Mod.        Exp1 ::= Exp2 "%" Exp3 ;
+Eq.         RExp4 ::= RExp4 "==" RExp5;
+Neq.        RExp4 ::= RExp4 "!=" RExp5;
+Lt.         RExp4 ::= RExp4 "<"  RExp5;
+LtE.        RExp4 ::= RExp4 "<=" RExp5;
+Gt.         RExp4 ::= RExp4 ">"  RExp5;
+GtE.        RExp4 ::= RExp4 ">=" RExp5;
 
-Pow.        Exp3 ::= Exp4 "^" Exp3 ;
+Add.        RExp5 ::= RExp5"+" RExp6;
+Sub.        RExp5 ::= RExp5 "-" RExp6;
 
-Neg.        Exp4 ::= "-" Exp5 ;
+Mul.        RExp6 ::= RExp6 MulDivPer RExp7;
 
-rules       Exp5 ::= Integer | NameVar | Double;
-coercions Exp 5;
+Pow.        RExp7 ::= RExp8 "^" RExp7 ;
 
+Neg.        RExp8 ::= "-" RExp9 ;
+FCall.      RExp9 ::= Func;
 
+ValInt.        RExp10 ::= Integer;
+ValVariable.   RExp10 ::= Ident;
+ValDouble.     RExp10 ::= Double;
+ValString.     RExp10 ::= String;
+ValChar.       RExp10 ::= Char;
+ValBoolean.    RExp10 ::= Boolean;
 
+Lexpr.      RExpr11 ::= LExp;
 
-
-Or.         BoolExp ::= BoolExp "or" BoolExp1;
-And.        BoolExp1 ::= BoolExp1 "and" BoolExp2;
-Not.        BoolExp2 ::= "not" BoolExp3;
-
-Eq.         BoolExp4 ::= Exp "==" Exp ;
-Neq.        BoolExp4 ::= Exp "!=" Exp ;
-Lt.         BoolExp4 ::= Exp "<"  Exp ;
-LtE.        BoolExp4 ::= Exp "<=" Exp ;
-Gt.         BoolExp4 ::= Exp ">"  Exp ;
-GtE.        BoolExp4 ::= Exp ">=" Exp ;
-
-rules       BoolExp5 ::= "true" | "false";
-coercions BoolExp 5 ;
+coercions RExp 11;
 
 -------------
 ----ARRAY----
@@ -141,7 +125,7 @@ ElementI.     Element ::= Integer;
 ElementD.     Element ::= Double;
 ElementS.     Element ::= String;
 ElementC.     Element ::= Char;
-ElementB.     Element ::= BoolExp5;
+ElementB.     Element ::= Boolean;
 ElementA.     Element ::= Array;
 ElementAF.    Element ::= "{" [Element] "}";    
 
@@ -150,10 +134,10 @@ ElementAF.    Element ::= "{" [Element] "}";
 ---VALORI----
 -------------
 
-ValS.       Value ::= String;
-ValB.       Value ::= BoolExp5;
-ValTab.     Value ::= Array;
-ValChar.    Value ::= Char;
+VS.       Value ::= String;
+VB.       Value ::= Boolean;
+VTab.     Value ::= Array;
+VChar.    Value ::= Char;
 
 
 token Array ('{''}');
