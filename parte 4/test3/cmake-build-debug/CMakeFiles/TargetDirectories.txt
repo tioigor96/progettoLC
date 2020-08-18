@@ -1,0 +1,3 @@
+/home/igor/Scrivania/haskell/progettoLC/parte 4/test3/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/igor/Scrivania/haskell/progettoLC/parte 4/test3/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/igor/Scrivania/haskell/progettoLC/parte 4/test3/cmake-build-debug/CMakeFiles/test3.dir

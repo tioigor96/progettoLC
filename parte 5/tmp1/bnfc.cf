@@ -1,5 +1,8 @@
 rules BasicType ::= "bool" | "char" | "float" | "int" | "string" | "void" ;
 rules Boolean ::= "true" | "false";
+
+comment "--";
+
 Prog.          Program ::= Block;
 
 -----------
