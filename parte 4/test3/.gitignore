@@ -1,6 +1,6 @@
-.idea	
-cmake-build-debug	
+.idea
+cmake-build-debug
 *.o	
-CMakeLists.txt	
+CMakeLists.txt
 
 Testbnf1
