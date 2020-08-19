@@ -12,8 +12,20 @@ BlkDiv.        Block ::= [Statement] DivStm [Statement] ;
 separator Statement "";
 token DivStm ('\n'|';');
 
-rules BasicType ::= "bool" | "char" | "float" | "int" | "string" | "void" ;
+rules BasicType ::= "Bool" | "Char" | "Float" | "Int" | "String" | "Void" ;
 rules Boolean ::= "true" | "false";
+rules Modality ::= {-empty-} | "val" | "ref" | "const" | "res" | "valres" | "name" ;
+
+------------
+--GESTIONE TIPI--
+-------------
+
+BasTyp.     Type ::= BasicType ;
+
+CompType.   Type ::= CompoundType ;
+ArrDef.     CompoundType ::= Type "[" Integer "]" ;
+ArrUnDef.   CompoundType ::= Type "["  "]" ;
+PType.      CompoundType ::= Type "*" ;
 
 ------------
 --STATEMENT-
@@ -44,14 +56,13 @@ ReadS.     FuncRead ::= "readString" "(" String ")";
 ----LEXP-----
 -------------
 
-Pointer.  LExp ::= "*" BLEx;
-NewArray. LExp ::= CompoundType NameVar;
+Pointer.  LExp ::=  "*" RExp;
+BasicLExp.   LExp ::= BLEx;
 
-BasicLExp.   LExp1 ::= BLEx;
-
-ArrayEl.    BLEx ::= NameVar "[" RExp "]" ;
+ArrayEl.    BLEx ::= BLEx "[" RExp "]" ;
 NewVariable.  BLEx ::= BasicType NameVar;
 OldVariable.  BLEx ::= NameVar;
+
 
 token NameVar (letter|'_'lower)(letter|digit|'_')*;
 
@@ -65,8 +76,8 @@ separator RExp ",";
 FunctionDeclaration. FuncDecl ::= BasicType "function" NameVar "(" [Parameters] ")" [FuncStatement] "end";
 
 
-ParamBasic.      Parameters ::= BasicType NameVar;
-ParamCompound.   Parameters ::= CompoundType NameVar;
+ParamBasic.      Parameters ::= Modality Type NameVar;
+
 separator Parameters ",";
 
 NormalStmt.      FuncStatement ::= Statement;
@@ -75,19 +86,14 @@ RVar.            FuncStatement ::= "return" RExp;
 separator FuncStatement "";
 
 
-BasTyp.     Type ::= BasicType ;
 
-CompType.   Type ::= CompoundType ;
-ArrDef.     CompoundType ::= Type "[" Integer "]" ;
-ArrUnDef.   CompoundType ::= Type "["  "]" ;
-PType.      CompoundType ::= Type "*" ;
 
 -----------
 ---CONTROLLO FLUSSO---
 -----------
 
 LoopW.         While ::= "while" RExp "do" Block "end";
-LoopR.         Repeat ::= "repeat" Block "until" RExp;
+LoopR.         Repeat ::= "repeat" RExp "until" RExp;
 LoopIfElse.    If ::= "if" RExp "then" Block [Elseif] Else "end";
 LoopIf.        If ::= "if" RExp "then" Block [Elseif]  "end";
 ElseV.         Else ::= "else" Block;
@@ -130,9 +136,10 @@ ValString.     RExp11 ::= String;
 ValChar.       RExp11 ::= Char;
 ValBoolean.    RExp11 ::= Boolean;
 
+LExp.         RExp12 ::= LExp;
 
 
-coercions RExp 11;
+coercions RExp 12;
 
 -------------
 ----ARRAY----
