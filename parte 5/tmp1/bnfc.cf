@@ -5,6 +5,8 @@ Prog.          Program ::= Block;
 -----------
 --BLOCCHI--
 -----------
+
+-- suddividere statement e funzioni
 Blk.           Block ::= [Statement] ;
 BlkDiv.        Block ::= [Statement] DivStm [Statement] ;
 
@@ -14,7 +16,9 @@ token DivStm ('\n'|';');
 
 rules BasicType ::= "Bool" | "Char" | "Float" | "Int" | "String" | "Void" ;
 rules Boolean ::= "true" | "false";
-rules Modality ::= {-empty-} | "val" | "ref" | "const" | "res" | "valres" | "name" ;
+rules Modality ::= {-empty-} | "val" | "ref";
+-- da gestire in futuro EVENTUALMENTE
+-- | "const" | "res" | "valres" | "name" ;
 
 ------------
 --GESTIONE TIPI--
@@ -56,10 +60,11 @@ ReadS.     FuncRead ::= "readString" "(" String ")";
 ----LEXP-----
 -------------
 
-Pointer.  LExp ::=  "*" BLEx;
+Pointer.     LExp ::= "*" BLEx;
 BasicLExp.   LExp ::= BLEx;
 
-ArrayEl.    BLEx ::= BLEx "[" RExp "]" ;
+ArrayEl.      BLEx ::= BLEx "[" RExp "]" ;
+ArrDecl.      BLEx ::= CompoundType NameVar;
 NewVariable.  BLEx ::= BasicType NameVar;
 OldVariable.  BLEx ::= NameVar;
 
@@ -106,7 +111,6 @@ separator Elseif "";
 --RIGHT EXPRESSIONS-
 --------------
 
-token MulDivPer ('*'|'/'|'%');
 
 Or.         RExp ::= RExp "or" RExp1;
 And.        RExp ::= RExp1 "and" RExp2;
@@ -122,7 +126,9 @@ GtE.        RExp4 ::= RExp4 ">=" RExp5;
 Add.        RExp6 ::= RExp6"+" RExp7;
 Sub.        RExp6 ::= RExp6 "-" RExp7;
 
-Mul.        RExp7 ::= RExp7 MulDivPer RExp8;
+Mul.        RExp7 ::= RExp7 '*' RExp8;
+Div.        RExp7 ::= RExp7 '/' RExp8;
+Per.        RExp7 ::= RExp7 '%' RExp8;
 
 Pow.        RExp8 ::= RExp9 "^" RExp8 ;
 
@@ -135,6 +141,7 @@ ValDouble.     RExp11 ::= Double;
 ValString.     RExp11 ::= String;
 ValChar.       RExp11 ::= Char;
 ValBoolean.    RExp11 ::= Boolean;
+ValArr.        RExp11 ::= "{" MyArray "}";
 
 --ValLExp.         RExp12 ::= LExp;
 
@@ -145,24 +152,26 @@ coercions RExp 12;
 ----ARRAY----
 -------------
 
-separator Element ",";
-ElementI.     Element ::= Integer;
-ElementD.     Element ::= Double;
-ElementS.     Element ::= String;
-ElementC.     Element ::= Char;
-ElementB.     Element ::= Boolean;
-ElementA.     Element ::= Array;
-ElementAF.    Element ::= "{" [Element] "}";    
+separator ElementI ",";
+separator ElementD ",";
+separator ElementS ",";
+separator ElementC ",";
+separator ElementB ",";
+--separator MyArray ",";
+
+ElmntI.       ElementI ::= Integer;
+ElmntD.       ElementD ::= Double;
+ElmntS.       ElementS ::= String;
+ElmntC.       ElementC ::= Char;
+ElmntB.       ElementB ::= Boolean;
 
 
--------------
----VALORI----
--------------
+rules MyArray ::= ArrayI | ArrayD | ArrayB | ArrayC | ArrayS;
 
-VS.       Value ::= String;
-VB.       Value ::= Boolean;
-VTab.     Value ::= Array;
-VChar.    Value ::= Char;
+ArrI.         ArrayI ::= [ElementI] ;
+ArrD.         ArrayD ::= [ElementD] ;
+ArrC.         ArrayC ::= [ElementC] ;
+ArrS.         ArrayS ::= [ElementS] ;
+ArrB.         ArrayB ::= [ElementB] ;
 
-
-token Array ('{''}');
+--manca array multi dimensionale
