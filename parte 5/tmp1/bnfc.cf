@@ -44,17 +44,18 @@ ReadS.     FuncRead ::= "readString" "(" String ")";
 ----LEXP-----
 -------------
 
-Pointer.  LExp ::= "*" RExp;
-IdNew.    LExp ::= NVar;
-IdOLD.    LExp ::= OVar;
-ArrayEl.  LExp ::= NameVar "[" RExp "]" ;
+Pointer.  LExp ::= "*" BLEx;
 NewArray. LExp ::= CompoundType NameVar;
 
-NewVariable.  NVar ::= BasicType NameVar;
-OldVariable.  OVar ::= NameVar;
+BasicLExp.   LExp1 ::= BLEx;
+
+ArrayEl.    BLEx ::= NameVar "[" RExp "]" ;
+NewVariable.  BLEx ::= BasicType NameVar;
+OldVariable.  BLEx ::= NameVar;
 
 token NameVar (letter|'_'lower)(letter|digit|'_')*;
---token NameFunc (letter|'_')(letter|digit|'_')*;
+
+
 ------------
 --FUNCTIONS && PARAMETERS-
 ------------
@@ -112,24 +113,24 @@ LtE.        RExp4 ::= RExp4 "<=" RExp5;
 Gt.         RExp4 ::= RExp4 ">"  RExp5;
 GtE.        RExp4 ::= RExp4 ">=" RExp5;
 
-Add.        RExp5 ::= RExp5"+" RExp6;
-Sub.        RExp5 ::= RExp5 "-" RExp6;
+Add.        RExp6 ::= RExp6"+" RExp7;
+Sub.        RExp6 ::= RExp6 "-" RExp7;
 
-Mul.        RExp6 ::= RExp6 MulDivPer RExp7;
+Mul.        RExp7 ::= RExp7 MulDivPer RExp8;
 
-Pow.        RExp7 ::= RExp8 "^" RExp7 ;
+Pow.        RExp8 ::= RExp9 "^" RExp8 ;
 
-Neg.        RExp8 ::= "-" RExp9 ;
-FCall.      RExp9 ::= Func;
+Neg.        RExp9 ::= "-" RExp10 ;
+FCall.      RExp10 ::= Func;
 
-ValInt.        RExp10 ::= Integer;
-ValVariable.   RExp10 ::= NameVar;
-ValDouble.     RExp10 ::= Double;
-ValString.     RExp10 ::= String;
-ValChar.       RExp10 ::= Char;
-ValBoolean.    RExp10 ::= Boolean;
+ValInt.        RExp11 ::= Integer;
+ValVariable.   RExp11 ::= NameVar;
+ValDouble.     RExp11 ::= Double;
+ValString.     RExp11 ::= String;
+ValChar.       RExp11 ::= Char;
+ValBoolean.    RExp11 ::= Boolean;
 
-Lexpr.      RExpr11 ::= LExp;
+
 
 coercions RExp 11;
 
