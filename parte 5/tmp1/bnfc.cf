@@ -56,7 +56,7 @@ ReadS.     FuncRead ::= "readString" "(" String ")";
 ----LEXP-----
 -------------
 
-Pointer.  LExp ::=  "*" RExp;
+Pointer.  LExp ::=  "*" BLEx;
 BasicLExp.   LExp ::= BLEx;
 
 ArrayEl.    BLEx ::= BLEx "[" RExp "]" ;
@@ -136,7 +136,7 @@ ValString.     RExp11 ::= String;
 ValChar.       RExp11 ::= Char;
 ValBoolean.    RExp11 ::= Boolean;
 
-LExp.         RExp12 ::= LExp;
+--ValLExp.         RExp12 ::= LExp;
 
 
 coercions RExp 12;
