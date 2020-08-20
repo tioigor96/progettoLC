@@ -7,7 +7,7 @@ Prog.          Program ::= Block;
 -----------
 
 -- suddividere statement e funzioni
-Blk.           Block ::= [Statement] ;
+Blk.           Block ::=  [Statement]  ;
 BlkDiv.        Block ::= [Statement] DivStm [Statement] ;
 
 --il ; è opzionale, si può mettere uno spazio o un a capo
@@ -43,6 +43,15 @@ Procedure.     Statement ::= Func;
 FunctWrite.    Statement ::= FuncWrite;
 FunctRead.     Statement ::= FuncRead;
 FDecl.         Statement ::= FuncDecl;
+
+
+InsideFuncStm.           IFuncStatement ::= LExp "=" RExp;
+InsideFuncStmWhile.      IFuncStatement ::= While;
+InsideFuncStmRepeat.     IFuncStatement ::= Repeat;
+InsideFuncStmIf.         IFuncStatement ::= If;
+InsideFuncProcedure.     IFuncStatement ::= Func;
+InsideFuncFunctWrite.    IFuncStatement ::= FuncWrite;
+InsideFuncFunctRead.     IFuncStatement ::= FuncRead;
 
 
 WriteI.    FuncWrite ::= "writeInt" "(" Integer ")";
@@ -85,7 +94,7 @@ ParamBasic.      Parameters ::= Modality Type NameVar;
 
 separator Parameters ",";
 
-NormalStmt.      FuncStatement ::= Statement;
+NormalStmt.      FuncStatement ::= IFuncStatement;
 RVar.            FuncStatement ::= "return" RExp;
 
 separator FuncStatement "";
@@ -123,12 +132,11 @@ LtE.        RExp4 ::= RExp4 "<=" RExp5;
 Gt.         RExp4 ::= RExp4 ">"  RExp5;
 GtE.        RExp4 ::= RExp4 ">=" RExp5;
 
-Add.        RExp6 ::= RExp6"+" RExp7;
+Add.        RExp6 ::= RExp6 "+" RExp7;
 Sub.        RExp6 ::= RExp6 "-" RExp7;
 
-Mul.        RExp7 ::= RExp7 '*' RExp8;
-Div.        RExp7 ::= RExp7 '/' RExp8;
-Per.        RExp7 ::= RExp7 '%' RExp8;
+MulOps.     RExp7 ::= RExp7 MulOp RExp8;
+
 
 Pow.        RExp8 ::= RExp9 "^" RExp8 ;
 
@@ -141,10 +149,11 @@ ValDouble.     RExp11 ::= Double;
 ValString.     RExp11 ::= String;
 ValChar.       RExp11 ::= Char;
 ValBoolean.    RExp11 ::= Boolean;
-ValArr.        RExp11 ::= "{" MyArray "}";
+ValArr.        RExp12 ::= "{" MyArray "}";
 
---ValLExp.         RExp12 ::= LExp;
 
+
+token MulOp ('*'|'/'|'%');
 
 coercions RExp 12;
 
@@ -152,11 +161,12 @@ coercions RExp 12;
 ----ARRAY----
 -------------
 
-separator ElementI ",";
-separator ElementD ",";
-separator ElementS ",";
-separator ElementC ",";
-separator ElementB ",";
+separator nonempty ElementI ",";
+separator  nonempty ElementD ",";
+separator  nonempty ElementS ",";
+separator  nonempty ElementC ",";
+separator  nonempty ElementB ",";
+
 --separator MyArray ",";
 
 ElmntI.       ElementI ::= Integer;
@@ -164,14 +174,16 @@ ElmntD.       ElementD ::= Double;
 ElmntS.       ElementS ::= String;
 ElmntC.       ElementC ::= Char;
 ElmntB.       ElementB ::= Boolean;
+ElmntE.       ElementE ::= {-empty-};
 
 
-rules MyArray ::= ArrayI | ArrayD | ArrayB | ArrayC | ArrayS;
+rules MyArray ::= ArrayI | ArrayD | ArrayB | ArrayC | ArrayS | ArrayE;
 
-ArrI.         ArrayI ::= [ElementI] ;
-ArrD.         ArrayD ::= [ElementD] ;
-ArrC.         ArrayC ::= [ElementC] ;
-ArrS.         ArrayS ::= [ElementS] ;
-ArrB.         ArrayB ::= [ElementB] ;
+ArrI.         ArrayI ::= [ElementI];
+ArrD.         ArrayD ::= [ElementD];
+ArrC.         ArrayC ::= [ElementC];
+ArrS.         ArrayS ::= [ElementS];
+ArrB.         ArrayB ::= [ElementB];
+ArrE.         ArrayE ::= ElementE;
 
 --manca array multi dimensionale
