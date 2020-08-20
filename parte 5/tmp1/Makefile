@@ -38,7 +38,7 @@ clean:
 #	$(GHC) Test.hs
 
 happy:  bnfc alex
-	$(HC) ParBnfc.y
+	$(HC) -i ParBnfc.y
 
 alex:   bnfc
 	python -c "import sys;lines=sys.stdin.read();t1='\"--\" [.]* ; -- Toss single line comments'; t2 = '\"--\" [.]* ; -- Toss single line comments\n\"--[\" (\"=\")* \"[\" ([MANGIAMI # [\]]])* (\"]\") (\"=\")* \"]\" ; -- Toss multi line comments'; print lines.replace(t1,t2)" < LexBnfc.x > Lex.x
