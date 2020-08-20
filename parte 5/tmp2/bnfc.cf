@@ -1,0 +1,143 @@
+comment "--";
+
+Prog.          Program ::= Block;
+
+-----------
+--BLOCCHI--
+-----------
+
+Blk.           Block ::= Stm StmDiv ;
+Blks.          Block ::= Stm StmDiv Block ;
+
+token StmDiv ('\n')*|(';');
+
+
+------------
+--GESTIONE TIPI--
+-------------
+
+BasTyp.     Type ::= BasicType ;
+
+rules BasicType ::= "Bool" | "Char" | "Float" | "Int" | "String" | "Void" ;
+rules Boolean ::= "true" | "false";
+
+
+------------
+--STATEMENT-
+------------
+
+SDecl.      Stm ::= Decl;
+SAss.       Stm ::= Ass;
+SWhile.     Stm ::= While;
+SRepeat.    Stm ::= Repeat;
+SIf.        Stm ::= If;
+
+-------------
+----DECL-----
+-------------
+
+DeclS.       Decl ::= Type LIdent VarInit;
+DeclSP.      Decl ::= Type "*" LIdent VarInit;
+VarINil.     VarInit ::= {- empty -};
+VarExp.      VarInit ::= RExp;
+
+token LIdent (letter|'_'lower)(letter|digit|'_')*;
+
+----ARRAY----
+--TODO: inserisci array
+
+-------------
+----ASGN-----
+-------------
+Ass.        Ass ::= LExp "=" RExp;
+
+------------
+--Base Fnct-
+------------
+FunctWrite.    Stm ::= FuncWrite;
+FunctRead.     Stm ::= FuncRead;
+
+WriteI.    FuncWrite ::= "writeInt" "(" Integer ")";
+WriteF.    FuncWrite ::= "writeFloat" "(" Double ")";
+WriteC.    FuncWrite ::= "writeChar" "(" Char ")";
+WriteS.    FuncWrite ::= "writeString" "(" String ")";
+
+ReadI.     FuncRead ::= "readInt" "(" Integer ")";
+ReadF.     FuncRead ::= "readFloat" "(" Double ")";
+ReadC.     FuncRead ::= "readChar" "(" Char ")";
+ReadS.     FuncRead ::= "readString" "(" String ")";
+
+-----------
+---LOOPS---
+-----------
+LoopW.         While ::= "while" RExp "do" Block "end";
+LoopR.         Repeat ::= "repeat" RExp "until" RExp;
+
+
+------------
+---IFELSE---
+------------
+If.         If ::= "if" RExp "then" Block IfDiv ;
+ElseSE.     IfDiv ::= {- empty -} "end";
+ElseS.      IfDiv ::= "else" Block "end";
+ElseIf.     IfDiv ::= "elseif" Block "end";
+
+
+------------
+--FUNCTIONS && PARAMETERS-
+------------
+
+rules Modality ::= {-empty-} | "val" | "ref";
+-- da gestire in futuro EVENTUALMENTE
+-- | "const" | "res" | "valres" | "name" ;
+
+
+
+-------------
+----LEXP-----
+-------------
+
+LExpS.  LExp ::= LIdent;
+LExpP.  LExp ::= "*" LExp ;
+
+
+
+--------------
+-----REXP-----
+--------------
+
+Or.            RExp ::= RExp "or" RExp1;
+And.           RExp ::= RExp1 "and" RExp2;
+Not.           RExp2 ::= "not" RExp3;
+
+Eq.            RExp3 ::= RExp3 "==" RExp5;
+Neq.           RExp3 ::= RExp3 "!=" RExp5;
+Lt.            RExp3 ::= RExp3 "<"  RExp5;
+LtE.           RExp3 ::= RExp3 "<=" RExp5;
+Gt.            RExp3 ::= RExp3 ">"  RExp5;
+GtE.           RExp3 ::= RExp3 ">=" RExp5;
+
+Add.           RExp6 ::= RExp6 "+" RExp7;
+Sub.           RExp6 ::= RExp6 "-" RExp7;
+
+Mul.           RExp7 ::= RExp7 "*" RExp8;
+Div.           RExp7 ::= RExp7 "/" RExp8;
+Rem.           RExp7 ::= RExp7 "%" RExp8;
+
+
+Pow.           RExp8 ::= RExp9 "^" RExp8 ;
+
+Neg.           RExp9 ::= "-" RExp10 ;
+-- FCall.      RExp10 ::= Func ;
+
+ValInt.        RExp11 ::= Integer;
+ValVariable.   RExp11 ::= LExp;
+ValDouble.     RExp11 ::= Double;
+ValString.     RExp11 ::= String;
+ValChar.       RExp11 ::= Char;
+ValBoolean.    RExp11 ::= Boolean;
+
+
+coercions RExp 11;
+
+

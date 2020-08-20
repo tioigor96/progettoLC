@@ -1,0 +1,14 @@
+AbsBnfc.hs
+DocBnfc.txt
+ErrM.hs
+LexBnfc.hs
+LexBnfc.x
+ParBnfc.hs
+ParBnfc.y
+ParBnfc.info
+PrintBnfc.hs
+SkelBnfc.hs
+TestBnfc*
+*.hi
+*.o
+
