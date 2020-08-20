@@ -1,6 +1,7 @@
 comment "--";
 
 Prog.          Program ::= Block;
+--TODO: cambia da locale a globale (no nasted function declaration)
 
 -----------
 --BLOCCHI--
@@ -31,6 +32,7 @@ SAss.       Stm ::= Ass;
 SWhile.     Stm ::= While;
 SRepeat.    Stm ::= Repeat;
 SIf.        Stm ::= If;
+SRExp.      Stm ::= RExp;
 
 -------------
 ----DECL-----
@@ -54,8 +56,11 @@ Ass.        Ass ::= LExp "=" RExp;
 ------------
 --Base Fnct-
 ------------
-FunctWrite.    Stm ::= FuncWrite;
-FunctRead.     Stm ::= FuncRead;
+FuncBW.      Func ::= FuncWrite ;
+FuncBR.      Func ::= FuncRead ;
+
+
+-- TODO: #::(strlen) e ..::(strconcat) 
 
 WriteI.    FuncWrite ::= "writeInt" "(" Integer ")";
 WriteF.    FuncWrite ::= "writeFloat" "(" Double ")";
@@ -91,6 +96,11 @@ rules Modality ::= {-empty-} | "val" | "ref";
 -- da gestire in futuro EVENTUALMENTE
 -- | "const" | "res" | "valres" | "name" ;
 
+FunctionCall.   Func ::= LIdent "(" [RExp] ")";
+separator RExp ",";
+
+-- TODO: Function declaration
+
 
 
 -------------
@@ -99,6 +109,8 @@ rules Modality ::= {-empty-} | "val" | "ref";
 
 LExpS.  LExp ::= LIdent;
 LExpP.  LExp ::= "*" LExp ;
+
+--TODO: LExp array
 
 
 
@@ -128,7 +140,7 @@ Rem.           RExp7 ::= RExp7 "%" RExp8;
 Pow.           RExp8 ::= RExp9 "^" RExp8 ;
 
 Neg.           RExp9 ::= "-" RExp10 ;
--- FCall.      RExp10 ::= Func ;
+FCall.         RExp10 ::= Func ;
 
 ValInt.        RExp11 ::= Integer;
 ValVariable.   RExp11 ::= LExp;
@@ -139,5 +151,7 @@ ValBoolean.    RExp11 ::= Boolean;
 
 
 coercions RExp 11;
+
+
 
 
