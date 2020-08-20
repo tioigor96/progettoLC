@@ -80,7 +80,7 @@ LoopR.         Repeat ::= "repeat" RExp "until" RExp;
 If.         If ::= "if" RExp "then" Block IfDiv ;
 ElseSE.     IfDiv ::= {- empty -} "end";
 ElseS.      IfDiv ::= "else" Block "end";
-ElseIf.     IfDiv ::= "elseif" Block "end";
+ElseIf.     IfDiv ::= "elseif" RExp "then" Block "end";
 
 
 ------------
