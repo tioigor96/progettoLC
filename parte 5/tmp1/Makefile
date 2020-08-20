@@ -34,6 +34,8 @@ clean:
 	rm -f TestBnfc.hs
 	rm -f TestBnfc.hi
 	rm -f TestBnfc.o
+	rm -f ParBnfc.info
+
 #demo:   bnfc alex happy
 #	$(GHC) Test.hs
 
