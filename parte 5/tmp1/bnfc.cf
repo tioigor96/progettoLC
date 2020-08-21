@@ -149,7 +149,8 @@ ValDouble.     RExp11 ::= Double;
 ValString.     RExp11 ::= String;
 ValChar.       RExp11 ::= Char;
 ValBoolean.    RExp11 ::= Boolean;
-ValArr.        RExp12 ::= "{" MyArray "}";
+ValArr.        RExp12 ::= MultiDimensionalArray;
+
 
 
 
@@ -167,6 +168,15 @@ separator  nonempty ElementS ",";
 separator  nonempty ElementC ",";
 separator  nonempty ElementB ",";
 
+separator nonempty ArrayI ",";
+separator  nonempty ArrayD ",";
+separator  nonempty ArrayS ",";
+separator  nonempty ArrayC ",";
+separator  nonempty ArrayB ",";
+
+
+
+
 --separator MyArray ",";
 
 ElmntI.       ElementI ::= Integer;
@@ -177,13 +187,23 @@ ElmntB.       ElementB ::= Boolean;
 ElmntE.       ElementE ::= {-empty-};
 
 
-rules MyArray ::= ArrayI | ArrayD | ArrayB | ArrayC | ArrayS | ArrayE;
+-- rules MyArray ::=   ArrayI  |  ArrayD  |  ArrayB  |  ArrayC   |  ArrayS  | ArrayE ;
 
-ArrI.         ArrayI ::= [ElementI];
-ArrD.         ArrayD ::= [ElementD];
-ArrC.         ArrayC ::= [ElementC];
-ArrS.         ArrayS ::= [ElementS];
-ArrB.         ArrayB ::= [ElementB];
+rules MultiDimensionalArray ::=  MArrayI | MArrayD | MArrayB | MArrayC | MArrayS | ArrayE;
+MArri.        MArrayI ::= [ArrayI];
+MArrD.        MArrayD ::= [ArrayD];
+MArrB.        MArrayB ::= [ArrayB];
+MArrC.        MArrayC ::= [ArrayC];
+MArrS.        MArrayS ::= [ArrayS];
+
+
+ArrI.         ArrayI ::= "{" [ElementI] "}";
+ArrD.         ArrayD ::= "{" [ElementD] "}";
+ArrC.         ArrayC ::= "{" [ElementC] "}";
+ArrS.         ArrayS ::= "{" [ElementS] "}";
+ArrB.         ArrayB ::= "{" [ElementB] "}";
+
+
 ArrE.         ArrayE ::= ElementE;
 
 --manca array multi dimensionale
