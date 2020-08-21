@@ -36,8 +36,8 @@ clean:
 	rm -f TestBnfc.o
 	rm -f ParBnfc.info
 
-#demo:   bnfc alex happy
-#	$(GHC) Test.hs
+demo:   clean bnfc alex happy
+	$(GHC) TestBnfc.hs
 
 happy:  bnfc alex
 	$(HC) -i ParBnfc.y
