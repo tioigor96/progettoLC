@@ -11,7 +11,8 @@ ProgF.         Program ::= FuncD;
 Blk.           Block ::= Stm StmDiv ;
 Blks.          Block ::= Stm StmDiv Block ;
 
-token StmDiv ('\n')*|(';');
+--TODO: SISTEMA STO CAZZO DI TOKEN
+token StmDiv {- ('\n')+ | -}(';');
 
 
 ------------
