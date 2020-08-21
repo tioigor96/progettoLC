@@ -35,6 +35,7 @@ SWhile.     Stm ::= While;
 SRepeat.    Stm ::= Repeat;
 SIf.        Stm ::= If;
 SRExp.      Stm ::= RExp;
+SReturn.    Stm ::= Return;
 
 -------------
 ----DECL-----
@@ -81,11 +82,22 @@ LoopR.         Repeat ::= "repeat" RExp "until" RExp;
 ------------
 ---IFELSE---
 ------------
-IfD.         If ::= "if" RExp "then" Block IfDiv ;
-ElseSE.     IfDiv ::= {- empty -} "end";
-ElseS.      IfDiv ::= "else" Block "end";
-ElseIf.     IfDiv ::= "elseif" RExp "then" Block "end";
+IfM.        If     ::= "if" RExp "then" Block [ElseIf] Else "end" ;
+IfE.        If     ::= "if" RExp "then" Block Else "end";
+IfS.        If     ::= "if" RExp "then" Block "end";
+ElseS.      Else ::= "else" Block;
 
+ElseIfD.    ElseIf ::= "elseif" RExp "then" Block ;
+separator nonempty ElseIf "";
+
+
+
+------------
+----JUMPS---
+------------
+JumpR.      Return ::= "return" RValue ;
+JumpRE.     RValue ::= {- empty -};
+JumpRV.     RValue ::= RExp;
 
 ------------
 --FUNCTIONS && PARAMETERS-
