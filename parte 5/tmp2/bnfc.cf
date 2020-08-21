@@ -165,8 +165,31 @@ ValString.     RExp11 ::= String;
 ValChar.       RExp11 ::= Char;
 ValBoolean.    RExp11 ::= Boolean;
 
+-- Array definition "inline"
+VarMArr.       RExp12 ::= "{" MyArrayD "}";
 
-coercions RExp 11;
+MyArrayLType.  MyArrayD ::= "{" MyArrayD "}";
+MyArrayLType1. MyArrayD ::= RExp12 "," "{" MyArrayD "}" ;
+MyArrayType.   MyArrayD ::= MyArray ;
+MyArrayB.      MyArray ::= [ArrB] ;
+MyArrayC.      MyArray ::= [ArrC] ;
+MyArrayF.      MyArray ::= [ArrF] ;
+MyArrayI.      MyArray ::= [ArrI] ;
+MyArrayS.      MyArray ::= [ArrS] ;
+
+separator nonempty ArrB ",";
+separator nonempty ArrC ",";
+separator nonempty ArrF ",";
+separator nonempty ArrI ",";
+separator nonempty ArrS ",";
+
+ArrVB.         ArrB ::= Boolean;
+ArrVC.         ArrC ::= Char;
+ArrVF.         ArrF ::= Double;
+ArrVI.         ArrI ::= Integer;
+ArrVS.         ArrS ::= String;
+
+coercions RExp 13;
 
 
 
