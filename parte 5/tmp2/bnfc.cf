@@ -1,7 +1,8 @@
 comment "--";
 
 Prog.          Program ::= Block;
---TODO: cambia da locale a globale (no nasted function declaration)
+ProgF.         Program ::= FuncD;
+
 
 -----------
 --BLOCCHI--
@@ -38,20 +39,17 @@ SRExp.      Stm ::= RExp;
 ----DECL-----
 -------------
 
-DeclS.       Decl ::= Type LIdent VarInit;
-DeclSP.      Decl ::= Type "*" LIdent VarInit;
+DeclSP.       Decl ::= Type LExp VarInit;
 VarINil.     VarInit ::= {- empty -};
-VarExp.      VarInit ::= RExp;
+VarExp.      VarInit ::= "=" RExp;
 
 token LIdent (letter|'_'lower)(letter|digit|'_')*;
 
-----ARRAY----
---TODO: inserisci array
 
 -------------
 ----ASGN-----
 -------------
-Ass.        Ass ::= LExp "=" RExp;
+AssD.        Ass ::= LExp "=" RExp;
 
 ------------
 --Base Fnct-
@@ -82,7 +80,7 @@ LoopR.         Repeat ::= "repeat" RExp "until" RExp;
 ------------
 ---IFELSE---
 ------------
-If.         If ::= "if" RExp "then" Block IfDiv ;
+IfD.         If ::= "if" RExp "then" Block IfDiv ;
 ElseSE.     IfDiv ::= {- empty -} "end";
 ElseS.      IfDiv ::= "else" Block "end";
 ElseIf.     IfDiv ::= "elseif" RExp "then" Block "end";
@@ -96,11 +94,13 @@ rules Modality ::= {-empty-} | "val" | "ref";
 -- da gestire in futuro EVENTUALMENTE
 -- | "const" | "res" | "valres" | "name" ;
 
-FunctionCall.   Func ::= LIdent "(" [RExp] ")";
+FnctCall.   Func ::= LIdent "(" [RExp] ")";
 separator RExp ",";
 
--- TODO: Function declaration
+ParmDecl.   Param ::= Modality Type LExp;      
 
+FnctDecl.   FuncD ::= BasicType "function" LIdent "(" [Param] ")" Block "end";
+separator Param "," ;
 
 
 -------------
@@ -110,8 +110,11 @@ separator RExp ",";
 LExpS.  LExp ::= LIdent;
 LExpP.  LExp ::= "*" LExp ;
 
---TODO: LExp array
+-- LExp array
+LExpA.  LExp ::= LIdent [Dim] ;
+separator nonempty Dim "";
 
+Dims.   Dim ::= "[" Integer "]" ;
 
 
 --------------
