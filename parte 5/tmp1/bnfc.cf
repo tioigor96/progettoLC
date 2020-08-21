@@ -149,7 +149,7 @@ ValDouble.     RExp11 ::= Double;
 ValString.     RExp11 ::= String;
 ValChar.       RExp11 ::= Char;
 ValBoolean.    RExp11 ::= Boolean;
-ValArr.        RExp12 ::= MultiDimensionalArray;
+ValArr.        RExp12 ::= "{" MyArray "}";
 
 
 
@@ -168,11 +168,11 @@ separator  nonempty ElementS ",";
 separator  nonempty ElementC ",";
 separator  nonempty ElementB ",";
 
-separator nonempty ArrayI ",";
-separator  nonempty ArrayD ",";
-separator  nonempty ArrayS ",";
-separator  nonempty ArrayC ",";
-separator  nonempty ArrayB ",";
+--separator nonempty ArrayI ",";
+--separator  nonempty ArrayD ",";
+--separator  nonempty ArrayS ",";
+--separator  nonempty ArrayC ",";
+--separator  nonempty ArrayB ",";
 
 
 
@@ -184,24 +184,28 @@ ElmntD.       ElementD ::= Double;
 ElmntS.       ElementS ::= String;
 ElmntC.       ElementC ::= Char;
 ElmntB.       ElementB ::= Boolean;
-ElmntE.       ElementE ::= {-empty-};
+ElmntE.       ElementE ::= "{""}";
 
 
 -- rules MyArray ::=   ArrayI  |  ArrayD  |  ArrayB  |  ArrayC   |  ArrayS  | ArrayE ;
 
-rules MultiDimensionalArray ::=  MArrayI | MArrayD | MArrayB | MArrayC | MArrayS | ArrayE;
-MArri.        MArrayI ::= [ArrayI];
-MArrD.        MArrayD ::= [ArrayD];
-MArrB.        MArrayB ::= [ArrayB];
-MArrC.        MArrayC ::= [ArrayC];
-MArrS.        MArrayS ::= [ArrayS];
+rules MyArray ::=  ArrUniDim | [ArrMultiDim] | ArrayE;
+rules ArrUniDim ::= ArrayI | ArrayB | ArrayC | ArrayS | ArrayD; 
 
+--MArri.        MArrayI ::= [ArrayI];
+--MArrD.        MArrayD ::= [ArrayD];
+--MArrB.        MArrayB ::= [ArrayB];
+--MArrC.        MArrayC ::= [ArrayC];
+--MArrS.        MArrayS ::= [ArrayS];
 
-ArrI.         ArrayI ::= "{" [ElementI] "}";
-ArrD.         ArrayD ::= "{" [ElementD] "}";
-ArrC.         ArrayC ::= "{" [ElementC] "}";
-ArrS.         ArrayS ::= "{" [ElementS] "}";
-ArrB.         ArrayB ::= "{" [ElementB] "}";
+separator ArrMultiDim ",";
+ArrND.        ArrMultiDim ::= "{" ArrUniDim "}";
+
+ArrI.         ArrayI ::= [ElementI];
+ArrD.         ArrayD ::= [ElementD];
+ArrC.         ArrayC ::= [ElementC];
+ArrS.         ArrayS ::= [ElementS];
+ArrB.         ArrayB ::= [ElementB];
 
 
 ArrE.         ArrayE ::= ElementE;
