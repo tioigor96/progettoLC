@@ -1,7 +1,12 @@
 comment "--";
 
-Prog.          Program ::= Block;
-ProgF.         Program ::= FuncD;
+Prog.          Program ::= [PGlobl] {-Program-} ;
+--ProgE.         Program ::= {- empty -};
+
+separator PGlobl "";
+
+ProgGlobB.     PGlobl ::= Stm StmDiv ;
+ProgGlobF.     PGlobl ::= FuncD ;
 
 
 -----------
@@ -12,7 +17,7 @@ Blk.           Block ::= Stm StmDiv ;
 Blks.          Block ::= Stm StmDiv Block ;
 
 --TODO: SISTEMA STO CAZZO DI TOKEN
-token StmDiv {- ('\n')+ | -}(';');
+token StmDiv ('\n' | ';');
 
 
 ------------
@@ -30,20 +35,24 @@ rules Boolean ::= "true" | "false";
 ------------
 
 SDecl.      Stm ::= Decl;
+SLocal.     Stm ::= Local;
 SAss.       Stm ::= Ass;
 SWhile.     Stm ::= While;
 SRepeat.    Stm ::= Repeat;
 SIf.        Stm ::= If;
 SRExp.      Stm ::= RExp;
 SReturn.    Stm ::= Return;
+SBreak.     Stm ::= Break;
 
 -------------
 ----DECL-----
 -------------
 
-DeclSP.       Decl ::= Type LExp VarInit;
-VarINil.     VarInit ::= {- empty -};
-VarExp.      VarInit ::= "=" RExp;
+DeclSP.      Decl ::= Type LExp VarInit ;
+VarINil.     VarInit ::= {- empty -} ;
+VarExp.      VarInit ::= "=" RExp ;
+
+DeclLocal.   Local ::= "local" Decl;
 
 token LIdent (letter|'_'lower)(letter|digit|'_')*;
 
@@ -78,7 +87,6 @@ ReadS.     FuncRead ::= "readString" "(" String ")";
 LoopW.         While ::= "while" RExp "do" Block "end";
 LoopR.         Repeat ::= "repeat" RExp "until" RExp;
 
-
 ------------
 ---IFELSE---
 ------------
@@ -98,6 +106,9 @@ separator nonempty ElseIf "";
 JumpR.      Return ::= "return" RValue ;
 JumpRE.     RValue ::= {- empty -};
 JumpRV.     RValue ::= RExp;
+
+-- break accettabile solo dentro loops!! (da gestire similmente a side effect?)
+JumpB.      Break ::= "break";
 
 ------------
 --FUNCTIONS && PARAMETERS-
