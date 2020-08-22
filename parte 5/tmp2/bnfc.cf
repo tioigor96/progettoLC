@@ -39,6 +39,7 @@ SLocal.     Stm ::= Local;
 SAss.       Stm ::= Ass;
 SWhile.     Stm ::= While;
 SRepeat.    Stm ::= Repeat;
+SFor.       Stm ::= For;
 SIf.        Stm ::= If;
 SRExp.      Stm ::= RExp;
 SReturn.    Stm ::= Return;
@@ -86,6 +87,8 @@ ReadS.     FuncRead ::= "readString" "(" String ")";
 -----------
 LoopW.         While ::= "while" RExp "do" Block "end";
 LoopR.         Repeat ::= "repeat" RExp "until" RExp;
+LoopF.         For ::= "for" LIdent "=" RExp "," [RExp] "do" Block "end";
+LoopFE.        For ::= "for" LIdent "in" LIdent "do" Block "end";
 
 ------------
 ---IFELSE---
