@@ -26,8 +26,9 @@ token StmDiv ('\n' | ';');
 
 BasTyp.     Type ::= BasicType ;
 
-rules BasicType ::= "Bool" | "Char" | "Float" | "Int" | "String" | "Void" ;
-rules Boolean ::= "true" | "false";
+rules          BasicType ::= "Bool" | "Char" | "Float" | "Int" | "String" | "Void" ;
+rules          Boolean   ::= "true" | "false";
+PtrType.       PtrVoid   ::= "nil";
 
 
 ------------
@@ -178,6 +179,7 @@ ValDouble.     RExp11 ::= Double;
 ValString.     RExp11 ::= String;
 ValChar.       RExp11 ::= Char;
 ValBoolean.    RExp11 ::= Boolean;
+ValPtr.        RExp11 ::= PtrVoid;
 
 -- Array definition "inline"
 VarMArr.       RExp12 ::= "{" MyArrayD "}";
@@ -185,11 +187,12 @@ VarMArr.       RExp12 ::= "{" MyArrayD "}";
 MyArrayLType.  MyArrayD ::= "{" MyArrayD "}";
 MyArrayLType1. MyArrayD ::= RExp12 "," "{" MyArrayD "}" ;
 MyArrayType.   MyArrayD ::= MyArray ;
-MyArrayB.      MyArray ::= [ArrB] ;
-MyArrayC.      MyArray ::= [ArrC] ;
-MyArrayF.      MyArray ::= [ArrF] ;
-MyArrayI.      MyArray ::= [ArrI] ;
-MyArrayS.      MyArray ::= [ArrS] ;
+MyArrayB.      MyArray  ::= [ArrB] ;
+MyArrayC.      MyArray  ::= [ArrC] ;
+MyArrayF.      MyArray  ::= [ArrF] ;
+MyArrayI.      MyArray  ::= [ArrI] ;
+MyArrayS.      MyArray  ::= [ArrS] ;
+MyArrayE.      MyArray  ::= {- empty -};
 
 separator nonempty ArrB ",";
 separator nonempty ArrC ",";
