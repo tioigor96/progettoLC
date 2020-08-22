@@ -192,19 +192,24 @@ MyArrayC.      MyArray  ::= [ArrC] ;
 MyArrayF.      MyArray  ::= [ArrF] ;
 MyArrayI.      MyArray  ::= [ArrI] ;
 MyArrayS.      MyArray  ::= [ArrS] ;
-MyArrayE.      MyArray  ::= {- empty -};
+MyArrayE.      MyArray  ::= [ArrE] ;
+MyArrayP.      MyArray  ::= [ArrP] ;
 
 separator nonempty ArrB ",";
 separator nonempty ArrC ",";
 separator nonempty ArrF ",";
 separator nonempty ArrI ",";
 separator nonempty ArrS ",";
+separator nonempty ArrE ",";
+separator nonempty ArrP ",";
 
 ArrVB.         ArrB ::= Boolean;
 ArrVC.         ArrC ::= Char;
 ArrVF.         ArrF ::= Double;
 ArrVI.         ArrI ::= Integer;
 ArrVS.         ArrS ::= String;
+ArrVP.         ArrP ::= PtrVoid;
+ArrVE.         ArrE ::= {- empty -};
 
 coercions RExp 13;
 
