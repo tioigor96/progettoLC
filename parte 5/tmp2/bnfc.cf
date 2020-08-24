@@ -43,8 +43,15 @@ SRepeat.    Stm ::= Repeat;
 SFor.       Stm ::= For;
 SIf.        Stm ::= If;
 SRExp.      Stm ::= RExp;
+SEBlk.      Stm ::= EBlk;
 SReturn.    Stm ::= Return;
 SBreak.     Stm ::= Break;
+
+
+-------------
+----BLCK-----
+-------------
+EBlk.       EBlk ::= "do" Block "end" ;
 
 -------------
 ----DECL-----
@@ -154,7 +161,7 @@ And.           RExp ::= RExp1 "and" RExp2;
 Not.           RExp2 ::= "not" RExp3;
 
 Eq.            RExp3 ::= RExp3 "==" RExp5;
-Neq.           RExp3 ::= RExp3 "!=" RExp5;
+Neq.           RExp3 ::= RExp3 "~=" RExp5;
 Lt.            RExp3 ::= RExp3 "<"  RExp5;
 LtE.           RExp3 ::= RExp3 "<=" RExp5;
 Gt.            RExp3 ::= RExp3 ">"  RExp5;
@@ -172,6 +179,8 @@ Pow.           RExp8 ::= RExp9 "^" RExp8 ;
 
 Neg.           RExp9 ::= "-" RExp10 ;
 FCall.         RExp10 ::= Func ;
+FStrCnt.       RExp10 ::= RExp10 ".." RExp11 ;
+FLen.          RExp10 ::= "#" RExp11 ;
 
 ValInt.        RExp11 ::= Integer;
 ValVariable.   RExp11 ::= LExp;
