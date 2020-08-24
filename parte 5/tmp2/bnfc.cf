@@ -1,11 +1,10 @@
 comment "--";
 
-Prog.          Program ::= [PGlobl] {-Program-} ;
---ProgE.         Program ::= {- empty -};
+Prog.          Program ::= [PGlobl] ;
 
-separator PGlobl "";
+separator nonempty PGlobl "";
 
-ProgGlobB.     PGlobl ::= Stm StmDiv ;
+ProgGlobB.     PGlobl ::= Stm;
 ProgGlobF.     PGlobl ::= FuncD ;
 
 
@@ -13,13 +12,11 @@ ProgGlobF.     PGlobl ::= FuncD ;
 --BLOCCHI--
 -----------
 
-Blk.           Block ::= Stm StmDiv ;
-Blks.          Block ::= Stm StmDiv Block ;
+Blk.           Block ::= [Stm] ;
 
 --TODO: SISTEMA STO CAZZO DI TOKEN
-token StmDiv ('\n' | ';');
-
-
+--token StmDiv ('\n' | ';');
+separator nonempty Stm "";
 ------------
 --GESTIONE TIPI--
 -------------
@@ -35,23 +32,23 @@ PtrType.       PtrVoid   ::= "nil";
 --STATEMENT-
 ------------
 
-SDecl.      Stm ::= Decl;
-SLocal.     Stm ::= Local;
-SAss.       Stm ::= Ass;
-SWhile.     Stm ::= While;
-SRepeat.    Stm ::= Repeat;
-SFor.       Stm ::= For;
-SIf.        Stm ::= If;
-SRExp.      Stm ::= RExp;
-SEBlk.      Stm ::= EBlk;
-SReturn.    Stm ::= Return;
-SBreak.     Stm ::= Break;
+SDecl.      Stm ::= Decl ";";
+SLocal.     Stm ::= Local ";";
+SAss.       Stm ::= Ass ";";
+SWhile.     Stm ::= While ;
+SRepeat.    Stm ::= Repeat ";";
+SFor.       Stm ::= For ;
+SIf.        Stm ::= If ;
+SRExp.      Stm ::= RExp ";";
+SEBlk.      Stm ::= EBlk ;
+SReturn.    Stm ::= Return ";";
+SBreak.     Stm ::= Break ";";
 
 
 -------------
 ----BLCK-----
 -------------
-EBlk.       EBlk ::= "do" Block "end" ;
+EBlkS.       EBlk ::= "do" Block "end" ;
 
 -------------
 ----DECL-----
@@ -77,21 +74,21 @@ AssD.        Ass ::= LExp "=" RExp;
 FuncBW.      Func ::= FuncWrite ;
 FuncBR.      Func ::= FuncRead ;
 
-WriteI.    FuncWrite ::= "writeInt" "(" Integer ")";
-WriteF.    FuncWrite ::= "writeFloat" "(" Double ")";
-WriteC.    FuncWrite ::= "writeChar" "(" Char ")";
-WriteS.    FuncWrite ::= "writeString" "(" String ")";
+WriteI.    FuncWrite ::= "writeInt" "(" RExp ")";
+WriteF.    FuncWrite ::= "writeFloat" "(" RExp ")";
+WriteC.    FuncWrite ::= "writeChar" "(" RExp ")";
+WriteS.    FuncWrite ::= "writeString" "(" RExp ")";
 
-ReadI.     FuncRead ::= "readInt" "(" Integer ")";
-ReadF.     FuncRead ::= "readFloat" "(" Double ")";
-ReadC.     FuncRead ::= "readChar" "(" Char ")";
-ReadS.     FuncRead ::= "readString" "(" String ")";
+ReadI.     FuncRead ::= "readInt" "(" ")";
+ReadF.     FuncRead ::= "readFloat" "(" ")";
+ReadC.     FuncRead ::= "readChar" "(" ")";
+ReadS.     FuncRead ::= "readString" "(" ")";
 
 -----------
 ---LOOPS---
 -----------
 LoopW.         While ::= "while" RExp "do" Block "end";
-LoopR.         Repeat ::= "repeat" RExp "until" RExp;
+LoopR.         Repeat ::= "repeat" Block "until" RExp;
 LoopF.         For ::= "for" LIdent "=" RExp "," RExp Increment "do" Block "end";
 FIncE.         Increment ::= {- empty, assumiamo 1 -};
 FInc.          Increment ::= "," RExp ;
@@ -102,12 +99,11 @@ LoopFE.        For ::= "for" LIdent "in" LIdent "do" Block "end";
 ---IFELSE---
 ------------
 IfM.        If     ::= "if" RExp "then" Block [ElseIf] Else "end" ;
-IfE.        If     ::= "if" RExp "then" Block Else "end";
-IfS.        If     ::= "if" RExp "then" Block "end";
 ElseS.      Else ::= "else" Block;
+ElseE.      Else ::= {- empty -};
 
 ElseIfD.    ElseIf ::= "elseif" RExp "then" Block ;
-separator nonempty ElseIf "";
+separator ElseIf "";
 
 
 
@@ -125,22 +121,14 @@ JumpB.      Break ::= "break";
 --FUNCTIONS && PARAMETERS-
 ------------
 
-rules Modality ::= {-empty-} | "val" | "ref";
--- da gestire in futuro EVENTUALMENTE
--- | "const" | "res" | "valres" | "name" ;
-
-FnctCall.   Func ::= LIdent "(" [Param] ")";
-FnctCallPE. Param ::= RExp ;
-FnctCallPP. Param ::= "&" RExp ;
-
-separator Param ",";
+FnctCall.   Func ::= LIdent "(" [RExp] ")";
+separator RExp ",";
 
 
 
-
-ParmDeclF.   ParamF ::= Modality Type LExp;      
 
 FnctDecl.   FuncD ::= BasicType "function" LIdent "(" [ParamF] ")" Block "end";
+ParmDeclF.   ParamF ::= Type LExp;
 separator ParamF "," ;
 
 
@@ -149,7 +137,8 @@ separator ParamF "," ;
 -------------
 
 LExpS.  LExp ::= LIdent;
-LExpP.  LExp ::= "*" LExp ;
+LExpPR. LExp ::= "*" LExp ;
+LExpPD. LExp ::= "&" LExp ;
 
 -- LExp array
 LExpA.  LExp ::= LIdent [Dim] ;
@@ -197,6 +186,7 @@ ValBoolean.    RExp11 ::= Boolean;
 ValPtr.        RExp11 ::= PtrVoid;
 
 -- Array definition "inline"
+-- TODO: ridefinisci. niente ibridi
 VarMArr.       RExp12 ::= "{" MyArrayD "}";
 
 MyArrayLType.  MyArrayD ::= "{" MyArrayD "}";
