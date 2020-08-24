@@ -98,6 +98,8 @@ LoopR.         Repeat ::= "repeat" RExp "until" RExp;
 LoopF.         For ::= "for" LIdent "=" RExp "," [RExp] "do" Block "end";
 LoopFE.        For ::= "for" LIdent "in" LIdent "do" Block "end";
 
+separator nonempty RExp ",";
+
 ------------
 ---IFELSE---
 ------------
@@ -129,13 +131,19 @@ rules Modality ::= {-empty-} | "val" | "ref";
 -- da gestire in futuro EVENTUALMENTE
 -- | "const" | "res" | "valres" | "name" ;
 
-FnctCall.   Func ::= LIdent "(" [RExp] ")";
-separator RExp ",";
+FnctCall.   Func ::= LIdent "(" [Param] ")";
+FnctCallPE. Param ::= RExp ;
+FnctCallPP. Param ::= "&" RExp ;
 
-ParmDecl.   Param ::= Modality Type LExp;      
+separator Param ",";
 
-FnctDecl.   FuncD ::= BasicType "function" LIdent "(" [Param] ")" Block "end";
-separator Param "," ;
+
+
+
+ParmDeclF.   ParamF ::= Modality Type LExp;      
+
+FnctDecl.   FuncD ::= BasicType "function" LIdent "(" [ParamF] ")" Block "end";
+separator ParamF "," ;
 
 
 -------------
