@@ -77,9 +77,6 @@ AssD.        Ass ::= LExp "=" RExp;
 FuncBW.      Func ::= FuncWrite ;
 FuncBR.      Func ::= FuncRead ;
 
-
--- TODO: #::(strlen) e ..::(strconcat) 
-
 WriteI.    FuncWrite ::= "writeInt" "(" Integer ")";
 WriteF.    FuncWrite ::= "writeFloat" "(" Double ")";
 WriteC.    FuncWrite ::= "writeChar" "(" Char ")";
@@ -95,10 +92,11 @@ ReadS.     FuncRead ::= "readString" "(" String ")";
 -----------
 LoopW.         While ::= "while" RExp "do" Block "end";
 LoopR.         Repeat ::= "repeat" RExp "until" RExp;
-LoopF.         For ::= "for" LIdent "=" RExp "," [RExp] "do" Block "end";
+LoopF.         For ::= "for" LIdent "=" RExp "," RExp Increment "do" Block "end";
+FIncE.         Increment ::= {- empty, assumiamo 1 -};
+FInc.          Increment ::= "," RExp ;
 LoopFE.        For ::= "for" LIdent "in" LIdent "do" Block "end";
 
-separator nonempty RExp ",";
 
 ------------
 ---IFELSE---
