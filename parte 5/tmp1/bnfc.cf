@@ -162,7 +162,7 @@ coercions RExp 12;
 ----ARRAY----
 -------------
 
-separator nonempty ElementI ",";
+separator  nonempty ElementI ",";
 separator  nonempty ElementD ",";
 separator  nonempty ElementS ",";
 separator  nonempty ElementC ",";
@@ -173,7 +173,6 @@ separator  nonempty ElementB ",";
 --separator  nonempty ArrayS ",";
 --separator  nonempty ArrayC ",";
 --separator  nonempty ArrayB ",";
-
 
 
 
@@ -191,12 +190,13 @@ ElmntE.       ElementE ::= "{""}";
 
 rules MyArray ::=  ArrUniDim | [ArrMultiDim] | ArrayE;
 rules ArrUniDim ::= ArrayI | ArrayB | ArrayC | ArrayS | ArrayD; 
+--rules ArrDim ::= ArrDimI | ArrDimB | ArrDimC | ArrDimS | ArrDimD;
 
---MArri.        MArrayI ::= [ArrayI];
---MArrD.        MArrayD ::= [ArrayD];
---MArrB.        MArrayB ::= [ArrayB];
---MArrC.        MArrayC ::= [ArrayC];
---MArrS.        MArrayS ::= [ArrayS];
+--MArri.        ArrDimI ::= [ArrayI];
+--MArrD.        ArrDimD ::= [ArrayD];
+--MArrB.        ArrDimB ::= [ArrayB];
+--MArrC.        ArrDimC ::= [ArrayC];
+--MArrS.        ArrDimS ::= [ArrayS];
 
 separator ArrMultiDim ",";
 ArrND.        ArrMultiDim ::= "{" ArrUniDim "}";
@@ -209,5 +209,3 @@ ArrB.         ArrayB ::= [ElementB];
 
 
 ArrE.         ArrayE ::= ElementE;
-
---manca array multi dimensionale

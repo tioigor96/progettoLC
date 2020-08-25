@@ -137,15 +137,15 @@ L_quoted { PT _ (TL $$) }
 L_charac { PT _ (TC $$) }
 L_LIdent { PT _ (T_LIdent $$) }
 
--- tipi per gli attributi di $$
--- %attributetype {AttrT}
--- %attribute rexp { RExp }         -- 14 prod
--- %attribute lexp { LExp }         -- 1 prod
--- %attribute lRExp { [RExp] }      -- 1 prod
--- %attribute program { Program }   -- 1 prod
--- %attribute lPGlob { [PGlob] }    -- 1 prod
--- %attribute pglobl { PGlob }      -- 1 prod
--- e tutti gli altri...................DC
+tipi per gli attributi di $$
+%attributetype {AttrT}
+%attribute rexp { RExp }         -- 14 prod
+%attribute lexp { LExp }         -- 1 prod
+%attribute lRExp { [RExp] }      -- 1 prod
+%attribute program { Program }   -- 1 prod
+%attribute lPGlob { [PGlob] }    -- 1 prod
+%attribute pglobl { PGlob }      -- 1 prod
+%attribute pbool  { BasicType_Bool }
 
 %%
 
@@ -158,22 +158,20 @@ LIdent    :: { LIdent} : L_LIdent { LIdent ($1)}
 Program :: { Program }
 Program : ListPGlobl 
         { 
-            AbsBnfc.Prog $1 
+            $$.program = AbsBnfc.Prog $1;
         }
-                     
-                     
+
 ListPGlobl :: { [PGlobl] }
 ListPGlobl : 
                 PGlobl 
-        { 
-            (:[]) $1 
+        {   
+            $$.PGlob = (:[]) $1; 
         }
                          
            | PGlobl ListPGlobl 
         { 
-            (:) $1 $2 
+            $$.PGlob = (:) $1 $2; 
         }
-                        
 PGlobl :: { PGlobl }
 PGlobl : Stm 
         { 
@@ -183,7 +181,7 @@ PGlobl : Stm
         { 
             AbsBnfc.ProgGlobF $1 
         }
-
+                        
 
 Block :: { Block }
 Block : ListStm 
@@ -206,317 +204,318 @@ ListStm : Stm
 BasicType :: { BasicType }
 BasicType : 'Bool'
         { 
-        AbsBnfc.BasicType_Bool
+            $$.basicT = AbsBnfc.BasicType_Bool;
         }
           | 'Char' 
         { 
-            AbsBnfc.BasicType_Char 
+            $$.basicT = AbsBnfc.BasicType_Char;
         }
           | 'Float' 
         { 
-            AbsBnfc.BasicType_Float
+            $$.basicT = AbsBnfc.BasicType_Float;
         }
           | 'Int' 
         { 
-            AbsBnfc.BasicType_Int 
+            $$.basicT = AbsBnfc.BasicType_Int;
         }
           | 'String' 
         { 
-            AbsBnfc.BasicType_String
+            $$.basicT = AbsBnfc.BasicType_String;
         }
           | 'Void' 
         { 
-            AbsBnfc.BasicType_Void
+            $$.basicT = AbsBnfc.BasicType_Void;
         }
 
 
 Boolean :: { Boolean }
 Boolean : 'true' 
         { 
-            AbsBnfc.Boolean_true
+           $$ = AbsBnfc.Boolean_true;
         }
         | 'false' 
         { 
-            AbsBnfc.Boolean_false 
+           $$ = AbsBnfc.Boolean_false;
         }
 
 
 PtrVoid :: { PtrVoid }
 PtrVoid : 'nil' 
         { 
-            AbsBnfc.PtrType
+          $$ = AbsBnfc.PtrType;
         }
 
 
 Stm :: { Stm }
 Stm : Decl ';' 
         { 
-            AbsBnfc.SDecl $1 
+            $$.stm = AbsBnfc.SDecl $1 
         }
     | Local ';' 
         { 
-            AbsBnfc.SLocal $1 
+            $$.stm = AbsBnfc.SLocal $1 
         }
     | Ass ';' 
         { 
-            AbsBnfc.SAss $1 
+           $$.stm = AbsBnfc.SAss $1 
         }
     | While 
         { 
-            AbsBnfc.SWhile $1 
+           $$.stm = AbsBnfc.SWhile $1 
         }
     | Repeat ';' 
         { 
-            AbsBnfc.SRepeat $1 
+           $$.stm = AbsBnfc.SRepeat $1 
         }
     | For 
         { 
-            AbsBnfc.SFor $1 
+           $$.stm = AbsBnfc.SFor $1 
         }
     | If 
         { 
-            AbsBnfc.SIf $1 
+           $$.stm = AbsBnfc.SIf $1 
         }
     | RExp ';' 
         { 
-            AbsBnfc.SRExp $1 
+           $$.stm = AbsBnfc.SRExp $1 
         }
     | EBlk 
         { 
-            AbsBnfc.SEBlk $1 
+           $$.stm = AbsBnfc.SEBlk $1 
         }
     | Return ';' 
         { 
-            AbsBnfc.SReturn $1 
+           $$.stm = AbsBnfc.SReturn $1 
         }
     | Break ';' 
         { 
-            AbsBnfc.SBreak $1 
+           $$.stm = AbsBnfc.SBreak $1 
         }
 
 
 EBlk :: { EBlk }
 EBlk : 'do' Block 'end' 
         { 
-            AbsBnfc.EBlkS $2 
+            $$.eblk = AbsBnfc.EBlkS $2 
         }
 
 
 Decl :: { Decl }
 Decl : BasicType LExp VarInit 
         { 
-            AbsBnfc.DeclSP $1 $2 $3 
+           $$.decl = AbsBnfc.DeclSP $1 $2 $3 
         }
 
 
 VarInit :: { VarInit }
 VarInit : {- empty -} 
         { 
-            AbsBnfc.VarINil 
+          $$.varinit = AbsBnfc.VarINil 
         }
         | '=' RExp 
         { 
-            AbsBnfc.VarExp $2 
+          $$.varinit =  AbsBnfc.VarExp $2 
+
         }
 
 
 Local :: { Local }
 Local : 'local' Decl 
         { 
-            AbsBnfc.DeclLocal $2 
+           $$.local = AbsBnfc.DeclLocal $2 
         }
 
 
 Ass :: { Ass }
 Ass : LExp '=' RExp 
         { 
-            AbsBnfc.AssD $1 $3 
+          $$.ass = AbsBnfc.AssD $1 $3 
         }
 
 
 Func :: { Func }
 Func : FuncWrite 
         { 
-            AbsBnfc.FuncBW $1 
+          $$.func = AbsBnfc.FuncBW $1 
         }
      | FuncRead 
         { 
-            AbsBnfc.FuncBR $1 
+          $$.func = AbsBnfc.FuncBR $1 
         }
      | LIdent '(' ListRExp ')' 
         { 
-            AbsBnfc.FnctCall $1 $3 
+          $$.func = AbsBnfc.FnctCall $1 $3 
         }
 
 
 FuncWrite :: { FuncWrite }
 FuncWrite : 'writeInt' '(' RExp ')' 
         { 
-        AbsBnfc.WriteI $3 
+           $$.funcwrite = AbsBnfc.WriteI $3 
         }
           | 'writeFloat' '(' RExp ')' 
         { 
-            AbsBnfc.WriteF $3 
+           $$.funcwrite = AbsBnfc.WriteF $3 
         }
           | 'writeChar' '(' RExp ')' 
         { 
-            AbsBnfc.WriteC $3 
+           $$.funcwrite = AbsBnfc.WriteC $3 
         }
           | 'writeString' '(' RExp ')' 
         { 
-            AbsBnfc.WriteS $3 
+           $$.funcwrite = AbsBnfc.WriteS $3 
         }
 
 
 FuncRead :: { FuncRead }
 FuncRead : 'readInt' '(' ')' 
         { 
-            AbsBnfc.ReadI 
+           $$.funcread = AbsBnfc.ReadI 
         }
          | 'readFloat' '(' ')' 
         { 
-            AbsBnfc.ReadF 
+           $$.funcread = AbsBnfc.ReadF 
         }
          | 'readChar' '(' ')' 
         { 
-            AbsBnfc.ReadC 
+           $$.funcread = AbsBnfc.ReadC 
         }
          | 'readString' '(' ')' 
         { 
-            AbsBnfc.ReadS 
+           $$.funcread = AbsBnfc.ReadS 
         }
 
 
 While :: { While }
 While : 'while' RExp 'do' Block 'end' 
         { 
-            AbsBnfc.LoopW $2 $4 
+           $$.while = AbsBnfc.LoopW $2 $4 
         }
 
 
 Repeat :: { Repeat }
 Repeat : 'repeat' Block 'until' RExp 
         { 
-            AbsBnfc.LoopR $2 $4 
+          $$.repeat = AbsBnfc.LoopR $2 $4 
         }
 
 
 For :: { For }
 For : 'for' LIdent '=' RExp ',' RExp Increment 'do' Block 'end' 
         { 
-            AbsBnfc.LoopF $2 $4 $6 $7 $9 
+           $$.for = AbsBnfc.LoopF $2 $4 $6 $7 $9 
         }
     | 'for' LIdent 'in' LIdent 'do' Block 'end' 
         { 
-            AbsBnfc.LoopFE $2 $4 $6 
+           $$.for =  AbsBnfc.LoopFE $2 $4 $6 
         }
 
 
 Increment :: { Increment }
 Increment : {- empty -} 
         { 
-            AbsBnfc.FInc (ValInt 1) -- assumiamo che sia 1, appunto 
+           $$.inc =  AbsBnfc.FInc (ValInt 1) -- assumiamo che sia 1, appunto 
         }
           | ',' RExp 
         { 
-            AbsBnfc.FInc $2
+           $$.inc =  AbsBnfc.FInc $2
         }
 
 
 If :: { If }
 If : 'if' RExp 'then' Block ListElseIf Else 'end' 
         { 
-            AbsBnfc.IfM $2 $4 (reverse $5) $6 
+          $$.if =   AbsBnfc.IfM $2 $4 (reverse $5) $6 
         }
 
 
 Else :: { Else }
 Else : 'else' Block 
         { 
-            AbsBnfc.ElseS $2 
+          $$.else =   AbsBnfc.ElseS $2 
         }
      | {- empty -} 
         { 
-            AbsBnfc.ElseE 
+          $$.else =   AbsBnfc.ElseE 
         }
 
 
 ElseIf :: { ElseIf }
 ElseIf : 'elseif' RExp 'then' Block 
         { 
-            AbsBnfc.ElseIfD $2 $4 
+          $$.elseif =   AbsBnfc.ElseIfD $2 $4 
         }
 
 
 ListElseIf :: { [ElseIf] }
 ListElseIf : {- empty -} 
         { 
-            [] 
+           $$.lelseif =  [] 
         }
            | ListElseIf ElseIf 
         { 
-            flip (:) $1 $2 
+           $$.lelseif = flip (:) $1 $2 
         }
 
 
 Return :: { Return }
 Return : 'return' RValue 
         { 
-            AbsBnfc.JumpR $2 
+           $$.return = AbsBnfc.JumpR $2 
         }
 
 
 RValue :: { RValue }
 RValue : {- empty -} 
         { 
-            AbsBnfc.JumpRE 
+           $$.Rvalue = AbsBnfc.JumpRE 
         }
        | RExp 
         { 
-            AbsBnfc.JumpRV $1 
+           $$.Rvalue = AbsBnfc.JumpRV $1 
         }
 
 
 Break :: { Break }
 Break : 'break' 
         { 
-            AbsBnfc.JumpB 
+          $$.break = AbsBnfc.JumpB 
         }
 
 
 ListRExp :: { [RExp] }
 ListRExp : {- empty -} 
         { 
-            [] 
+          $$.LRExp =  [] 
         }
          | RExp 
         { 
-            (:[]) $1 
+          $$.LRExp = (:[]) $1 
         }
          | RExp ',' ListRExp 
         { 
-            (:) $1 $3 
+          $$.LRExp = (:) $1 $3 
         }
 
 
 FuncD :: { FuncD }
 FuncD : BasicType 'function' LIdent '(' ListParamF ')' Block 'end' 
         { 
-            AbsBnfc.FnctDecl $1 $3 $5 $7 
+          $$.FuncD =  AbsBnfc.FnctDecl $1 $3 $5 $7 
         }
 
 
 ParamF :: { ParamF }
 ParamF : Modality BasicType LExp 
         { 
-            AbsBnfc.ParmDeclF $1 $2 $3 
+          $$.paramF = AbsBnfc.ParmDeclF $1 $2 $3 
         }
 
 
 ListParamF :: { [ParamF] }
 ListParamF : {- empty -} 
         { 
-        [] 
+          $$.LparamF = [] 
         }
            | ParamF 
         { 
@@ -524,284 +523,424 @@ ListParamF : {- empty -}
         }
            | ParamF ',' ListParamF 
         { 
-            (:) $1 $3 
+          $$.LparamF = (:) $1 $3 
         }
 
 
 Modality :: { Modality }
 Modality : {- empty -} { AbsBnfc.Modality1 }
-         | 'val' { AbsBnfc.Modality_val }
-         | 'ref' { AbsBnfc.Modality_ref }
-         | 'const' { AbsBnfc.Modality_const }
-         | 'res' { AbsBnfc.Modality_res }
-         | 'valres' { AbsBnfc.Modality_valres }
-         | 'name' { AbsBnfc.Modality_name }
+         | 'val' { $$.modality = AbsBnfc.Modality_val }
+         | 'ref' { $$.modality =  AbsBnfc.Modality_ref }
+         | 'const' { $$.modality =  AbsBnfc.Modality_const }
+         | 'res' { $$.modality =  AbsBnfc.Modality_res }
+         | 'valres' { $$.modality =  AbsBnfc.Modality_valres }
+         | 'name' { $$.modality =  AbsBnfc.Modality_name }
 
 
 LExp :: { LExp }
-LExp : LIdent { AbsBnfc.LExpS $1 }
-     | '*' LExp { AbsBnfc.LExpDR $2 }
-     | LIdent ListDim { AbsBnfc.LExpA $1 $2 }
+LExp : LIdent { $$.LExp = AbsBnfc.LExpS $1 }
+     | '*' LExp { $$.LExp = AbsBnfc.LExpDR $2 }
+     | LIdent ListDim { $$.LExp = AbsBnfc.LExpA $1 $2 }
 
 
 ListDim :: { [Dim] }
 ListDim : Dim 
         { 
-            (:[]) $1 
+          $$.LDim =  (:[]) $1 
         }
          | Dim ListDim 
         { 
-            (:) $1 $2 
+          $$.LDim = (:) $1 $2 
         }
 
 
 Dim :: { Dim }
 Dim : '[' Integer ']' 
         { 
-            AbsBnfc.Dims $2 
+           $$.Dim = AbsBnfc.Dims $2 
         }
 
 
 RExp :: { RExp }
 RExp : RExp 'or' RExp1 
         { 
-            AbsBnfc.Or $1 $3 
+           $$.RExp = AbsBnfc.Or $1 $3;
+           $$.tipo = BasicType_Bool;
+           $1.env = $$.env;
+           $3.env = $$.env;
+           $$.err = (checkBothBool $1 $3);
         }
      | RExp1 'and' RExp2 
         { 
-            AbsBnfc.And $1 $3 
+           $$.RExp = AbsBnfc.And $1 $3 ;
+           $$.tipo = BasicType_Bool;
+           $1.env = $$.env;
+           $3.env = $$.env;
+           $$.err = (checkBothBool $1 $3);
         }
      | RExp1 
         { 
-            $1 
+           $$.RExp = $1;
+           $1.env = $$.env;
+           $$.tipo = $1.tipo;
+           $$.err = $1.err;
         }
 
 
 RExp2 :: { RExp }
 RExp2 : 'not' RExp3 
         { 
-            AbsBnfc.Not $2 
+           $$.RExp = AbsBnfc.Not $2;
+           $$.tipo = BasicType_Bool;
+           $2.env = $$.env;
+           $$.err = (checkIsBool $2);
         } 
         | RExp3 
         { 
-            $1 
+           $$.RExp = $1;
+           $1.env = $$.env;
+           $$.tipo = $1.tipo;
+           $$.err = $1.err;
         }
 
 
 RExp3 :: { RExp }
 RExp3 : RExp3 '==' RExp5 
         { 
-            AbsBnfc.Eq $1 $3 
+           $$.RExp = AbsBnfc.Eq $1 $3 ;
+           $$.tipo = BasicType_Bool;
+           $1.env = $$.env;
+           $3.env = $$.env;
+           $$.err = (checkBothBool $1 $3);
         }
       | RExp3 '~=' RExp5 
         { 
-            AbsBnfc.Neq $1 $3 
+           $$.RExp = AbsBnfc.Neq $1 $3 ;
+           $$.tipo = BasicType_Bool;
+           $1.env = $$.env;
+           $3.env = $$.env;
+           $$.err = (checkBothBool $1 $3);
         }
       | RExp3 '<' RExp5 
         { 
-            AbsBnfc.Lt $1 $3 
+           $$.RExp = AbsBnfc.Lt $1 $3 ;
+           $$.tipo = BasicType_Bool;
+           $1.env = $$.env;
+           $3.env = $$.env;
+           $$.err = (checkBothBool $1 $3);
         }
       | RExp3 '<=' RExp5 
         { 
-            AbsBnfc.LtE $1 $3 
+           $$.RExp = AbsBnfc.LtE $1 $3 ;
+           $$.tipo = BasicType_Bool;
+           $1.env = $$.env;
+           $3.env = $$.env;
+           $$.err = (checkBothBool $1 $3);
         }
       | RExp3 '>' RExp5 
         { 
-            AbsBnfc.Gt $1 $3 
+           $$.RExp = AbsBnfc.Gt $1 $3 ;
+           $$.tipo = BasicType_Bool;
+           $1.env = $$.env;
+           $3.env = $$.env;
+           $$.err = (checkBothBool $1 $3);
         }
       | RExp3 '>=' RExp5 
         { 
-            AbsBnfc.GtE $1 $3 
+           $$.RExp = AbsBnfc.GtE $1 $3 ;
+           $$.tipo = BasicType_Bool;
+           $1.env = $$.env;
+           $3.env = $$.env;
+           $$.err = (checkBothBool $1 $3);
         }
-      | RExp4 { $1 }
+      | RExp4 { 
+          $$.RExp = $1;
+          $1.env = $$.env;
+          $$.tipo = $1.tipo; 
+          $$.err = $1.err;
+          }
 
 
 RExp6 :: { RExp }
 RExp6 : RExp6 '+' RExp7 
         { 
-            AbsBnfc.Add $1 $3 
+           $$.RExp = AbsBnfc.Add $1 $3;
+           $$.tipo = (supType $1.tipo $2.tipo) ;
+           $1.env = $$.env;
+           $3.env = $$.env;
+           $$.err = (checkNumeric $1 $3);
         }
       | RExp6 '-' RExp7 
         { 
-            AbsBnfc.Sub $1 $3 
+           $$.RExp = AbsBnfc.Sub $1 $3;
+           $$.tipo = (supType $1.tipo $2.tipo) ;
+           $1.env = $$.env;
+           $3.env = $$.env;
+           $$.err = (checkNumeric $1 $3);
         }
       | RExp7 
         { 
-            $1 
+          $$.RExp = $1; 
+          $1.env = $$.env;
+          $$.tipo = $1.tipo; 
+          $$.err = $1.err;
         }
 
 
 RExp7 :: { RExp }
 RExp7 : RExp7 '*' RExp8 
         { 
-            AbsBnfc.Mul $1 $3 
+           $$.RExp =  AbsBnfc.Mul $1 $3;
+           $$.tipo = (supType $1.tipo $2.tipo) ;
+           $1.env = $$.env;
+           $3.env = $$.env;
+           $$.err = (checkNumeric $1 $3);
         }
       | RExp7 '/' RExp8 
         { 
-            AbsBnfc.Div $1 $3 
+           $$.RExp = AbsBnfc.Div $1 $3;
+           $$.tipo = (supType $1.tipo $2.tipo) ;
+           $1.env = $$.env;
+           $3.env = $$.env;
+           $$.err = (checkNotZero $3) ++ (checkNumeric $1 $3);
         }
       | RExp7 '%' RExp8 
         { 
-            AbsBnfc.Rem $1 $3 
+           $$.RExp =  AbsBnfc.Rem $1 $3;
+           $$.tipo = (supType $1.tipo $2.tipo) ;
+           $1.env = $$.env;
+           $3.env = $$.env;
+           $$.err = (checkNotZero $3) ++ (checkInt $1 $3);
         }
       | RExp8 
         { 
-            $1 
+          $$.RExp = $1;
+          $1.env = $$.env;
+          $$.tipo = $1.tipo; 
+          $$.err = $1.err;
         }
 
 
 RExp8 :: { RExp }
 RExp8 : RExp9 '^' RExp8 
         { 
-            AbsBnfc.Pow $1 $3 
+          $$.RExp = AbsBnfc.Pow $1 $3;
+          $$.tipo = (supType $1.tipo $2.tipo) ;
+          $1.env = $$.env;
+          $3.env = $$.env;
+          $$.err = (checkBothZero $1 $3) ++ (checkNumeric $1 $3);
         } 
       | RExp9 
         { 
-            $1 
+          $$.RExp = $1;
+          $1.env = $$.env; 
+          $$.tipo = $1.tipo; 
+          $$.err = $1.err;
         }
 
 
 RExp9 :: { RExp }
 RExp9 : '-' RExp10 
         { 
-            AbsBnfc.Neg $2 
+          $$.RExp = AbsBnfc.Neg $2;
+          $$.tipo = $2.tipo;
+          $2.env = $$.env;
+          $$.err = (checkSingleNumeric $2);
         } 
       | RExp10 
         { 
-            $1 
+          $$.RExp = $1;
+          $$.tipo = $1.tipo;
+          $1.env = $$.env;
+          $$.err = $1.err;
         }
 
 
 RExp10 :: { RExp }
 RExp10 : Func 
         { 
-            AbsBnfc.FCall $1 
+           $$.RExp = AbsBnfc.FCall $1 ;
+
         }
        | RExp10 '..' RExp11 
         { 
-            AbsBnfc.FStrCnt $1 $3 
+            $$.RExp = AbsBnfc.FStrCnt $1 $3 
         }
        | '#' RExp11 
         { 
-            AbsBnfc.FLen $2 
+            $$.RExp = AbsBnfc.FLen $2 
         }
        | RExp11 
         { 
-            $1 
+           $$.RExp =  $1 
         }
 
 
 RExp11 :: { RExp }
 RExp11 : Integer 
         { 
-            AbsBnfc.ValInt $1 
+            $$.RExp = AbsBnfc.ValInt $1; 
+            $$.tipo = BasicType_Int;
+            $1.env = $$.env;
+            $$.err = "";
         }
        | LExp 
         { 
-            AbsBnfc.ValVariable $1 
+            $$.RExp = AbsBnfc.ValVariable $1 ;
+            $$.tipo = $1.tipo;
+            $1.env = $$.env;
+            $$.err = "";
         }
        | '&' LExp 
         { 
-            AbsBnfc.ValRef $2 
+            $$.RExp = AbsBnfc.ValRef $2 
+            $$.tipo = $2.tipo;
+            $2.env = $$.env;
+            $$.err = "";
         }
        | Double 
         { 
-            AbsBnfc.ValDouble $1 
+            $$.RExp = AbsBnfc.ValDouble $1 ;
+            $$.tipo = BasicType_Float;
+            $1.env = $$.env;
+            $$.err = "";
         }
        | String 
         { 
-            AbsBnfc.ValString $1 
+            $$.RExp =  AbsBnfc.ValString $1 ;
+            $$.tipo = BasicType_String;
+            $1.env = $$.env;
+            $$.err = "";
         }
        | Char 
         { 
-            AbsBnfc.ValChar $1 
+            $$.RExp = AbsBnfc.ValChar $1 ;
+            $$.tipo = BasicType_Char;
+            $1.env = $$.env;
+            $$.err = "";
         }
        | Boolean 
         { 
-            AbsBnfc.ValBoolean $1 
+            $$.RExp = AbsBnfc.ValBoolean $1 ;
+            $$.tipo = BasicType_Bool;
+            $1.env = $$.env;
+            $$.err = "";
         }
        | PtrVoid 
         { 
-            AbsBnfc.ValPtr $1 
+            $$.RExp = AbsBnfc.ValPtr $1 ;
+            $$.tipo = BasicType_Void;
+            $1.env = $$.env;
+            $$.err = "";
         }
        | RExp12 
         { 
-            $1 
+            $$.RExp = $1 ;
+            $$.tipo = $1.tipo;
+            $1.env = $$.env;
+            $$.err = $1.err;
         }
 
 
 RExp12 :: { RExp }
 RExp12 : '{' Array '}' 
         { 
-            AbsBnfc.ValMArr $2 
+            $$.RExp = AbsBnfc.ValMArr $2 ;
+            $$.tipo = $2.tipo;
+            $2.env = $$.env;
+            $$.err = $2.err;
         } 
         | RExp13 
         { 
-            $1 
+            $$.RExp = $1 ;
+            $$.tipo = $1.tipo;
+            $1.env = $$.env;
+            $$.err = $1.err;
         }
 
 
 Array :: { Array }
 Array : '{' Array '}' ',' Array 
         { 
-            AbsBnfc.ArrayV0 $2 $5 
+            $$.Array = AbsBnfc.ArrayV0 $2 $5;
+            $2.env = $$.env;
+            $5.env = $$.env;
+            
         }
       | '{' Array '}' 
         { 
-            AbsBnfc.ArrayV1 $2 
+            AbsBnfc.ArrayV1 $2 ;
+            $$.tipo = $2.tipo;
+            $2.env = $$.env;
+            $$.err = $2.err;
         }
       | ListVType 
         { 
-            AbsBnfc.ArrayV2 $1 
+            AbsBnfc.ArrayV2 $1 ;
+            $$.tipo = $1.tipo;
+            $1.env = $$.env;
+            $$.err = (checkTypeSubElements );
         }
 
 
 VType :: { VType }      --una dummy qui?
-VType : Boolean { AbsBnfc.VTypeBoolean $1 }
-      | Char { AbsBnfc.VTypeChar $1 }
-      | Double { AbsBnfc.VTypeDouble $1 }
-      | Integer { AbsBnfc.VTypeInteger $1 }
-      | String { AbsBnfc.VTypeString $1 }
-      | PtrVoid { AbsBnfc.VTypePtrVoid $1 }
-      | {- empty -} { AbsBnfc.VType1 }
+VType : Boolean { $$.VType = AbsBnfc.VTypeBoolean $1 }
+      | Char { $$.VType =  AbsBnfc.VTypeChar $1 }
+      | Double { $$.VType =  AbsBnfc.VTypeDouble $1 }
+      | Integer { $$.VType =  AbsBnfc.VTypeInteger $1 }
+      | String { $$.VType =  AbsBnfc.VTypeString $1 }
+      | PtrVoid { $$.VType =  AbsBnfc.VTypePtrVoid $1 }
+      | {- empty -} { $$.VType =  AbsBnfc.VType1 }
 
 
 ListVType :: { [VType] }
 ListVType : VType 
         { 
-            (:[]) $1 
+            $$.VType = (:[]) $1 
         } 
         | VType ',' ListVType 
         { 
-            (:) $1 $3 
+            $$.VType = (:) $1 $3 
         }
 
 
 RExp1 :: { RExp }
 RExp1 : RExp2 
         { 
-            $1 
+            $$.RExp = $1 ;
+            $$.tipo = $1.tipo;
+            $1.env = $$.env;
+            $$.err = $1.err;
         }
 
 
 RExp4 :: { RExp }
 RExp4 : RExp5 
         { 
-            $1 
+            $$.RExp = $1 ;
+            $$.tipo = $1.tipo;
+            $1.env = $$.env;
+            $$.err = $1.err; 
         }
 
 
 RExp5 :: { RExp }
 RExp5 : RExp6 
         { 
-            $1 
+            $$.RExp = $1 ;
+            $$.tipo = $1.tipo;
+            $1.env = $$.env;
+            $$.err = $1.err;
         }
 
 
 RExp13 :: { RExp }
 RExp13 : '(' RExp ')' 
         { 
-            $2 
+            $$.RExp = $2 ;
+            $$.tipo = $2.tipo;
+            $2.env = $$.env;
+            $$.err = $2.err; 
         }
 
 
