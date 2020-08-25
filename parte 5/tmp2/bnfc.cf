@@ -14,14 +14,11 @@ ProgGlobF.     PGlobl ::= FuncD ;
 
 Blk.           Block ::= [Stm] ;
 
---TODO: SISTEMA STO CAZZO DI TOKEN
---token StmDiv ('\n' | ';');
 separator nonempty Stm "";
+
 ------------
 --GESTIONE TIPI--
 -------------
-
-BasTyp.     Type ::= BasicType ;
 
 rules          BasicType ::= "Bool" | "Char" | "Float" | "Int" | "String" | "Void" ;
 rules          Boolean   ::= "true" | "false";
@@ -54,7 +51,7 @@ EBlkS.       EBlk ::= "do" Block "end" ;
 ----DECL-----
 -------------
 
-DeclSP.      Decl ::= Type LExp VarInit ;
+DeclSP.      Decl ::= BasicType LExp VarInit ;
 VarINil.     VarInit ::= {- empty -} ;
 VarExp.      VarInit ::= "=" RExp ;
 
@@ -128,7 +125,7 @@ separator RExp ",";
 
 
 FnctDecl.   FuncD ::= BasicType "function" LIdent "(" [ParamF] ")" Block "end";
-ParmDeclF.   ParamF ::= Type LExp;
+ParmDeclF.   ParamF ::= BasicType LExp;
 separator ParamF "," ;
 
 
@@ -137,8 +134,7 @@ separator ParamF "," ;
 -------------
 
 LExpS.  LExp ::= LIdent;
-LExpPR. LExp ::= "*" LExp ;
-LExpPD. LExp ::= "&" LExp ;
+LExpDR. LExp ::= "*" LExp ;
 
 -- LExp array
 LExpA.  LExp ::= LIdent [Dim] ;
@@ -179,6 +175,7 @@ FLen.          RExp10 ::= "#" RExp11 ;
 
 ValInt.        RExp11 ::= Integer;
 ValVariable.   RExp11 ::= LExp;
+ValRef.        RExp11 ::= "&" LExp;
 ValDouble.     RExp11 ::= Double;
 ValString.     RExp11 ::= String;
 ValChar.       RExp11 ::= Char;
@@ -187,34 +184,14 @@ ValPtr.        RExp11 ::= PtrVoid;
 
 -- Array definition "inline"
 -- TODO: ridefinisci. niente ibridi
-VarMArr.       RExp12 ::= "{" MyArrayD "}";
+ValMArr.       RExp12 ::= "{" Array "}" ;
 
-MyArrayLType.  MyArrayD ::= "{" MyArrayD "}";
-MyArrayLType1. MyArrayD ::= RExp12 "," "{" MyArrayD "}" ;
-MyArrayType.   MyArrayD ::= MyArray ;
-MyArrayB.      MyArray  ::= [ArrB] ;
-MyArrayC.      MyArray  ::= [ArrC] ;
-MyArrayF.      MyArray  ::= [ArrF] ;
-MyArrayI.      MyArray  ::= [ArrI] ;
-MyArrayS.      MyArray  ::= [ArrS] ;
-MyArrayE.      MyArray  ::= [ArrE] ;
-MyArrayP.      MyArray  ::= [ArrP] ;
+ArrayV0.       Array ::= "{" Array "}" "," Array ;
+ArrayV1.       Array ::= "{" Array "}" ;
+ArrayV2.       Array ::= [VType];
 
-separator nonempty ArrB ",";
-separator nonempty ArrC ",";
-separator nonempty ArrF ",";
-separator nonempty ArrI ",";
-separator nonempty ArrS ",";
-separator nonempty ArrE ",";
-separator nonempty ArrP ",";
-
-ArrVB.         ArrB ::= Boolean;
-ArrVC.         ArrC ::= Char;
-ArrVF.         ArrF ::= Double;
-ArrVI.         ArrI ::= Integer;
-ArrVS.         ArrS ::= String;
-ArrVP.         ArrP ::= PtrVoid;
-ArrVE.         ArrE ::= {- empty -};
+rules VType ::= Boolean | Char | Double | Integer | String | PtrVoid | {- empty -};
+separator nonempty VType ",";
 
 coercions RExp 13;
 
