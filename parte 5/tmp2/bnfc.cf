@@ -125,8 +125,10 @@ separator RExp ",";
 
 
 FnctDecl.   FuncD ::= BasicType "function" LIdent "(" [ParamF] ")" Block "end";
-ParmDeclF.   ParamF ::= BasicType LExp;
+ParmDeclF.   ParamF ::= Modality BasicType LExp;
 separator ParamF "," ;
+
+rules Modality ::= {-empty-} | "val" | "ref" | "const" | "res" | "valres" | "name" ;
 
 
 -------------
