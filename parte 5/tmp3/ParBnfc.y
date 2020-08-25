@@ -139,7 +139,13 @@ L_LIdent { PT _ (T_LIdent $$) }
 
 -- tipi per gli attributi di $$
 -- %attributetype {AttrT}
--- %attribute rexp { RExp }
+-- %attribute rexp { RExp }         -- 14 prod
+-- %attribute lexp { LExp }         -- 1 prod
+-- %attribute lRExp { [RExp] }      -- 1 prod
+-- %attribute program { Program }   -- 1 prod
+-- %attribute lPGlob { [PGlob] }    -- 1 prod
+-- %attribute pglobl { PGlob }      -- 1 prod
+-- e tutti gli altri...................DC
 
 %%
 
@@ -290,113 +296,236 @@ Stm : Decl ';'
 
 
 EBlk :: { EBlk }
-EBlk : 'do' Block 'end' { AbsBnfc.EBlkS $2 }
+EBlk : 'do' Block 'end' 
+        { 
+            AbsBnfc.EBlkS $2 
+        }
 
 
 Decl :: { Decl }
-Decl : BasicType LExp VarInit { AbsBnfc.DeclSP $1 $2 $3 }
+Decl : BasicType LExp VarInit 
+        { 
+            AbsBnfc.DeclSP $1 $2 $3 
+        }
 
 
 VarInit :: { VarInit }
-VarInit : {- empty -} { AbsBnfc.VarINil }
-        | '=' RExp { AbsBnfc.VarExp $2 }
+VarInit : {- empty -} 
+        { 
+            AbsBnfc.VarINil 
+        }
+        | '=' RExp 
+        { 
+            AbsBnfc.VarExp $2 
+        }
 
 
 Local :: { Local }
-Local : 'local' Decl { AbsBnfc.DeclLocal $2 }
+Local : 'local' Decl 
+        { 
+            AbsBnfc.DeclLocal $2 
+        }
 
 
 Ass :: { Ass }
-Ass : LExp '=' RExp { AbsBnfc.AssD $1 $3 }
+Ass : LExp '=' RExp 
+        { 
+            AbsBnfc.AssD $1 $3 
+        }
 
 
 Func :: { Func }
-Func : FuncWrite { AbsBnfc.FuncBW $1 }
-     | FuncRead { AbsBnfc.FuncBR $1 }
-     | LIdent '(' ListRExp ')' { AbsBnfc.FnctCall $1 $3 }
+Func : FuncWrite 
+        { 
+            AbsBnfc.FuncBW $1 
+        }
+     | FuncRead 
+        { 
+            AbsBnfc.FuncBR $1 
+        }
+     | LIdent '(' ListRExp ')' 
+        { 
+            AbsBnfc.FnctCall $1 $3 
+        }
 
 
 FuncWrite :: { FuncWrite }
-FuncWrite : 'writeInt' '(' RExp ')' { AbsBnfc.WriteI $3 }
-          | 'writeFloat' '(' RExp ')' { AbsBnfc.WriteF $3 }
-          | 'writeChar' '(' RExp ')' { AbsBnfc.WriteC $3 }
-          | 'writeString' '(' RExp ')' { AbsBnfc.WriteS $3 }
+FuncWrite : 'writeInt' '(' RExp ')' 
+        { 
+        AbsBnfc.WriteI $3 
+        }
+          | 'writeFloat' '(' RExp ')' 
+        { 
+            AbsBnfc.WriteF $3 
+        }
+          | 'writeChar' '(' RExp ')' 
+        { 
+            AbsBnfc.WriteC $3 
+        }
+          | 'writeString' '(' RExp ')' 
+        { 
+            AbsBnfc.WriteS $3 
+        }
 
 
 FuncRead :: { FuncRead }
-FuncRead : 'readInt' '(' ')' { AbsBnfc.ReadI }
-         | 'readFloat' '(' ')' { AbsBnfc.ReadF }
-         | 'readChar' '(' ')' { AbsBnfc.ReadC }
-         | 'readString' '(' ')' { AbsBnfc.ReadS }
+FuncRead : 'readInt' '(' ')' 
+        { 
+            AbsBnfc.ReadI 
+        }
+         | 'readFloat' '(' ')' 
+        { 
+            AbsBnfc.ReadF 
+        }
+         | 'readChar' '(' ')' 
+        { 
+            AbsBnfc.ReadC 
+        }
+         | 'readString' '(' ')' 
+        { 
+            AbsBnfc.ReadS 
+        }
 
 
 While :: { While }
-While : 'while' RExp 'do' Block 'end' { AbsBnfc.LoopW $2 $4 }
+While : 'while' RExp 'do' Block 'end' 
+        { 
+            AbsBnfc.LoopW $2 $4 
+        }
 
 
 Repeat :: { Repeat }
-Repeat : 'repeat' Block 'until' RExp { AbsBnfc.LoopR $2 $4 }
+Repeat : 'repeat' Block 'until' RExp 
+        { 
+            AbsBnfc.LoopR $2 $4 
+        }
 
 
 For :: { For }
-For : 'for' LIdent '=' RExp ',' RExp Increment 'do' Block 'end' { AbsBnfc.LoopF $2 $4 $6 $7 $9 }
-    | 'for' LIdent 'in' LIdent 'do' Block 'end' { AbsBnfc.LoopFE $2 $4 $6 }
+For : 'for' LIdent '=' RExp ',' RExp Increment 'do' Block 'end' 
+        { 
+            AbsBnfc.LoopF $2 $4 $6 $7 $9 
+        }
+    | 'for' LIdent 'in' LIdent 'do' Block 'end' 
+        { 
+            AbsBnfc.LoopFE $2 $4 $6 
+        }
 
 
 Increment :: { Increment }
-Increment : {- empty -} { AbsBnfc.FInc (ValInt 1) } -- assumiamo che sia 1, appunto
-          | ',' RExp { AbsBnfc.FInc $2 }
+Increment : {- empty -} 
+        { 
+            AbsBnfc.FInc (ValInt 1) -- assumiamo che sia 1, appunto 
+        }
+          | ',' RExp 
+        { 
+            AbsBnfc.FInc $2
+        }
 
 
 If :: { If }
-If : 'if' RExp 'then' Block ListElseIf Else 'end' { AbsBnfc.IfM $2 $4 (reverse $5) $6 }
+If : 'if' RExp 'then' Block ListElseIf Else 'end' 
+        { 
+            AbsBnfc.IfM $2 $4 (reverse $5) $6 
+        }
 
 
 Else :: { Else }
-Else : 'else' Block { AbsBnfc.ElseS $2 }
-     | {- empty -} { AbsBnfc.ElseE }
+Else : 'else' Block 
+        { 
+            AbsBnfc.ElseS $2 
+        }
+     | {- empty -} 
+        { 
+            AbsBnfc.ElseE 
+        }
 
 
 ElseIf :: { ElseIf }
-ElseIf : 'elseif' RExp 'then' Block { AbsBnfc.ElseIfD $2 $4 }
+ElseIf : 'elseif' RExp 'then' Block 
+        { 
+            AbsBnfc.ElseIfD $2 $4 
+        }
 
 
 ListElseIf :: { [ElseIf] }
-ListElseIf : {- empty -} { [] }
-           | ListElseIf ElseIf { flip (:) $1 $2 }
+ListElseIf : {- empty -} 
+        { 
+            [] 
+        }
+           | ListElseIf ElseIf 
+        { 
+            flip (:) $1 $2 
+        }
 
 
 Return :: { Return }
-Return : 'return' RValue { AbsBnfc.JumpR $2 }
+Return : 'return' RValue 
+        { 
+            AbsBnfc.JumpR $2 
+        }
 
 
 RValue :: { RValue }
-RValue : {- empty -} { AbsBnfc.JumpRE }
-       | RExp { AbsBnfc.JumpRV $1 }
+RValue : {- empty -} 
+        { 
+            AbsBnfc.JumpRE 
+        }
+       | RExp 
+        { 
+            AbsBnfc.JumpRV $1 
+        }
 
 
 Break :: { Break }
-Break : 'break' { AbsBnfc.JumpB }
+Break : 'break' 
+        { 
+            AbsBnfc.JumpB 
+        }
 
 
 ListRExp :: { [RExp] }
-ListRExp : {- empty -} { [] }
-         | RExp { (:[]) $1 }
-         | RExp ',' ListRExp { (:) $1 $3 }
+ListRExp : {- empty -} 
+        { 
+            [] 
+        }
+         | RExp 
+        { 
+            (:[]) $1 
+        }
+         | RExp ',' ListRExp 
+        { 
+            (:) $1 $3 
+        }
 
 
 FuncD :: { FuncD }
-FuncD : BasicType 'function' LIdent '(' ListParamF ')' Block 'end' { AbsBnfc.FnctDecl $1 $3 $5 $7 }
+FuncD : BasicType 'function' LIdent '(' ListParamF ')' Block 'end' 
+        { 
+            AbsBnfc.FnctDecl $1 $3 $5 $7 
+        }
 
 
 ParamF :: { ParamF }
-ParamF : Modality BasicType LExp { AbsBnfc.ParmDeclF $1 $2 $3 }
+ParamF : Modality BasicType LExp 
+        { 
+            AbsBnfc.ParmDeclF $1 $2 $3 
+        }
 
 
 ListParamF :: { [ParamF] }
-ListParamF : {- empty -} { [] }
-           | ParamF { (:[]) $1 }
-           | ParamF ',' ListParamF { (:) $1 $3 }
+ListParamF : {- empty -} 
+        { 
+        [] 
+        }
+           | ParamF 
+        { 
+        (:[]) $1 
+        }
+           | ParamF ',' ListParamF 
+        { 
+            (:) $1 $3 
+        }
 
 
 Modality :: { Modality }
@@ -416,84 +545,218 @@ LExp : LIdent { AbsBnfc.LExpS $1 }
 
 
 ListDim :: { [Dim] }
-ListDim : Dim { (:[]) $1 } | Dim ListDim { (:) $1 $2 }
+ListDim : Dim 
+        { 
+            (:[]) $1 
+        }
+         | Dim ListDim 
+        { 
+            (:) $1 $2 
+        }
 
 
 Dim :: { Dim }
-Dim : '[' Integer ']' { AbsBnfc.Dims $2 }
+Dim : '[' Integer ']' 
+        { 
+            AbsBnfc.Dims $2 
+        }
 
 
 RExp :: { RExp }
-RExp : RExp 'or' RExp1 { AbsBnfc.Or $1 $3 }
-     | RExp1 'and' RExp2 { AbsBnfc.And $1 $3 }
-     | RExp1 { $1 }
+RExp : RExp 'or' RExp1 
+        { 
+            AbsBnfc.Or $1 $3 
+        }
+     | RExp1 'and' RExp2 
+        { 
+            AbsBnfc.And $1 $3 
+        }
+     | RExp1 
+        { 
+            $1 
+        }
 
 
 RExp2 :: { RExp }
-RExp2 : 'not' RExp3 { AbsBnfc.Not $2 } | RExp3 { $1 }
+RExp2 : 'not' RExp3 
+        { 
+            AbsBnfc.Not $2 
+        } 
+        | RExp3 
+        { 
+            $1 
+        }
 
 
 RExp3 :: { RExp }
-RExp3 : RExp3 '==' RExp5 { AbsBnfc.Eq $1 $3 }
-      | RExp3 '~=' RExp5 { AbsBnfc.Neq $1 $3 }
-      | RExp3 '<' RExp5 { AbsBnfc.Lt $1 $3 }
-      | RExp3 '<=' RExp5 { AbsBnfc.LtE $1 $3 }
-      | RExp3 '>' RExp5 { AbsBnfc.Gt $1 $3 }
-      | RExp3 '>=' RExp5 { AbsBnfc.GtE $1 $3 }
+RExp3 : RExp3 '==' RExp5 
+        { 
+            AbsBnfc.Eq $1 $3 
+        }
+      | RExp3 '~=' RExp5 
+        { 
+            AbsBnfc.Neq $1 $3 
+        }
+      | RExp3 '<' RExp5 
+        { 
+            AbsBnfc.Lt $1 $3 
+        }
+      | RExp3 '<=' RExp5 
+        { 
+            AbsBnfc.LtE $1 $3 
+        }
+      | RExp3 '>' RExp5 
+        { 
+            AbsBnfc.Gt $1 $3 
+        }
+      | RExp3 '>=' RExp5 
+        { 
+            AbsBnfc.GtE $1 $3 
+        }
       | RExp4 { $1 }
 
 
 RExp6 :: { RExp }
-RExp6 : RExp6 '+' RExp7 { AbsBnfc.Add $1 $3 }
-      | RExp6 '-' RExp7 { AbsBnfc.Sub $1 $3 }
-      | RExp7 { $1 }
+RExp6 : RExp6 '+' RExp7 
+        { 
+            AbsBnfc.Add $1 $3 
+        }
+      | RExp6 '-' RExp7 
+        { 
+            AbsBnfc.Sub $1 $3 
+        }
+      | RExp7 
+        { 
+            $1 
+        }
 
 
 RExp7 :: { RExp }
-RExp7 : RExp7 '*' RExp8 { AbsBnfc.Mul $1 $3 }
-      | RExp7 '/' RExp8 { AbsBnfc.Div $1 $3 }
-      | RExp7 '%' RExp8 { AbsBnfc.Rem $1 $3 }
-      | RExp8 { $1 }
+RExp7 : RExp7 '*' RExp8 
+        { 
+            AbsBnfc.Mul $1 $3 
+        }
+      | RExp7 '/' RExp8 
+        { 
+            AbsBnfc.Div $1 $3 
+        }
+      | RExp7 '%' RExp8 
+        { 
+            AbsBnfc.Rem $1 $3 
+        }
+      | RExp8 
+        { 
+            $1 
+        }
 
 
 RExp8 :: { RExp }
-RExp8 : RExp9 '^' RExp8 { AbsBnfc.Pow $1 $3 } | RExp9 { $1 }
+RExp8 : RExp9 '^' RExp8 
+        { 
+            AbsBnfc.Pow $1 $3 
+        } 
+      | RExp9 
+        { 
+            $1 
+        }
 
 
 RExp9 :: { RExp }
-RExp9 : '-' RExp10 { AbsBnfc.Neg $2 } | RExp10 { $1 }
+RExp9 : '-' RExp10 
+        { 
+            AbsBnfc.Neg $2 
+        } 
+      | RExp10 
+        { 
+            $1 
+        }
 
 
 RExp10 :: { RExp }
-RExp10 : Func { AbsBnfc.FCall $1 }
-       | RExp10 '..' RExp11 { AbsBnfc.FStrCnt $1 $3 }
-       | '#' RExp11 { AbsBnfc.FLen $2 }
-       | RExp11 { $1 }
+RExp10 : Func 
+        { 
+            AbsBnfc.FCall $1 
+        }
+       | RExp10 '..' RExp11 
+        { 
+            AbsBnfc.FStrCnt $1 $3 
+        }
+       | '#' RExp11 
+        { 
+            AbsBnfc.FLen $2 
+        }
+       | RExp11 
+        { 
+            $1 
+        }
 
 
 RExp11 :: { RExp }
-RExp11 : Integer { AbsBnfc.ValInt $1 }
-       | LExp { AbsBnfc.ValVariable $1 }
-       | '&' LExp { AbsBnfc.ValRef $2 }
-       | Double { AbsBnfc.ValDouble $1 }
-       | String { AbsBnfc.ValString $1 }
-       | Char { AbsBnfc.ValChar $1 }
-       | Boolean { AbsBnfc.ValBoolean $1 }
-       | PtrVoid { AbsBnfc.ValPtr $1 }
-       | RExp12 { $1 }
+RExp11 : Integer 
+        { 
+            AbsBnfc.ValInt $1 
+        }
+       | LExp 
+        { 
+            AbsBnfc.ValVariable $1 
+        }
+       | '&' LExp 
+        { 
+            AbsBnfc.ValRef $2 
+        }
+       | Double 
+        { 
+            AbsBnfc.ValDouble $1 
+        }
+       | String 
+        { 
+            AbsBnfc.ValString $1 
+        }
+       | Char 
+        { 
+            AbsBnfc.ValChar $1 
+        }
+       | Boolean 
+        { 
+            AbsBnfc.ValBoolean $1 
+        }
+       | PtrVoid 
+        { 
+            AbsBnfc.ValPtr $1 
+        }
+       | RExp12 
+        { 
+            $1 
+        }
 
 
 RExp12 :: { RExp }
-RExp12 : '{' Array '}' { AbsBnfc.ValMArr $2 } | RExp13 { $1 }
+RExp12 : '{' Array '}' 
+        { 
+            AbsBnfc.ValMArr $2 
+        } 
+        | RExp13 
+        { 
+            $1 
+        }
 
 
 Array :: { Array }
-Array : '{' Array '}' ',' Array { AbsBnfc.ArrayV0 $2 $5 }
-      | '{' Array '}' { AbsBnfc.ArrayV1 $2 }
-      | ListVType { AbsBnfc.ArrayV2 $1 }
+Array : '{' Array '}' ',' Array 
+        { 
+            AbsBnfc.ArrayV0 $2 $5 
+        }
+      | '{' Array '}' 
+        { 
+            AbsBnfc.ArrayV1 $2 
+        }
+      | ListVType 
+        { 
+            AbsBnfc.ArrayV2 $1 
+        }
 
 
-VType :: { VType }
+VType :: { VType }      --una dummy qui?
 VType : Boolean { AbsBnfc.VTypeBoolean $1 }
       | Char { AbsBnfc.VTypeChar $1 }
       | Double { AbsBnfc.VTypeDouble $1 }
@@ -504,23 +767,42 @@ VType : Boolean { AbsBnfc.VTypeBoolean $1 }
 
 
 ListVType :: { [VType] }
-ListVType : VType { (:[]) $1 } | VType ',' ListVType { (:) $1 $3 }
+ListVType : VType 
+        { 
+            (:[]) $1 
+        } 
+        | VType ',' ListVType 
+        { 
+            (:) $1 $3 
+        }
 
 
 RExp1 :: { RExp }
-RExp1 : RExp2 { $1 }
+RExp1 : RExp2 
+        { 
+            $1 
+        }
 
 
 RExp4 :: { RExp }
-RExp4 : RExp5 { $1 }
+RExp4 : RExp5 
+        { 
+            $1 
+        }
 
 
 RExp5 :: { RExp }
-RExp5 : RExp6 { $1 }
+RExp5 : RExp6 
+        { 
+            $1 
+        }
 
 
 RExp13 :: { RExp }
-RExp13 : '(' RExp ')' { $2 }
+RExp13 : '(' RExp ')' 
+        { 
+            $2 
+        }
 
 
 {
