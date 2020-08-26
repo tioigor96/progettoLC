@@ -137,7 +137,7 @@ L_quoted { PT _ (TL $$) }
 L_charac { PT _ (TC $$) }
 L_LIdent { PT _ (T_LIdent $$) }
 
-tipi per gli attributi di $$
+-- tipi per gli attributi di $$
 %attributetype {AttrT}
 %attribute rexp { RExp }         -- 14 prod
 %attribute lexp { LExp }         -- 1 prod
@@ -145,8 +145,28 @@ tipi per gli attributi di $$
 %attribute program { Program }   -- 1 prod
 %attribute lpglob { [PGlob] }    -- 1 prod
 %attribute pglobl { PGlob }      -- 1 prod
-%attribute pbool  { BasicType_Bool }
+%attribute basict  { BasicType } -- ?? prod
 %attribute modality { Modality } -- 1 prod
+%attribute vbool { Boolean }     -- ?? prod
+%attribute vvoid { PtrVoid }     --?? prod
+%attribute stm  { Stm }          --troppe prod   
+%attribute eblk { EBlk }         -- 1 prod
+%attribute decl { Decl }         -- 1 prod
+%attribute varinit { VarInit }   -- 1 prod
+%attribute local { Local }       -- 1 prod
+%attribute ass { Ass }           -- 1 prod
+%attribute func { Func }         -- 1 prod
+%attribute funcwrite { FuncWrite } -- 1 prod
+%attribute funcread { FuncRead } -- 1 prod
+%attribute while { While }       --1 prod
+%attribute repeat { Repeat }     -- 1 prod
+%attribute for { For }           -- 1 prod
+%attribute inc { Increment }     -- 1 prod
+%attribute if { If }             -- 1 prod
+%attribute else { Else }         -- 1 prod
+%attribute elseif { ElseIf }     -- cucu
+%attribute lelseif { [ElseIf] }  --mannagia a voi
+--- credo abbiate capito, ora ceno.............
 
 %%
 
@@ -184,14 +204,14 @@ PGlobl : Stm
         }
                         
 
-Block :: { Block }
+Block :: { Block }  --TODO
 Block : ListStm 
         { 
         AbsBnfc.Blk $1 
         }
 
 
-ListStm :: { [Stm] }            
+ListStm :: { [Stm] }      --TODO      
 ListStm : Stm 
         { 
             (:[]) $1
@@ -205,64 +225,64 @@ ListStm : Stm
 BasicType :: { BasicType }      --TODO: rivedi
 BasicType : 'Bool'
         { 
-            $$.basicT = AbsBnfc.BasicType_Bool;
+            $$.basict = AbsBnfc.BasicType_Bool;
         }
           | 'Char' 
         { 
-            $$.basicT = AbsBnfc.BasicType_Char;
+            $$.basict = AbsBnfc.BasicType_Char;
         }
           | 'Float' 
         { 
-            $$.basicT = AbsBnfc.BasicType_Float;
+            $$.basict = AbsBnfc.BasicType_Float;
         }
           | 'Int' 
         { 
-            $$.basicT = AbsBnfc.BasicType_Int;
+            $$.basict = AbsBnfc.BasicType_Int;
         }
           | 'String' 
         { 
-            $$.basicT = AbsBnfc.BasicType_String;
+            $$.basict = AbsBnfc.BasicType_String;
         }
           | 'Void' 
         { 
-            $$.basicT = AbsBnfc.BasicType_Void;
+            $$.basict = AbsBnfc.BasicType_Void;
         }
 
 
 Boolean :: { Boolean }      --TODO: rivedi
 Boolean : 'true' 
         { 
-           $$ = AbsBnfc.Boolean_true;
+           $$.vbool = AbsBnfc.Boolean_true;
         }
         | 'false' 
         { 
-           $$ = AbsBnfc.Boolean_false;
+           $$.vbool = AbsBnfc.Boolean_false;
         }
 
 
 PtrVoid :: { PtrVoid }      --TODO: rivedi
 PtrVoid : 'nil' 
         { 
-          $$ = AbsBnfc.PtrType;
+          $$.vvoid = AbsBnfc.PtrType;
         }
 
 
-Stm :: { Stm }          --TODO: rivedi
+Stm :: { Stm }          --TODO: rivedi tutti i $1
 Stm : Decl ';' 
         { 
-            $$.stm = AbsBnfc.SDecl $1 
+            $$.stm = AbsBnfc.SDecl $1.decl
         }
     | Local ';' 
         { 
-            $$.stm = AbsBnfc.SLocal $1 
+            $$.stm = AbsBnfc.SLocal $1.local 
         }
     | Ass ';' 
         { 
-           $$.stm = AbsBnfc.SAss $1 
+           $$.stm = AbsBnfc.SAss $1.ass
         }
     | While 
         { 
-           $$.stm = AbsBnfc.SWhile $1 
+           $$.stm = AbsBnfc.SWhile $1
         }
     | Repeat ';' 
         { 
@@ -278,11 +298,11 @@ Stm : Decl ';'
         }
     | RExp ';' 
         { 
-           $$.stm = AbsBnfc.SRExp $1 
+           $$.stm = AbsBnfc.SRExp $1.rexp 
         }
     | EBlk 
         { 
-           $$.stm = AbsBnfc.SEBlk $1 
+           $$.stm = AbsBnfc.SEBlk $1.eblk
         }
     | Return ';' 
         { 
@@ -294,43 +314,43 @@ Stm : Decl ';'
         }
 
 
-EBlk :: { EBlk }            --TODO: rivedi
+EBlk :: { EBlk }            --TODO: rivedi $2
 EBlk : 'do' Block 'end' 
         { 
-            $$.eblk = AbsBnfc.EBlkS $2 
+            $$.eblk = AbsBnfc.EBlkS $2.blk 
         }
 
 
-Decl :: { Decl }        --TODO: rivedi
+Decl :: { Decl }        --TODO: controlla
 Decl : BasicType LExp VarInit 
         { 
-           $$.decl = AbsBnfc.DeclSP $1 $2 $3 
+           $$.decl = AbsBnfc.DeclSP $1.basict $2.lexp $3.varinit
         }
 
 
-VarInit :: { VarInit }      --TODO: rivedi
+VarInit :: { VarInit }
 VarInit : {- empty -} 
         { 
           $$.varinit = AbsBnfc.VarINil 
         }
         | '=' RExp 
         { 
-          $$.varinit =  AbsBnfc.VarExp $2 
+          $$.varinit =  AbsBnfc.VarExp $2.rexp
 
         }
 
 
-Local :: { Local }          --TODO: rivedi
+Local :: { Local }
 Local : 'local' Decl 
         { 
-           $$.local = AbsBnfc.DeclLocal $2 
+           $$.local = AbsBnfc.DeclLocal $2.decl
         }
 
 
 Ass :: { Ass }              --TODO: rivedi
 Ass : LExp '=' RExp 
         { 
-          $$.ass = AbsBnfc.AssD $1 $3 
+          $$.ass = AbsBnfc.AssD $1.lexp $3.rexp 
         }
 
 
@@ -343,32 +363,32 @@ Func : FuncWrite
         { 
           $$.func = AbsBnfc.FuncBR $1 
         }
-     | LIdent '(' ListRExp ')' 
+     | LIdent '(' ListRExp ')' --TODO: rivedi
         { 
-          $$.func = AbsBnfc.FnctCall $1 $3 
+          $$.func = AbsBnfc.FnctCall $1 $3.lrexp 
         }
 
 
 FuncWrite :: { FuncWrite }          --TODO: rivedi
 FuncWrite : 'writeInt' '(' RExp ')' 
         { 
-           $$.funcwrite = AbsBnfc.WriteI $3 
+           $$.funcwrite = AbsBnfc.WriteI $3.rexp 
         }
           | 'writeFloat' '(' RExp ')' 
         { 
-           $$.funcwrite = AbsBnfc.WriteF $3 
+           $$.funcwrite = AbsBnfc.WriteF $3.rexp
         }
           | 'writeChar' '(' RExp ')' 
         { 
-           $$.funcwrite = AbsBnfc.WriteC $3 
+           $$.funcwrite = AbsBnfc.WriteC $3.rexp
         }
           | 'writeString' '(' RExp ')' 
         { 
-           $$.funcwrite = AbsBnfc.WriteS $3 
+           $$.funcwrite = AbsBnfc.WriteS $3.rexp
         }
 
 
-FuncRead :: { FuncRead }            --TODO: rivedi
+FuncRead :: { FuncRead }            --TODO: controlla
 FuncRead : 'readInt' '(' ')' 
         { 
            $$.funcread = AbsBnfc.ReadI 
@@ -397,14 +417,14 @@ While : 'while' RExp 'do' Block 'end'
 Repeat :: { Repeat }            --TODO: rivedi
 Repeat : 'repeat' Block 'until' RExp 
         { 
-          $$.repeat = AbsBnfc.LoopR $2 $4 
+          $$.repeat = AbsBnfc.LoopR $2 $4.rexp 
         }
 
 
-For :: { For }                  --TODO: rivedi
+For :: { For }                  --TODO: rivedi $2 $9
 For : 'for' LIdent '=' RExp ',' RExp Increment 'do' Block 'end' 
         { 
-           $$.for = AbsBnfc.LoopF $2 $4 $6 $7 $9 
+           $$.for = AbsBnfc.LoopF $2 $4.rexp $6.rexp $7.inc $9 
         }
     | 'for' LIdent 'in' LIdent 'do' Block 'end' 
         { 
@@ -444,7 +464,7 @@ Else : 'else' Block
 ElseIf :: { ElseIf }            --TODO: rivedi
 ElseIf : 'elseif' RExp 'then' Block 
         { 
-          $$.elseif =   AbsBnfc.ElseIfD $2 $4 
+          $$.elseif =   AbsBnfc.ElseIfD $2.rexp $4 
         }
 
 
