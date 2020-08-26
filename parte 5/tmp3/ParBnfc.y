@@ -139,34 +139,51 @@ L_LIdent { PT _ (T_LIdent $$) }
 
 -- tipi per gli attributi di $$
 %attributetype {AttrT}
-%attribute rexp { RExp }         -- 14 prod
-%attribute lexp { LExp }         -- 1 prod
-%attribute lrexp { [RExp] }      -- 1 prod
-%attribute program { Program }   -- 1 prod
-%attribute lpglob { [PGlob] }    -- 1 prod
-%attribute pglobl { PGlob }      -- 1 prod
-%attribute basict  { BasicType } -- ?? prod
-%attribute modality { Modality } -- 1 prod
-%attribute vbool { Boolean }     -- ?? prod
-%attribute vvoid { PtrVoid }     --?? prod
-%attribute stm  { Stm }          --troppe prod   
-%attribute eblk { EBlk }         -- 1 prod
-%attribute decl { Decl }         -- 1 prod
-%attribute varinit { VarInit }   -- 1 prod
-%attribute local { Local }       -- 1 prod
-%attribute ass { Ass }           -- 1 prod
-%attribute func { Func }         -- 1 prod
-%attribute funcwrite { FuncWrite } -- 1 prod
-%attribute funcread { FuncRead } -- 1 prod
-%attribute while { While }       --1 prod
-%attribute repeat { Repeat }     -- 1 prod
-%attribute for { For }           -- 1 prod
-%attribute inc { Increment }     -- 1 prod
-%attribute if { If }             -- 1 prod
-%attribute else { Else }         -- 1 prod
-%attribute elseif { ElseIf }     -- cucu
-%attribute lelseif { [ElseIf] }  --mannagia a voi
---- credo abbiate capito, ora ceno.............
+%attribute rexp { RExp }            -- 14 prod
+%attribute lexp { LExp }            -- 1 prod
+%attribute lrexp { [RExp] }         -- 1 prod
+%attribute program { Program }      -- 1 prod
+%attribute lpglob { [PGlob] }       -- 1 prod
+%attribute pglobl { PGlob }         -- 1 prod
+%attribute basict  { BasicType }    -- ?? prod
+%attribute modality { Modality }    -- 1 prod
+%attribute vbool { Boolean }        -- ?? prod
+%attribute vvoid { PtrVoid }        --?? prod
+%attribute lident { LIdent }
+%attribute rvalue {RValue}
+%attribute stm  { Stm }             --troppe prod 
+%attribute lstm { [Stm] }
+%attribute blk { Block }  
+%attribute eblk { EBlk }            -- 1 prod
+%attribute decl { Decl }            -- 1 prod
+%attribute varinit { VarInit }      -- 1 prod
+%attribute local { Local }          -- 1 prod
+%attribute ass { Ass }              -- 1 prod
+%attribute func { Func }            -- 1 prod
+%attribute funcd { FuncD }
+%attribute funcwrite { FuncWrite }  -- 1 prod
+%attribute funcread { FuncRead }    -- 1 prod
+%attribute whilestm { While }       --1 prod                               
+%attribute repeatstm { Repeat }     -- 1 prod
+%attribute forstm { For }           -- 1 prod
+%attribute incstm { Increment }     -- 1 prod
+%attribute ifstm { If }             -- 1 prod
+%attribute elsestm { Else }         -- 1 prod
+%attribute elseifstm { ElseIf }     
+%attribute lelseifstm { [ElseIf] }
+%attribute returnstm {Return}  
+%attribute breakstm {Break}
+%attribute lparamf { [ParamF] }
+%attribute paramf { ParamF }
+%attribute dim { Dim }
+%attribute ldim { [Dim] }
+%attribute valint { Integer }
+%attribute valdouble { Double }
+%attribute valstr { String }
+%attribute valchar { Char }
+%attribute array { Array }
+%attribute vtype { VType }
+%attribute lvtype { [VType] }  
 
 %%
 
@@ -176,10 +193,10 @@ String  :: { String }  : L_quoted {  $1 }
 Char    :: { Char }    : L_charac { (read ( $1)) :: Char }
 LIdent    :: { LIdent} : L_LIdent { LIdent ($1)}
 
-Program :: { Program }      --TODO: rivedi
+Program :: { Program }      --TODO: modificato, controllare
 Program : ListPGlobl 
         { 
-            $$.program = AbsBnfc.Prog $1;
+            $$.program = AbsBnfc.Prog $1.lpglob;
         }
 
 ListPGlobl :: { [PGlobl] }  
@@ -191,34 +208,34 @@ ListPGlobl :
                          
            | PGlobl ListPGlobl 
         { 
-            $$.lpglob = (:) $1.lpglobl $2.lpglobl; 
+            $$.lpglob = (:) $1.pglobl $2.lpglobl; 
         }
-PGlobl :: { PGlobl }    --TODO: rivedi
+PGlobl :: { PGlobl }    --TODO: modificato, controllare
 PGlobl : Stm 
         { 
-            AbsBnfc.ProgGlobB $1
+           $$.pglobl = AbsBnfc.ProgGlobB $1.stm
         }
        | FuncD 
         { 
-            AbsBnfc.ProgGlobF $1
+           $$.pglobl = AbsBnfc.ProgGlobF $1.funcd
         }
                         
 
-Block :: { Block }  --TODO
+Block :: { Block }  --TODO: modificato, controllare
 Block : ListStm 
         { 
-        AbsBnfc.Blk $1 
+          $$.blk = AbsBnfc.Blk $1.lstm 
         }
 
 
-ListStm :: { [Stm] }      --TODO      
+ListStm :: { [Stm] }      --TODO: modificato, controllare      
 ListStm : Stm 
         { 
-            (:[]) $1
+            $$.lstm = (:[]) $1.stm
         } 
        | Stm ListStm 
         { 
-            (:) $1 $2 
+            $$.lstm = (:) $1.stm $2.lstm 
         }
 
 
@@ -267,7 +284,7 @@ PtrVoid : 'nil'
         }
 
 
-Stm :: { Stm }          --TODO: rivedi tutti i $1
+Stm :: { Stm }          --TODO: modificato, controlla
 Stm : Decl ';' 
         { 
             $$.stm = AbsBnfc.SDecl $1.decl
@@ -282,19 +299,19 @@ Stm : Decl ';'
         }
     | While 
         { 
-           $$.stm = AbsBnfc.SWhile $1
+           $$.stm = AbsBnfc.SWhile $1.whilestm
         }
     | Repeat ';' 
         { 
-           $$.stm = AbsBnfc.SRepeat $1 
+           $$.stm = AbsBnfc.SRepeat $1.repeatstm
         }
     | For 
         { 
-           $$.stm = AbsBnfc.SFor $1 
+           $$.stm = AbsBnfc.SFor $1.forstm
         }
     | If 
         { 
-           $$.stm = AbsBnfc.SIf $1 
+           $$.stm = AbsBnfc.SIf $1.ifstm
         }
     | RExp ';' 
         { 
@@ -306,22 +323,22 @@ Stm : Decl ';'
         }
     | Return ';' 
         { 
-           $$.stm = AbsBnfc.SReturn $1 
+           $$.stm = AbsBnfc.SReturn $1.returnstm
         }
     | Break ';' 
         { 
-           $$.stm = AbsBnfc.SBreak $1 
+           $$.stm = AbsBnfc.SBreak $1.breakstm 
         }
 
 
-EBlk :: { EBlk }            --TODO: rivedi $2
+EBlk :: { EBlk }            --TODO: rivedi $2 (?)
 EBlk : 'do' Block 'end' 
         { 
             $$.eblk = AbsBnfc.EBlkS $2.blk 
         }
 
 
-Decl :: { Decl }        --TODO: controlla
+Decl :: { Decl }        --TODO: controlla (ok)
 Decl : BasicType LExp VarInit 
         { 
            $$.decl = AbsBnfc.DeclSP $1.basict $2.lexp $3.varinit
@@ -347,29 +364,29 @@ Local : 'local' Decl
         }
 
 
-Ass :: { Ass }              --TODO: rivedi
+Ass :: { Ass }              --TODO: rivedi (ok)
 Ass : LExp '=' RExp 
         { 
           $$.ass = AbsBnfc.AssD $1.lexp $3.rexp 
         }
 
 
-Func :: { Func }            --TODO: rivedi
+Func :: { Func }            --TODO: rivedi (ok)
 Func : FuncWrite 
         { 
-          $$.func = AbsBnfc.FuncBW $1 
+          $$.func = AbsBnfc.FuncBW $1.funcwrite
         }
      | FuncRead 
         { 
-          $$.func = AbsBnfc.FuncBR $1 
+          $$.func = AbsBnfc.FuncBR $1.funcread
         }
-     | LIdent '(' ListRExp ')' --TODO: rivedi
+     | LIdent '(' ListRExp ')' 
         { 
-          $$.func = AbsBnfc.FnctCall $1 $3.lrexp 
+          $$.func = AbsBnfc.FnctCall $1.lident $3.lrexp 
         }
 
 
-FuncWrite :: { FuncWrite }          --TODO: rivedi
+FuncWrite :: { FuncWrite }          --TODO: rivedi (ok)
 FuncWrite : 'writeInt' '(' RExp ')' 
         { 
            $$.funcwrite = AbsBnfc.WriteI $3.rexp 
@@ -388,7 +405,7 @@ FuncWrite : 'writeInt' '(' RExp ')'
         }
 
 
-FuncRead :: { FuncRead }            --TODO: controlla
+FuncRead :: { FuncRead }            --TODO: controlla (ok)
 FuncRead : 'readInt' '(' ')' 
         { 
            $$.funcread = AbsBnfc.ReadI 
@@ -407,144 +424,144 @@ FuncRead : 'readInt' '(' ')'
         }
 
 
-While :: { While }              --TODO: rivedi
+While :: { While }              --TODO: rivedi (ok)
 While : 'while' RExp 'do' Block 'end' 
         { 
-           $$.while = AbsBnfc.LoopW $2 $4 
+           $$.whilestm = AbsBnfc.LoopW $2.rexp $4.blk 
         }
 
 
-Repeat :: { Repeat }            --TODO: rivedi
+Repeat :: { Repeat }            --TODO: rivedi (ok)
 Repeat : 'repeat' Block 'until' RExp 
         { 
-          $$.repeat = AbsBnfc.LoopR $2 $4.rexp 
+          $$.repeatstm = AbsBnfc.LoopR $2.blk $4.rexp 
         }
 
 
-For :: { For }                  --TODO: rivedi $2 $9
+For :: { For }                  --TODO: modificato
 For : 'for' LIdent '=' RExp ',' RExp Increment 'do' Block 'end' 
         { 
-           $$.for = AbsBnfc.LoopF $2 $4.rexp $6.rexp $7.inc $9 
+           $$.forstm = AbsBnfc.LoopF $2.lident $4.rexp $6.rexp $7.inc $9.blk 
         }
     | 'for' LIdent 'in' LIdent 'do' Block 'end' 
         { 
-           $$.for =  AbsBnfc.LoopFE $2 $4 $6 
+           $$.forstm =  AbsBnfc.LoopFE $2.lident $4.lident $6.blk 
         }
 
 
-Increment :: { Increment }          --TODO: rivedi
+Increment :: { Increment }          --TODO: modificato
 Increment : {- empty -} 
         { 
            $$.inc =  AbsBnfc.FInc (ValInt 1) -- assumiamo che sia 1, appunto 
         }
           | ',' RExp 
         { 
-           $$.inc =  AbsBnfc.FInc $2
+           $$.inc =  AbsBnfc.FInc $2.rexp
         }
 
 
-If :: { If }                    --TODO: rivedi
+If :: { If }                    --TODO: rivedi (ok)
 If : 'if' RExp 'then' Block ListElseIf Else 'end' 
         { 
-          $$.if =   AbsBnfc.IfM $2 $4 (reverse $5) $6 
+          $$.ifstm =   AbsBnfc.IfM $2.rexp $4.block (reverse $5.lelseifstm) $6.elsestm 
         }
 
 
-Else :: { Else }                --TODO: rivedi
+Else :: { Else }                --TODO: rivedi (ok)
 Else : 'else' Block 
         { 
-          $$.else =   AbsBnfc.ElseS $2 
+          $$.elsestm =   AbsBnfc.ElseS $2.blk 
         }
      | {- empty -} 
         { 
-          $$.else =   AbsBnfc.ElseE 
+          $$.elsestm =   AbsBnfc.ElseE 
         }
 
 
-ElseIf :: { ElseIf }            --TODO: rivedi
+ElseIf :: { ElseIf }            --TODO: rivedi (ok)
 ElseIf : 'elseif' RExp 'then' Block 
         { 
-          $$.elseif =   AbsBnfc.ElseIfD $2.rexp $4 
+          $$.elseifstm =   AbsBnfc.ElseIfD $2.rexp $4.blk
         }
 
 
-ListElseIf :: { [ElseIf] }      --TODO: rivedi
+ListElseIf :: { [ElseIf] }      --TODO: rivedi (ok)
 ListElseIf : {- empty -} 
         { 
-           $$.lelseif =  [] 
+           $$.lelseifstm =  [] 
         }
            | ListElseIf ElseIf 
         { 
-           $$.lelseif = flip (:) $1 $2 
+           $$.lelseifstm = flip (:) $1.lelseifstm $2.elseif 
         }
 
 
-Return :: { Return }            --TODO: rivedi
+Return :: { Return }            --TODO: rivedi (ok)
 Return : 'return' RValue 
         { 
-           $$.return = AbsBnfc.JumpR $2 
+           $$.return = AbsBnfc.JumpR $2.rvalue 
         }
 
 
-RValue :: { RValue }            --TODO: rivedi
+RValue :: { RValue }            --TODO: rivedi (ok)
 RValue : {- empty -} 
         { 
-           $$.Rvalue = AbsBnfc.JumpRE 
+           $$.rvalue = AbsBnfc.JumpRE 
         }
        | RExp 
         { 
-           $$.Rvalue = AbsBnfc.JumpRV $1 
+           $$.rvalue = AbsBnfc.JumpRV $1.rexp
         }
 
 
-Break :: { Break }              --TODO: rivedi
+Break :: { Break }              --TODO: rivedi (ok)
 Break : 'break' 
         { 
-          $$.break = AbsBnfc.JumpB 
+          $$.breakstm = AbsBnfc.JumpB 
         }
 
 
-ListRExp :: { [RExp] }          --TODO: rivedi
+ListRExp :: { [RExp] }          --TODO: rivedi (ok)
 ListRExp : {- empty -} 
         { 
-          $$.LRExp =  [] 
+          $$.lrexp =  [] 
         }
          | RExp 
         { 
-          $$.LRExp = (:[]) $1 
+          $$.lrexp = (:[]) $1.rexp 
         }
          | RExp ',' ListRExp 
         { 
-          $$.LRExp = (:) $1 $3 
+          $$.lrexp = (:) $1.rexp $3.lrexp 
         }
 
 
-FuncD :: { FuncD }              --TODO: controlla
+FuncD :: { FuncD }              --TODO: controlla (ok)
 FuncD : BasicType 'function' LIdent '(' ListParamF ')' Block 'end' 
         { 
-          $$.FuncD =  AbsBnfc.FnctDecl $1 $3 $5 $7 
+          $$.FuncD =  AbsBnfc.FnctDecl $1.basict $3.lident $5.lparamf $7.blk 
         }
 
 
-ParamF :: { ParamF }            -- TODO: controlla
+ParamF :: { ParamF }            -- TODO: controlla (ok)
 ParamF : Modality BasicType LExp 
         { 
-          $$.paramF = AbsBnfc.ParmDeclF $1 $2 $3 
+          $$.paramF = AbsBnfc.ParmDeclF $1.modality $2.basict $3.lexp 
         }
 
 
-ListParamF :: { [ParamF] }      --TODO: controlla
+ListParamF :: { [ParamF] }      --TODO: controlla (ok)
 ListParamF : {- empty -} 
         { 
-          $$.LparamF = [] 
+          $$.lparamf = [] 
         }
            | ParamF 
         { 
-        (:[]) $1 
+          $$.lparamf = (:[]) $1.paramf 
         }
            | ParamF ',' ListParamF 
         { 
-          $$.LparamF = (:) $1 $3 
+          $$.lparamf = (:) $1.paramf $3.lparamf 
         }
 
 
@@ -558,27 +575,27 @@ Modality : {- empty -} { AbsBnfc.Modality1 }
          | 'name' { $$.modality =  AbsBnfc.Modality_name }
 
 
-LExp :: { LExp }        --TODO: rivedi
-LExp : LIdent { $$.lexp = AbsBnfc.LExpS $1 }
-     | '*' LExp { $$.lexp = AbsBnfc.LExpDR $2 }
-     | LIdent ListDim { $$.lexp = AbsBnfc.LExpA $1 $2 }
+LExp :: { LExp }        --TODO: rivedi (ok)
+LExp : LIdent { $$.lexp = AbsBnfc.LExpS $1.lident }
+     | '*' LExp { $$.lexp = AbsBnfc.LExpDR $2.lexp }
+     | LIdent ListDim { $$.lexp = AbsBnfc.LExpA $1.lident $2.ldim }
 
 
-ListDim :: { [Dim] }                    --TODO
+ListDim :: { [Dim] }                    --TODO: modificato
 ListDim : Dim 
         { 
-          $$.LDim =  (:[]) $1 
+          $$.ldim =  (:[]) $1.dim 
         }
          | Dim ListDim 
         { 
-          $$.LDim = (:) $1 $2 
+          $$.ldim = (:) $1.dim $2.ldim 
         }
 
 
-Dim :: { Dim }          --TODO: rivedi
+Dim :: { Dim }          --TODO: rivedi (?)
 Dim : '[' Integer ']' 
         { 
-           $$.dim = AbsBnfc.Dims $2     --rivedi (,ValInt)? da dummy scarico? 
+           $$.dim = AbsBnfc.Dims $2.valint     --rivedi (,ValInt)? da dummy scarico? 
         }
 
 
@@ -621,7 +638,7 @@ RExp : RExp 'or' RExp1
         }
 
 
-RExp2 :: { RExp }       --TODO: rivedi
+RExp2 :: { RExp }       --TODO: rivedi (ok)
 RExp2 : 'not' RExp3 
         { 
            $$.rexp = AbsBnfc.Not $2.rexp;
@@ -877,7 +894,7 @@ RExp9 : '-' RExp10
         }
 
 
-RExp10 :: { RExp }      --TODO: controlla
+RExp10 :: { RExp }      --TODO: controlla (ok)
 RExp10 : Func 
         { 
            $$.rexp = AbsBnfc.FCall $1.func ;
@@ -900,7 +917,7 @@ RExp10 : Func
 RExp11 :: { RExp }
 RExp11 : Integer 
         { 
-            $$.rexp = AbsBnfc.ValInt $1;        --TODO: controlla la merda in $1 
+            $$.rexp = AbsBnfc.ValInt $1.valint;        --TODO: (ok) controlla la merda in $1 
 {-            $$.tipo = BasicType_Int;
             $1.env = $$.env;
             $$.err = "";
@@ -908,7 +925,7 @@ RExp11 : Integer
         }
        | LExp 
         { 
-            $$.rexp = AbsBnfc.ValVariable $1 ;
+            $$.rexp = AbsBnfc.ValVariable $1.lexp ;
 {-            $$.tipo = $1.tipo;
             $1.env = $$.env;
             $$.err = "";
@@ -916,7 +933,7 @@ RExp11 : Integer
         }
        | '&' LExp 
         { 
-            $$.rexp = AbsBnfc.ValRef $2.lexp; --TODO: controlla la merda in $2
+            $$.rexp = AbsBnfc.ValRef $2.lexp; --TODO: (?) controlla la merda in $2
 {-            $$.tipo = $2.tipo;
             $2.env = $$.env;
             $$.err = "";
@@ -924,7 +941,7 @@ RExp11 : Integer
         }
        | Double 
         { 
-            $$.rexp = AbsBnfc.ValDouble $1 ; --TODO: controlla la merda in $1
+            $$.rexp = AbsBnfc.ValDouble $1.valdouble ; --TODO: (ok) controlla la merda in $1
 {-            $$.tipo = BasicType_Float;
             $1.env = $$.env;
             $$.err = "";
@@ -932,7 +949,7 @@ RExp11 : Integer
         }
        | String 
         { 
-            $$.rexp =  AbsBnfc.ValString $1 ; --TODO: controlla la merda in $1
+            $$.rexp =  AbsBnfc.ValString $1.valstr ; --TODO:(oK) controlla la merda in $1
 {-            $$.tipo = BasicType_String;
             $1.env = $$.env;
             $$.err = "";
@@ -940,7 +957,7 @@ RExp11 : Integer
         }
        | Char 
         { 
-            $$.rexp = AbsBnfc.ValChar $1 ; --TODO: controlla la merda in $1
+            $$.rexp = AbsBnfc.ValChar $1.valchar ; --TODO:(OK) controlla la merda in $1
 {-            $$.tipo = BasicType_Char;
             $1.env = $$.env;
             $$.err = "";
@@ -948,7 +965,7 @@ RExp11 : Integer
         }
        | Boolean 
         { 
-            $$.RExp = AbsBnfc.ValBoolean $1 ; --TODO: controlla la merda in $1
+            $$.RExp = AbsBnfc.ValBoolean $1.vbool ; --TODO: (OK) controlla la merda in $1
 {-            $$.tipo = BasicType_Bool;
             $1.env = $$.env;
             $$.err = "";
@@ -956,7 +973,7 @@ RExp11 : Integer
         }
        | PtrVoid 
         { 
-            $$.rexp = AbsBnfc.ValPtr $1 ; --TODO: controlla la merda in $1
+            $$.rexp = AbsBnfc.ValPtr $1.vvoid ; --TODO: (OK) controlla la merda in $1
 {-            $$.tipo = BasicType_Void;
             $1.env = $$.env;
             $$.err = "";
@@ -975,7 +992,7 @@ RExp11 : Integer
 RExp12 :: { RExp }
 RExp12 : '{' Array '}' 
         { 
-            $$.rexp = AbsBnfc.ValMArr $2 ;  --TODO: controlla la merda in $2 (valMArr?)
+            $$.rexp = AbsBnfc.ValMArr $2.array ;  --TODO:(OK) controlla la merda in $2 (valMArr?)
 {-            $$.tipo = $2.tipo;
             $2.env = $$.env;
             $$.err = $2.err;
@@ -994,46 +1011,48 @@ RExp12 : '{' Array '}'
 Array :: { Array }
 Array : '{' Array '}' ',' Array 
         { 
-            $$.array = AbsBnfc.ArrayV0 $2 $5;   --TODO: controlla la merda in $2..
+            $$.array = AbsBnfc.ArrayV0 $2.array $5.array;   --TODO: (oK) controlla la merda in $2..
 {-
             $2.env = $$.env;
             $5.env = $$.env;
 -}            
         }
-      | '{' Array '}'   --TODO: implementa
+      | '{' Array '}'   --TODO: (OK) implementa
         { 
-            AbsBnfc.ArrayV1 $2 ;
-            $$.tipo = $2.tipo;
+            $$.array = AbsBnfc.ArrayV1 $2.array ;
+{-            $$.tipo = $2.tipo;
             $2.env = $$.env;
             $$.err = $2.err;
+-}
         }
-      | ListVType        --TODO: implementa
+      | ListVType        --TODO: (OK) implementa
         { 
-            AbsBnfc.ArrayV2 $1 ;
-            $$.tipo = $1.tipo;
+            $$.array = AbsBnfc.ArrayV2 $1.lvtype ;
+ {-           $$.tipo = $1.tipo;
             $1.env = $$.env;
             $$.err = (checkTypeSubElements );
+-}
         }
 
 
 VType :: { VType }      --una dummy qui?
-VType : Boolean { $$.VType = AbsBnfc.VTypeBoolean $1 }
-      | Char { $$.VType =  AbsBnfc.VTypeChar $1 }
-      | Double { $$.VType =  AbsBnfc.VTypeDouble $1 }
-      | Integer { $$.VType =  AbsBnfc.VTypeInteger $1 }
-      | String { $$.VType =  AbsBnfc.VTypeString $1 }
-      | PtrVoid { $$.VType =  AbsBnfc.VTypePtrVoid $1 }
-      | {- empty -} { $$.VType =  AbsBnfc.VType1 }
+VType : Boolean { $$.vtype = AbsBnfc.VTypeBoolean $1.vbool }
+      | Char { $$.vtype =  AbsBnfc.VTypeChar $1.valchar }
+      | Double { $$.vtype =  AbsBnfc.VTypeDouble $1.valdouble }
+      | Integer { $$.vtype =  AbsBnfc.VTypeInteger $1.valint }
+      | String { $$.vtype =  AbsBnfc.VTypeString $1.valstr }
+      | PtrVoid { $$.vtype =  AbsBnfc.VTypePtrVoid $1.vvoid }
+      | {- empty -} { $$.vtype =  AbsBnfc.VType1 }
 
 
-ListVType :: { [VType] }    --TODO: implementa
+ListVType :: { [VType] }    --TODO: (OK) implementa
 ListVType : VType 
         { 
-            $$.vtype = (:[]) $1 
+            $$.lvtype = (:[]) $1.vtype 
         } 
         | VType ',' ListVType 
         { 
-            $$.VType = (:) $1 $3 
+            $$.lvtype = (:) $1.vtype $3.lvtype 
         }
 
 
