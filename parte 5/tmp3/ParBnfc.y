@@ -568,7 +568,12 @@ RExp : RExp 'or' RExp1
            $$.tipo = BasicType_Bool;
            $1.env = $$.env;
            $3.env = $$.env;
-           $$.err = (checkBothBool $1 $3);
+           $$.err = (checkBothBool $1.tipo $3.tipo);
+          where ( 
+            if ($$.err == "") 
+               then (Ok())
+            else (Bad $ (prntErr $$.err $1 $3 ))
+            );
         }
      | RExp1 'and' RExp2 
         { 
@@ -576,7 +581,12 @@ RExp : RExp 'or' RExp1
            $$.tipo = BasicType_Bool;
            $1.env = $$.env;
            $3.env = $$.env;
-           $$.err = (checkBothBool $1 $3);
+           $$.err = (checkBothBool $1.tipo $3.tipo);
+          where ( 
+            if ($$.err == "") 
+               then (Ok())
+            else (Bad $ (prntErr $$.err $1 $3 ))
+            );
         }
      | RExp1 
         { 
@@ -593,7 +603,12 @@ RExp2 : 'not' RExp3
            $$.RExp = AbsBnfc.Not $2;
            $$.tipo = BasicType_Bool;
            $2.env = $$.env;
-           $$.err = (checkIsBool $2);
+           $$.err = (checkIsBool $2.tipo);
+          where ( 
+            if ($$.err == "") 
+               then (Ok())
+            else (Bad $ (prntErr $$.err $2))
+            );
         } 
         | RExp3 
         { 
@@ -611,7 +626,12 @@ RExp3 : RExp3 '==' RExp5
            $$.tipo = BasicType_Bool;
            $1.env = $$.env;
            $3.env = $$.env;
-           $$.err = (checkBothBool $1 $3);
+           $$.err = (checkBothBool $1.tipo $3.tipo);
+          where ( 
+            if ($$.err == "") 
+               then (Ok())
+            else (Bad $ (prntErr $$.err $1 $3 ))
+            );
         }
       | RExp3 '~=' RExp5 
         { 
@@ -619,7 +639,12 @@ RExp3 : RExp3 '==' RExp5
            $$.tipo = BasicType_Bool;
            $1.env = $$.env;
            $3.env = $$.env;
-           $$.err = (checkBothBool $1 $3);
+           $$.err = (checkBothBool $1.tipo $3.tipo);
+          where ( 
+            if ($$.err == "") 
+               then (Ok())
+            else (Bad $ (prntErr $$.err $1 $3 ))
+            );
         }
       | RExp3 '<' RExp5 
         { 
@@ -627,7 +652,12 @@ RExp3 : RExp3 '==' RExp5
            $$.tipo = BasicType_Bool;
            $1.env = $$.env;
            $3.env = $$.env;
-           $$.err = (checkBothBool $1 $3);
+           $$.err = (checkBothBool $1.tipo $3.tipo);
+          where ( 
+            if ($$.err == "") 
+               then (Ok())
+            else (Bad $ (prntErr $$.err $1 $3 ))
+            );
         }
       | RExp3 '<=' RExp5 
         { 
@@ -635,7 +665,12 @@ RExp3 : RExp3 '==' RExp5
            $$.tipo = BasicType_Bool;
            $1.env = $$.env;
            $3.env = $$.env;
-           $$.err = (checkBothBool $1 $3);
+           $$.err = (checkBothBool $1.tipo $3.tipo);
+          where ( 
+            if ($$.err == "") 
+               then (Ok())
+            else (Bad $ (prntErr $$.err $1 $3 ))
+            );
         }
       | RExp3 '>' RExp5 
         { 
@@ -643,7 +678,12 @@ RExp3 : RExp3 '==' RExp5
            $$.tipo = BasicType_Bool;
            $1.env = $$.env;
            $3.env = $$.env;
-           $$.err = (checkBothBool $1 $3);
+           $$.err = (checkBothBool $1.tipo $3.tipo);
+          where ( 
+            if ($$.err == "") 
+               then (Ok())
+            else (Bad $ (prntErr $$.err $1 $3 ))
+            );
         }
       | RExp3 '>=' RExp5 
         { 
@@ -651,7 +691,12 @@ RExp3 : RExp3 '==' RExp5
            $$.tipo = BasicType_Bool;
            $1.env = $$.env;
            $3.env = $$.env;
-           $$.err = (checkBothBool $1 $3);
+           $$.err = (checkBothBool $1.tipo $3.tipo);
+          where ( 
+            if ($$.err == "") 
+               then (Ok())
+            else (Bad $ (prntErr $$.err $1 $3 ))
+            );
         }
       | RExp4 { 
           $$.RExp = $1;
@@ -668,7 +713,12 @@ RExp6 : RExp6 '+' RExp7
            $$.tipo = (supType $1.tipo $2.tipo) ;
            $1.env = $$.env;
            $3.env = $$.env;
-           $$.err = (checkNumeric $1 $3);
+           $$.err = (checkNumeric $1.tipo $3.tipo);
+          where ( 
+            if ($$.err == "") 
+               then (Ok())
+            else (Bad $ (prntErr $$.err $1 $3 ))
+            );
         }
       | RExp6 '-' RExp7 
         { 
@@ -676,7 +726,12 @@ RExp6 : RExp6 '+' RExp7
            $$.tipo = (supType $1.tipo $2.tipo) ;
            $1.env = $$.env;
            $3.env = $$.env;
-           $$.err = (checkNumeric $1 $3);
+           $$.err = (checkNumeric $1.tipo $3.tipo);
+          where ( 
+            if ($$.err == "") 
+               then (Ok())
+            else (Bad $ (prntErr $$.err $1 $3 ))
+            );
         }
       | RExp7 
         { 
@@ -694,7 +749,12 @@ RExp7 : RExp7 '*' RExp8
            $$.tipo = (supType $1.tipo $2.tipo) ;
            $1.env = $$.env;
            $3.env = $$.env;
-           $$.err = (checkNumeric $1 $3);
+           $$.err = (checkNumeric $1.tipo $3.tipo);
+          where ( 
+            if ($$.err == "") 
+               then (Ok())
+            else (Bad $ (prntErr $$.err $1 $3 ))
+            );
         }
       | RExp7 '/' RExp8 
         { 
@@ -702,7 +762,12 @@ RExp7 : RExp7 '*' RExp8
            $$.tipo = (supType $1.tipo $2.tipo) ;
            $1.env = $$.env;
            $3.env = $$.env;
-           $$.err = (checkNotZero $3) ++ (checkNumeric $1 $3);
+           $$.err = (checkNotZero $3.tipo) ++ (checkNumeric $1.tipo $3.tipo);
+          where ( 
+            if ($$.err == "") 
+               then (Ok())
+            else (Bad $ (prntErr $$.err $3))
+            );
         }
       | RExp7 '%' RExp8 
         { 
@@ -710,7 +775,12 @@ RExp7 : RExp7 '*' RExp8
            $$.tipo = (supType $1.tipo $2.tipo) ;
            $1.env = $$.env;
            $3.env = $$.env;
-           $$.err = (checkNotZero $3) ++ (checkInt $1 $3);
+           $$.err = (checkNotZero $3.tipo) ++ (checkInt $1.tipo $3.tipo);
+          where ( 
+            if ($$.err == "") 
+               then (Ok())
+            else (Bad $ (prntErr $$.err $1 $3 ))
+            );
         }
       | RExp8 
         { 
@@ -728,7 +798,12 @@ RExp8 : RExp9 '^' RExp8
           $$.tipo = (supType $1.tipo $2.tipo) ;
           $1.env = $$.env;
           $3.env = $$.env;
-          $$.err = (checkBothZero $1 $3) ++ (checkNumeric $1 $3);
+          $$.err = (checkBothZero $1.tipo $3.tipo) ++ (checkNumeric $1.tipo $3.tipo);
+          where ( 
+            if ($$.err == "") 
+               then (Ok())
+            else (Bad $ (prntErr $$.err $1 $3))
+            );
         } 
       | RExp9 
         { 
@@ -745,7 +820,7 @@ RExp9 : '-' RExp10
           $$.RExp = AbsBnfc.Neg $2;
           $$.tipo = $2.tipo;
           $2.env = $$.env;
-          $$.err = (checkSingleNumeric $2);
+          $$.err = (checkSingleNumeric $2.tipo);
         } 
       | RExp10 
         { 
