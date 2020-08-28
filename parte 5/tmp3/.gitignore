@@ -5,9 +5,9 @@ LexBnfc.hs
 LexBnfc.x
 ParBnfc.hs
 ParBnfc.info
-PrintBnfc.hs
 SkelBnfc.hs
 TestBnfc*
+main
 *.hi
 *.o
 

@@ -25,7 +25,7 @@ clean:
 	rm -f ParBnfc.o
 #	rm -f ParBnfc.y
 	rm -f PrintBnfc.hi
-	rm -f PrintBnfc.hs
+#	rm -f PrintBnfc.hs
 	rm -f PrintBnfc.o
 	rm -f SkelBnfc.hi
 	rm -f SkelBnfc.hs
@@ -35,6 +35,9 @@ clean:
 	rm -f TestBnfc.hi
 	rm -f TestBnfc.o
 	rm -f ParBnfc.info
+	rm main.o
+	rm main.hi
+	rm main
 
 demo:   clean bnfc alex happy
 	$(GHC) TestBnfc.hs
@@ -50,5 +53,6 @@ alex:   bnfc
 
 bnfc:
 	$(BNFC) bnfc.cf
-	rm ParBnfc.y
+	rm ParBnfc.y PrintBnfc.hs
 	mv ParBnfc.y.bak ParBnfc.y
+	mv PrintBnfc.hs.bak PrintBnfc.hs
