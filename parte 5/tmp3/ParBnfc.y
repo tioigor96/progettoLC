@@ -5,6 +5,7 @@ module ParBnfc where
 import AbsBnfc
 import LexBnfc
 import ErrM
+import Env
 
 }
 
@@ -147,6 +148,10 @@ L_LIdent { PT _ (T_LIdent $$) }
 %attribute vstr { String }
 %attribute vlident { LIdent }
 
+-- attributi per il frontend
+%attribute envin { EnvT }
+%attribute envout { EnvT }
+
 
 %%
 
@@ -162,25 +167,36 @@ LIdent : L_LIdent { $$.vlident = LIdent ($1)}
 
 Program : ListPGlobl
     { 
-        $$.res = Result (AbsBnfc.Prog $1.parsetree ) "qui TAC" "qui ERR"
+        $1.envin = emptyEnv
+        ; $$.res = Result (AbsBnfc.Prog $1.parsetree ) "qui TAC" "qui ERR" $1.envout
     }
 
 ListPGlobl : PGlobl 
     { 
-        $$.parsetree = (:[]) $1.parsetree 
+        $1.envin = $$.envin
+        ; $$.parsetree = (:[]) $1.parsetree
+        ; $$.envout = $1.envout
     } 
     | PGlobl ListPGlobl 
     { 
-        $$.parsetree = (:) $1.parsetree $2.parsetree 
+        $1.envin = $$.envin
+        ; $2.envin = $$.envin
+        ; $$.parsetree = (:) $1.parsetree $2.parsetree
+        ; $$.envout = Map.union $1.envout $2.envout
+        
     }
 
 PGlobl : Stm 
     { 
-        $$.parsetree = AbsBnfc.ProgGlobB $1.parsetree 
+        $1.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.ProgGlobB $1.parsetree
+        ; $$.envout = $1.envout 
     }
        | FuncD 
     { 
-        $$.parsetree = AbsBnfc.ProgGlobF $1.parsetree 
+        $1.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.ProgGlobF $1.parsetree
+        ; $$.envout = $1.envout 
     }
 
 Block : ListStm 
@@ -194,7 +210,8 @@ ListStm : Stm
     } 
     | Stm ListStm 
     { 
-        $$.parsetree = (:) $1.parsetree $2.parsetree 
+        $$.parsetree = (:) $1.parsetree $2.parsetree
+        $1.
     }
 
 BasicType : 'Bool' 
@@ -279,7 +296,9 @@ EBlk : 'do' Block 'end'
 
 Decl : BasicType LExp VarInit 
     { 
-        $$.parsetree = AbsBnfc.DeclSP $1.parsetree $2.parsetree $3.parsetree 
+        
+        $$.parsetree = AbsBnfc.DeclSP $1.parsetree $2.parsetree $3.parsetree
+        ; $$.envout = insertEnv $2.vlident (makevar $2.vlident $1.parsetree) $$.envin
     }
 
 VarInit : {- empty -} 
@@ -749,8 +768,7 @@ RExp13 : '(' RExp ')'
     }
 {
 
-data Result = Result Program String String
-  deriving (Eq, Show)
+data Result = Result Program String String EnvT  deriving (Eq, Show)
 
 
 returnM :: a -> Err a
