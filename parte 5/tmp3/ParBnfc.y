@@ -300,7 +300,7 @@ Decl : BasicType LExp VarInit
     { 
         
         $$.parsetree = AbsBnfc.DeclSP $1.parsetree $2.parsetree $3.parsetree
-        ; $$.envout = insertEnv (getLIdentlexp $2.parsetree) (makevar (getLIdentlexp $2.parsetree) $1.parsetree) $$.envin
+        ; $$.envout = insertEnv $1.parsetree $2.parsetree $$.envin
     }
 
 VarInit : {- empty -} 

@@ -30,18 +30,33 @@ data Entity = Var { getTypeV :: AbsBnfc.BasicType,
                     }
             deriving (Show, Eq)
 
-makevar :: LIdent -> AbsBnfc.BasicType -> [Entity]
-makevar x@(LIdent str) tipo = [Var tipo str]
-
-
+--crea l'env vuoto
 emptyEnv :: EnvT
 emptyEnv = Map.empty
 
-insertEnv :: LIdent -> [Entity] -> EnvT -> EnvT
-insertEnv x@(LIdent str) ent env = Map.insert str ent env
-
-
-
 -- TODO: controllo sui merge! se ho cose con medesimi nomi come si combina?
 mergeEnv e1 e2 = Map.union e1 e2
+
+--crea una Var
+makeVar :: String -> AbsBnfc.BasicType -> Entity
+makeVar str tipo = Var tipo str
+
+--crea un Arr
+makeArr :: String -> AbsBnfc.BasicType -> [Integer] -> Entity
+makeArr str tipo dims = Arr tipo str dims
+
+--inserisce una var
+insertVar :: LIdent -> AbsBnfc.BasicType -> EnvT -> EnvT
+insertVar x@(LIdent str) tipo env = Map.insert str [(makeVar str tipo)] env
+
+-- inserisce un Arr
+insertArr :: LIdent -> BasicType -> [Integer] -> EnvT -> EnvT
+insertArr x@(LIdent str) tipo dims env = Map.insert str [(makeArr str tipo dims)] env
+
+-- inserisce caso gen
+insertEnv :: BasicType -> LExp -> EnvT -> EnvT
+insertEnv tipo lexp env
+    | isVar lexp = insertVar (getLIdentlexp lexp) tipo env
+    | isArr lexp = insertArr (getLIdentlexp lexp) tipo (fromJust $ getDim lexp) env
+--    | otherwise = "non implementato"
 
