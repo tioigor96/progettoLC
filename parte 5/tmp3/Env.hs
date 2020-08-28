@@ -3,6 +3,7 @@ module Env where
 import AbsBnfc
 import Control.Applicative
 import qualified Data.Map.Strict as Map
+import Utils
 import Data.Maybe
 
 type EnvT = Map.Map String [Entity]
@@ -23,6 +24,10 @@ data Entity = Var { getTypeV :: AbsBnfc.BasicType,
                     getNameA :: String,
                     getDimA  :: [Integer]
                     }
+            | Ptr { getTypeP :: AbsBnfc.BasicType,
+                    getNameP :: String,
+                    getLevP  :: Integer
+                    }
             deriving (Show, Eq)
 
 makevar :: LIdent -> AbsBnfc.BasicType -> [Entity]
@@ -35,18 +40,8 @@ emptyEnv = Map.empty
 insertEnv :: LIdent -> [Entity] -> EnvT -> EnvT
 insertEnv x@(LIdent str) ent env = Map.insert str ent env
 
--- TODO: controllo sui merge!
 
 
---test utility varie
-{-
-seqADim [] = []
-seqADim (x:xs) = ((\(Dims z)-> z) x) : (seqADim xs)
+-- TODO: controllo sui merge! se ho cose con medesimi nomi come si combina?
+mergeEnv e1 e2 = Map.union e1 e2
 
-
-seqADim xs = map (\(Dims x)-> x) xs
-
-isVTBool (VTypeBoolean _) = True
-isVTBool _ = False
-
--}

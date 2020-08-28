@@ -5,6 +5,7 @@ module ParBnfc where
 import AbsBnfc
 import LexBnfc
 import ErrM
+import Utils
 import Env
 
 }
@@ -182,7 +183,7 @@ ListPGlobl : PGlobl
         $1.envin = $$.envin
         ; $2.envin = $$.envin
         ; $$.parsetree = (:) $1.parsetree $2.parsetree
-        ; $$.envout = Map.union $1.envout $2.envout
+        ; $$.envout = mergeEnv $1.envout $2.envout
         
     }
 
@@ -211,7 +212,6 @@ ListStm : Stm
     | Stm ListStm 
     { 
         $$.parsetree = (:) $1.parsetree $2.parsetree
-        $1.
     }
 
 BasicType : 'Bool' 
@@ -246,7 +246,9 @@ PtrVoid : 'nil' { $$.parsetree = AbsBnfc.PtrType }
 
 Stm : Decl ';' 
     { 
-        $$.parsetree = AbsBnfc.SDecl $1.parsetree 
+        $1.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.SDecl $1.parsetree
+        ; $$.envout = $1.envout
     }
     | Local ';' 
     { 
@@ -298,7 +300,7 @@ Decl : BasicType LExp VarInit
     { 
         
         $$.parsetree = AbsBnfc.DeclSP $1.parsetree $2.parsetree $3.parsetree
-        ; $$.envout = insertEnv $2.vlident (makevar $2.vlident $1.parsetree) $$.envin
+        ; $$.envout = insertEnv (getLIdentlexp $2.parsetree) (makevar (getLIdentlexp $2.parsetree) $1.parsetree) $$.envin
     }
 
 VarInit : {- empty -} 
