@@ -770,7 +770,7 @@ RExp13 : '(' RExp ')'
     }
 {
 
-data Result = Result Program String String EnvT  deriving (Eq, Show, Print)
+data Result = Result Program String String EnvT  deriving (Eq, Show)
 
 
 returnM :: a -> Err a
