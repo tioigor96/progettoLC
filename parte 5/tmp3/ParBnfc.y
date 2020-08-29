@@ -6,6 +6,7 @@ import AbsBnfc
 import LexBnfc
 import ErrM
 import Utils
+import Data.Maybe
 import Env
 
 }
@@ -137,7 +138,7 @@ L_integ  { PT _ (TI $$) }
 L_doubl  { PT _ (TD $$) }
 L_quoted { PT _ (TL $$) }
 L_charac { PT _ (TC $$) }
-L_LIdent { PT _ (T_LIdent $$) }
+L_LIdent { PT _ (T_LIdent _) }
 
 -- tipi per gli attributi di $$
 %attributetype { AttrTree a }
@@ -152,6 +153,8 @@ L_LIdent { PT _ (T_LIdent $$) }
 -- attributi per il frontend
 %attribute envin { EnvT }
 %attribute envout { EnvT }
+%attribute errs { [String] }
+%attribute posn { Posn }
 
 
 %%
@@ -164,12 +167,16 @@ String : L_quoted { $$.vstr = $1 }
 
 Char : L_charac {  $$.vchr = (read ( $1)) :: Char }
 
-LIdent : L_LIdent { $$.vlident = LIdent ($1)}
+LIdent : L_LIdent 
+{         
+            $$.posn =  (tokenPosn $1)                           
+            ; $$.vlident = LIdent (getLIdentT $1)
+        }
 
 Program : ListPGlobl
     { 
         $1.envin = emptyEnv
-        ; $$.res = Result (AbsBnfc.Prog $1.parsetree ) "qui TAC" "qui ERR" $1.envout
+        ; $$.res = Result (AbsBnfc.Prog $1.parsetree ) "qui TAC" $1.envout $1.errs
     }
 
 ListPGlobl : PGlobl 
@@ -177,13 +184,15 @@ ListPGlobl : PGlobl
         $1.envin = $$.envin
         ; $$.parsetree = (:[]) $1.parsetree
         ; $$.envout = $1.envout
+        ; $$.errs = $1.errs
     } 
-    | PGlobl ListPGlobl 
+    | PGlobl ListPGlobl
     { 
         $1.envin = $$.envin
-        ; $2.envin = $$.envin
+        ; $2.envin = $1.envout
         ; $$.parsetree = (:) $1.parsetree $2.parsetree
         ; $$.envout = mergeEnv $1.envout $2.envout
+        ; $$.errs = $1.errs ++ $2.errs
         
     }
 
@@ -192,12 +201,14 @@ PGlobl : Stm
         $1.envin = $$.envin
         ; $$.parsetree = AbsBnfc.ProgGlobB $1.parsetree
         ; $$.envout = $1.envout 
+        ; $$.errs = $1.errs
     }
        | FuncD 
     { 
-        $1.envin = $$.envin
-        ; $$.parsetree = AbsBnfc.ProgGlobF $1.parsetree
+        $$.parsetree = AbsBnfc.ProgGlobF $1.parsetree
+        ; $1.envin = $$.envin 
         ; $$.envout = $1.envout 
+        ; $$.errs = $1.errs
     }
 
 Block : ListStm 
@@ -249,6 +260,7 @@ Stm : Decl ';'
         $1.envin = $$.envin
         ; $$.parsetree = AbsBnfc.SDecl $1.parsetree
         ; $$.envout = $1.envout
+        ; $$.errs = $1.errs
     }
     | Local ';' 
     { 
@@ -296,20 +308,34 @@ EBlk : 'do' Block 'end'
         $$.parsetree = AbsBnfc.EBlkS $2.parsetree 
     }
 
+-- passa a VarInit env e varie
 Decl : BasicType LExp VarInit 
     { 
-        
-        $$.parsetree = AbsBnfc.DeclSP $1.parsetree $2.parsetree $3.parsetree
-        ; $$.envout = insertEnv $1.parsetree $2.parsetree $$.envin
+        $3.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.DeclSP $1.parsetree $2.parsetree $3.parsetree
+        ; $$.envout = ( if (isOk (insertEnv $1.parsetree $2.parsetree $$.envin $2.posn))
+                         then (fromOk (insertEnv $1.parsetree $2.parsetree $$.envin $2.posn))
+                         else $3.envin
+                        )
+        ; $$.errs = ( if (isJust (lookupEnv ( (fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))
+                         then ["error: variable " ++ (fromBad (insertEnv $1.parsetree $2.parsetree $$.envin $2.posn))]
+                         else []
+                        ) ++ $3.errs
+                            
     }
 
 VarInit : {- empty -} 
     { 
-        $$.parsetree = AbsBnfc.VarINil 
+        
+        $$.parsetree = AbsBnfc.VarINil
+        ; $$.envout = $$.envin
+        ; $$.errs = []
     }
     | '=' RExp 
-    { 
+    {
         $$.parsetree = AbsBnfc.VarExp $2.parsetree 
+        ; $$.envout = $$.envin
+        ; $$.errs = []
     }
 
 Local : 'local' Decl 
@@ -511,15 +537,18 @@ Modality : {- empty -}
 
 LExp : LIdent --modded
     { 
-        $$.parsetree = AbsBnfc.LExpS $1.vlident 
+        $$.parsetree = AbsBnfc.LExpS $1.vlident
+        ; $$.posn = $1.posn
     }
     | '*' LExp 
     { 
         $$.parsetree = AbsBnfc.LExpDR $2.parsetree 
+        ; $$.posn = $2.posn
     }
     | LIdent ListDim --modded
     { 
-        $$.parsetree = AbsBnfc.LExpA $1.vlident $2.parsetree 
+        $$.parsetree = AbsBnfc.LExpA $1.vlident $2.parsetree
+        ; $$.posn = $1.posn
     }
 
 ListDim : Dim 
@@ -770,7 +799,7 @@ RExp13 : '(' RExp ')'
     }
 {
 
-data Result = Result Program String String EnvT  deriving (Eq, Show)
+data Result = Result Program String EnvT [String]  deriving (Eq, Show)
 
 
 returnM :: a -> Err a
