@@ -5,6 +5,7 @@ import Control.Applicative
 import qualified Data.Map.Strict as Map
 import Utils
 import Data.Maybe
+import Data.Typeable
 
 type EnvT = Map.Map String [Entity]
 
@@ -59,4 +60,47 @@ insertEnv tipo lexp env
     | isVar lexp = insertVar (getLIdentlexp lexp) tipo env
     | isArr lexp = insertArr (getLIdentlexp lexp) tipo (fromJust $ getDim lexp) env
 --    | otherwise = "non implementato"
+
+checkArrayType array a 
+                          | a == AbsBnfc.BasicType_Bool = 
+                              if (all(\x-> typeOf x == typeOf(True)) array)
+                                then ""
+                              else 
+                                "Mismatch type between elements and array definition" 
+                          | a == BasicType_Int = 
+                              if (all (\x-> typeOf x == typeOf(toInteger(1))) array)
+                                then ""
+                              else 
+                                "Mismatch type between elements and array definition" 
+                          | a == BasicType_Float = 
+                              if (all (\x-> typeOf x == typeOf(1::Double)) array)
+                                then ""
+                              else 
+                                "Mismatch type between elements and array definition"
+                          | a == BasicType_String = 
+                              if (all(\x-> typeOf x == typeOf("a")) array)
+                                then ""
+                              else 
+                                "Mismatch type between elements and array definition"
+                          | a == BasicType_Char = 
+                              if (all(\x-> typeOf x == typeOf('a')) array)
+                                then ""
+                              else 
+                                "Mismatch type between elements and array definition" 
+                
+checkSameTypeEl []         = 1
+checkSameTypeEl (x:[])     = 1
+checkSameTypeEl (x:xs:xss) = if (typeOf x == typeOf xs) 
+                                then checkSameTypeEl xss
+                             else 0      
+
+checkArrayLenght array len = if (length array) == len then      
+                                ""
+                             else
+                                "Too much or too few elements in array"
+
+indexOutOfBound index len = if (index < len && index > 0) then
+                                ""
+                            else 
+                                "Index out of bound"
 
