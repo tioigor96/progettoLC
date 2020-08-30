@@ -38,6 +38,12 @@ render d = rend 0 (map ($ "") $ d []) "" where
                                                          "elseif" -> (new (i-1) . rend (i-1) ts) 
                                                          _ -> new i . rend i ts)
                                     else new i . rend i ts)
+    ")"      :ts -> showChar ')' . (if ts /= [] then
+                                      if (head ts /= "+" && head ts /= "-" && head ts /= "/" && head ts /= ";" && head ts /= "*" &&
+                                          head ts /= "%" && head ts /= "&") 
+                                          then new (i+1) . rend (i+1) ts
+                                      else  rend i ts
+                                    else new i . rend i ts)
     "do"     :ts -> showString "do" . new (i+1) . rend (i+1) ts
     "then"   :ts -> showString "then" . new (i+1) . rend (i+1) ts
     "else"   :ts -> showString "else" .(if ts /= [] then
