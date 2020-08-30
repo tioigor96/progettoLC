@@ -6,6 +6,24 @@ import ErrM
 import Control.Applicative
 import Data.Maybe
 
+-- controllo compatibilità tipi
+{- 
+AbsBnfc.BasicType_Float   AbsBnfc.BasicType_Void
+AbsBnfc.BasicType_Bool    AbsBnfc.BasicType_Int
+AbsBnfc.BasicType_Char    AbsBnfc.BasicType_String
+-}
+isValidCmp :: AbsBnfc.BasicType -> AbsBnfc.BasicType -> Bool                    -- canonici
+isValidCmp (AbsBnfc.BasicType_Int) (AbsBnfc.BasicType_Int) = True
+isValidCmp (AbsBnfc.BasicType_Float) (AbsBnfc.BasicType_Float) = True
+isValidCmp (AbsBnfc.BasicType_Void) (AbsBnfc.BasicType_Void) = True
+isValidCmp (AbsBnfc.BasicType_Bool) (AbsBnfc.BasicType_Bool) = True
+isValidCmp (AbsBnfc.BasicType_Char) (AbsBnfc.BasicType_Char) = True
+isValidCmp (AbsBnfc.BasicType_String) (AbsBnfc.BasicType_String) = True
+isValidCmp (AbsBnfc.BasicType_Float) (AbsBnfc.BasicType_Int) = True             -- compatibilità tra tipi
+isValidCmp (AbsBnfc.BasicType_Int) (AbsBnfc.BasicType_Float) = True             -- compatibilità tra tipi
+-- isValidCmp (AbsBnfc.BasicType_Char) (AbsBnfc.BasicType_String) = True        -- e qui che famo?
+-- isValidCmp (AbsBnfc.BasicType_String) (AbsBnfc.BasicType_Char) = True        -- e qui che famo?
+isValidCmp _ _ = False                                                          -- default case
 
 --controllo token per errori
 getLIdentT :: Token -> String
@@ -15,6 +33,10 @@ getLinePosn :: (Int, Int) -> Int
 getLinePosn (ln, _) = ln
 getColPosn :: (Int, Int) -> Int
 getColPosn (_, cl) = cl
+
+showFromPosn :: Posn -> String
+showFromPosn psn = ((show . getLinePosn . posLineCol) psn) ++ ":" ++ 
+                   ((show . getColPosn . posLineCol) psn)
 
 -- prende dal parse tree il nome
 getLIdentlexp x = case x of

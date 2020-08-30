@@ -155,6 +155,7 @@ L_LIdent { PT _ (T_LIdent _) }
 %attribute envout { EnvT }
 %attribute errs { [String] }
 %attribute posn { Posn }
+%attribute tipo { BasicType }
 
 
 %%
@@ -288,7 +289,10 @@ Stm : Decl ';'
     }
     | RExp ';' 
     { 
-        $$.parsetree = AbsBnfc.SRExp $1.parsetree 
+        $1.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.SRExp $1.parsetree
+        ; $$.envout = $1.envout
+        ; $$.errs = $1.errs
     }
     | EBlk 
     { 
@@ -350,11 +354,19 @@ Ass : LExp '=' RExp
 
 Func : FuncWrite 
     { 
-        $$.parsetree = AbsBnfc.FuncBW $1.parsetree 
+        $1.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.FuncBW $1.parsetree
+        ; $$.envout = $1.envout
+        ; $$.errs = $1.errs
+        ; $$.tipo = AbsBnfc.BasicType_Void
     }
     | FuncRead 
     { 
-        $$.parsetree = AbsBnfc.FuncBR $1.parsetree 
+        $1.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.FuncBR $1.parsetree 
+        ; $$.envout = $1.envout
+        ; $$.errs = $1.errs
+        ; $$.tipo = $1.tipo
     }
     | LIdent '(' ListRExp ')' --modded
     { 
@@ -363,36 +375,72 @@ Func : FuncWrite
 
 FuncWrite : 'writeInt' '(' RExp ')' 
     { 
-        $$.parsetree = AbsBnfc.WriteI $3.parsetree 
+        $3.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.WriteI $3.parsetree 
+        ; $$.envout = $3.envout
+        ; $$.errs = (if (not($3.tipo == BasicType_Int))
+                        then ["error at " ++ ((showFromPosn . tokenPosn) $1) ++ ": type for 'writeInt' need to be Int!"]
+                        else []
+                     ) ++ $3.errs
     }
     | 'writeFloat' '(' RExp ')' 
     { 
-        $$.parsetree = AbsBnfc.WriteF $3.parsetree 
+        $3.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.WriteF $3.parsetree
+        ; $$.envout = $3.envout
+        ; $$.errs = (if (not ($3.tipo == BasicType_Float))
+                        then ["error at " ++ ((showFromPosn . tokenPosn) $1) ++ ": type for 'writeFloat' need to be Float!"]
+                        else []
+                     ) ++ $3.errs
     }
     | 'writeChar' '(' RExp ')' 
     { 
-        $$.parsetree = AbsBnfc.WriteC $3.parsetree 
+        $3.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.WriteC $3.parsetree
+        ; $$.envout = $3.envout
+        ; $$.errs = (if (not ($3.tipo == BasicType_Char))
+                        then ["error at " ++ ((showFromPosn . tokenPosn) $1) ++ ": type for 'writeChar' need to be Char!"]
+                        else []
+                     ) ++ $3.errs
     }
     | 'writeString' '(' RExp ')' 
     { 
-        $$.parsetree = AbsBnfc.WriteS $3.parsetree 
+        $3.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.WriteS $3.parsetree
+        ; $$.envout = $3.envout
+        ; $$.errs = (if (not ($3.tipo == BasicType_String))
+                        then ["error at " ++ ((showFromPosn . tokenPosn) $1) ++ ": type for 'writeString' need to be String!"]
+                        else []
+                     ) ++ $3.errs
     }
 
 FuncRead : 'readInt' '(' ')' 
     { 
-        $$.parsetree = AbsBnfc.ReadI 
+        $$.parsetree = AbsBnfc.ReadI
+        ; $$.tipo = BasicType_Int
+        ; $$.errs = []
+        ; $$.envout = $$.envin
     }
     | 'readFloat' '(' ')' 
     { 
-        $$.parsetree = AbsBnfc.ReadF 
+        $$.parsetree = AbsBnfc.ReadF
+        ; $$.tipo = BasicType_Float
+        ; $$.errs = []
+        ; $$.envout = $$.envin
     }
     | 'readChar' '(' ')' 
     { 
-        $$.parsetree = AbsBnfc.ReadC 
+        $$.parsetree = AbsBnfc.ReadC
+        ; $$.tipo = BasicType_Char
+        ; $$.errs = []
+        ; $$.envout = $$.envin 
     }
     | 'readString' '(' ')' 
     { 
-        $$.parsetree = AbsBnfc.ReadS 
+        $$.parsetree = AbsBnfc.ReadS
+        ; $$.tipo = BasicType_String
+        ; $$.errs = []
+        ; $$.envout = $$.envin 
     }
 
 While : 'while' RExp 'do' Block 'end' 
@@ -567,166 +615,371 @@ Dim : '[' Integer ']' --modded
 
 RExp : RExp 'or' RExp1 
     { 
-        $$.parsetree = AbsBnfc.Or $1.parsetree $3.parsetree 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.Or $1.parsetree $3.parsetree
+        ; $$.errs = (if (($1.tipo == BasicType_Bool) && ($3.tipo == BasicType_Bool))
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for 'or' operations!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = BasicType_Bool 
     }
     | RExp1 'and' RExp2 
     { 
-        $$.parsetree = AbsBnfc.And $1.parsetree $3.parsetree 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.And $1.parsetree $3.parsetree
+        ; $$.errs = (if (($1.tipo == BasicType_Bool) && ($3.tipo == BasicType_Bool))
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for 'and' operations!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = BasicType_Bool
     }
     | RExp1 
     { 
-        $$.parsetree = $1.parsetree 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo 
     }
 
 RExp2 : 'not' RExp3 
     { 
-        $$.parsetree = AbsBnfc.Not $2.parsetree 
+        $2.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.Not $2.parsetree
+        ; $$.errs = (if ($2.tipo == BasicType_Bool)
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $1) ++ ": type need to be compatible for 'and' operations!"]) ++ $2.errs
+        ; $$.envout = $2.envout
+        ; $$.tipo = BasicType_Bool
     } 
     | RExp3 
     { 
-        $$.parsetree = $1.parsetree 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo 
     }
 
 RExp3 : RExp3 '==' RExp5 
     { 
-        $$.parsetree = AbsBnfc.Eq $1.parsetree $3.parsetree 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.Eq $1.parsetree $3.parsetree
+        ; $$.errs = (if (isValidCmp $1.tipo $3.tipo)
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '==' operations!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = BasicType_Bool 
     }
     | RExp3 '~=' RExp5 
     { 
-        $$.parsetree = AbsBnfc.Neq $1.parsetree $3.parsetree 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.Neq $1.parsetree $3.parsetree
+        ; $$.errs = (if (isValidCmp $1.tipo $3.tipo)
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '~=' operations!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = BasicType_Bool 
     }
     | RExp3 '<' RExp5 
     { 
-        $$.parsetree = AbsBnfc.Lt $1.parsetree $3.parsetree 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.Lt $1.parsetree $3.parsetree
+        ; $$.errs = (if (isValidCmp $1.tipo $3.tipo)
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '<' operations!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = BasicType_Bool
     }
     | RExp3 '<=' RExp5 
     { 
-        $$.parsetree = AbsBnfc.LtE $1.parsetree $3.parsetree 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.LtE $1.parsetree $3.parsetree
+        ; $$.errs = (if (isValidCmp $1.tipo $3.tipo)
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '<=' operations!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = BasicType_Bool
     }
     | RExp3 '>' RExp5 
     { 
-        $$.parsetree = AbsBnfc.Gt $1.parsetree $3.parsetree 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.Gt $1.parsetree $3.parsetree
+        ; $$.errs = (if (isValidCmp $1.tipo $3.tipo)
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '>' operations!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = BasicType_Bool
     }
     | RExp3 '>=' RExp5 
     { 
-        $$.parsetree = AbsBnfc.GtE $1.parsetree $3.parsetree 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.GtE $1.parsetree $3.parsetree
+        ; $$.errs = (if (isValidCmp $1.tipo $3.tipo)
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '>=' operations!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = BasicType_Bool
     }
     | RExp4 
     { 
-        $$.parsetree = $1.parsetree 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo 
     }
 
 RExp6 : RExp6 '+' RExp7 
     { 
-        $$.parsetree = AbsBnfc.Add $1.parsetree $3.parsetree 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.Add $1.parsetree $3.parsetree
+        ; $$.errs = (if ((($1.tipo == BasicType_Int) || ($1.tipo == BasicType_Float)) && (($3.tipo == BasicType_Int) || ($3.tipo == BasicType_Float)))
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be Int or Float!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = (if (($1.tipo == BasicType_Float) || ($3.tipo == BasicType_Float))
+                         then BasicType_Float
+                         else BasicType_Int )  
     }
     | RExp6 '-' RExp7 
     { 
-        $$.parsetree = AbsBnfc.Sub $1.parsetree $3.parsetree 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.Sub $1.parsetree $3.parsetree
+        ; $$.errs = (if ((($1.tipo == BasicType_Int) || ($1.tipo == BasicType_Float)) && (($3.tipo == BasicType_Int) || ($3.tipo == BasicType_Float)))
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be Int or Float!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = (if (($1.tipo == BasicType_Float) || ($3.tipo == BasicType_Float))
+                         then BasicType_Float
+                         else BasicType_Int )  
     }
     | RExp7 
     { 
-        $$.parsetree = $1.parsetree 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo 
     }
 
 RExp7 : RExp7 '*' RExp8 
     { 
-        $$.parsetree = AbsBnfc.Mul $1.parsetree $3.parsetree 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.Mul $1.parsetree $3.parsetree
+        ; $$.errs = (if ((($1.tipo == BasicType_Int) || ($1.tipo == BasicType_Float)) && (($3.tipo == BasicType_Int) || ($3.tipo == BasicType_Float)))
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be Int or Float!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = (if (($1.tipo == BasicType_Float) || ($3.tipo == BasicType_Float))
+                         then BasicType_Float
+                         else BasicType_Int ) 
     }
     | RExp7 '/' RExp8 
     {
-        $$.parsetree = AbsBnfc.Div $1.parsetree $3.parsetree 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.Div $1.parsetree $3.parsetree
+        ; $$.errs = (if ((($1.tipo == BasicType_Int) || ($1.tipo == BasicType_Float)) && (($3.tipo == BasicType_Int) || ($3.tipo == BasicType_Float)))
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be Int or Float!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = (if (($1.tipo == BasicType_Float) || ($3.tipo == BasicType_Float))
+                         then BasicType_Float
+                         else BasicType_Int )
     }
     | RExp7 '%' RExp8 
-    { 
-        $$.parsetree = AbsBnfc.Rem $1.parsetree $3.parsetree 
+    {   
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.Rem $1.parsetree $3.parsetree
+        ; $$.errs = (if ((($1.tipo == BasicType_Int) || ($1.tipo == BasicType_Float)) && (($3.tipo == BasicType_Int) || ($3.tipo == BasicType_Float)))
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be Int or Float!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = BasicType_Int
     }
     | RExp8 
     { 
-        $$.parsetree = $1.parsetree 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo 
     }
 
 RExp8 : RExp9 '^' RExp8 
-    { 
-        $$.parsetree = AbsBnfc.Pow $1.parsetree $3.parsetree 
+    {   
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.Pow $1.parsetree $3.parsetree
+        ; $$.errs = (if ((($1.tipo == BasicType_Int) || ($1.tipo == BasicType_Float)) && (($3.tipo == BasicType_Int) || ($3.tipo == BasicType_Float)))
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be Int or Float!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = ( if ((($1.tipo == BasicType_Int) || ($1.tipo == BasicType_Float)) && (($3.tipo == BasicType_Int) || ($3.tipo == BasicType_Float)))
+                         then $1.tipo
+                         else BasicType_Float )
     } 
     | RExp9 
     { 
-        $$.parsetree = $1.parsetree 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo
     }
 
-RExp9 : '-' RExp10 
+RExp9 : '-' RExp10 -- tipo numerico!! per il momento lasciamo sia int o float
     { 
-        $$.parsetree = AbsBnfc.Neg $2.parsetree 
+        $2.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.Neg $2.parsetree
+        ; $$.errs = ( if (($2.tipo == BasicType_Int) || ($2.tipo == BasicType_Float))
+                         then []
+                         else ["error at " ++ ((showFromPosn . tokenPosn) $1) ++ ": type need to be Int or Float!"]   ) ++ $2.errs
+        ; $$.envout = $2.envout
+        ; $$.tipo = ( if (($2.tipo == BasicType_Int) || ($2.tipo == BasicType_Float))
+                         then $2.tipo
+                         else BasicType_Float )
     } 
     | RExp10 
     { 
-        $$.parsetree = $1.parsetree 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo 
     }
 
-RExp10 : Func 
+RExp10 : Func --TODO: sistema la roba dentro func
     { 
-        $$.parsetree = AbsBnfc.FCall $1.parsetree 
+        $1.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.FCall $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo
     }
-    | RExp10 '..' RExp11 
+    | RExp10 '..' RExp11 -- temporaneamente ignorato
     { 
         $$.parsetree = AbsBnfc.FStrCnt $1.parsetree $3.parsetree 
     }
-    | '#' RExp11 
+    | '#' RExp11 -- temporaneamente ignorato
     { 
         $$.parsetree = AbsBnfc.FLen $2.parsetree 
     }
     | RExp11 
     { 
-        $$.parsetree = $1.parsetree 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo
     }
 
 RExp11 : Integer --modded
     { 
-        $$.parsetree = AbsBnfc.ValInt $1.vint 
+        $$.parsetree = AbsBnfc.ValInt $1.vint
+        ; $$.tipo = BasicType_Int
+        ; $$.envout = $$.envin
+        ; $$.errs = []
     }
     | LExp 
     { 
         $$.parsetree = AbsBnfc.ValVariable $1.parsetree 
+        ; $$.tipo = (if (isJust (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
+                        then (if ((isVarEnv . head . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
+                                then ((getTypeV . head . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
+                                else BasicType_Void )
+                        else BasicType_Void ) 
+        ; $$.envout = $$.envin
+        ; $$.errs = (if ($$.tipo == BasicType_Void)
+                        then ["error: reference to " ++ ((fromLIdent . getLIdentlexp) $1.parsetree) ++ " at line " ++
+                                (showFromPosn $1.posn) ++ "is invalid (maybe a function or not declared variable?)"]
+                        else [])
     }
     | '&' LExp 
     { 
-        $$.parsetree = AbsBnfc.ValRef $2.parsetree 
+        $$.parsetree = AbsBnfc.ValRef $2.parsetree
+        ; $$.envout = $$.envin
+        ; $$.tipo = (if (isJust (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))
+                        then (if ((isVarEnv . head . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))
+                                then ((getTypeV . head . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))
+                                else BasicType_Void )
+                        else BasicType_Void )
+        ; $$.errs = (if ($$.tipo == BasicType_Void)
+                        then ["error: reference to " ++ ((fromLIdent . getLIdentlexp) $2.parsetree) ++ " at line " ++
+                                (showFromPosn $2.posn) ++ "is invalid (maybe a function or not declared variable?)"]
+                        else [])
     }
     | Double --modded
     { 
-        $$.parsetree = AbsBnfc.ValDouble $1.vdbl 
+        $$.parsetree = AbsBnfc.ValDouble $1.vdbl
+        ; $$.tipo = BasicType_Float
+        ; $$.envout = $$.envin
+        ; $$.errs = []
     }
     | String --modded
     { 
-        $$.parsetree = AbsBnfc.ValString $1.vstr 
+        $$.parsetree = AbsBnfc.ValString $1.vstr
+        ; $$.tipo = BasicType_String
+        ; $$.envout = $$.envin
+        ; $$.errs = []
     }
     | Char --modded
     { 
-        $$.parsetree = AbsBnfc.ValChar $1.vchr 
+        $$.parsetree = AbsBnfc.ValChar $1.vchr
+        ; $$.tipo = BasicType_Char
+        ; $$.envout = $$.envin
+        ; $$.errs = []
     }
     | Boolean 
     { 
-        $$.parsetree = AbsBnfc.ValBoolean $1.parsetree 
+        $$.parsetree = AbsBnfc.ValBoolean $1.parsetree
+        ; $$.tipo = BasicType_Int
+        ; $$.envout = $$.envin
+        ; $$.errs = []
     }
     | PtrVoid 
     { 
-        $$.parsetree = AbsBnfc.ValPtr $1.parsetree 
+        $$.parsetree = AbsBnfc.ValPtr $1.parsetree
+        ; $$.tipo = BasicType_Void
+        ; $$.envout = $$.envin
+        ; $$.errs = []
     }
     | RExp12 
     { 
-        $$.parsetree = $1.parsetree 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree 
+        ; $$.envout = $1.envout
+        ; $$.errs = $1.errs
+        ; $$.tipo = $1.tipo
     }
 
-RExp12 : '{' Array '}' 
+RExp12 : '{' Array '}' --temporaneamente non tipo
     { 
         $$.parsetree = AbsBnfc.ValMArr $2.parsetree 
     } 
     | RExp13 
     { 
-        $$.parsetree = $1.parsetree 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree 
+        ; $$.envout = $1.envout
+        ; $$.errs = $1.errs
+        ; $$.tipo = $1.tipo
     }
 
+-- temporaneamente sospeso il tipo
 Array : '{' Array '}' ',' Array 
     { 
         $$.parsetree = AbsBnfc.ArrayV0 $2.parsetree $5.parsetree 
@@ -778,24 +1031,42 @@ ListVType : VType
         $$.parsetree = (:) $1.parsetree $3.parsetree 
     }
 
+--rexp continuo a tipare
+
 RExp1 : RExp2 
     { 
-        $$.parsetree = $1.parsetree
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo
     }
 
 RExp4 : RExp5 
     { 
-        $$.parsetree = $1.parsetree 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo 
     }
 
 RExp5 : RExp6 
     { 
-        $$.parsetree = $1.parsetree 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo 
     }
 
 RExp13 : '(' RExp ')' 
     { 
-        $$.parsetree = $2.parsetree 
+        $2.envin = $$.envin
+        ; $$.parsetree = $2.parsetree
+        ; $$.errs = $2.errs
+        ; $$.envout = $2.envout
+        ; $$.tipo = $2.tipo 
     }
 {
 
