@@ -79,40 +79,9 @@ insertEnv tipo lexp env posn = let nme = (getLIdentlexp lexp)
                                     Just e  -> Bad $ name ++ " is already declared at line " ++ ((show . getLinePosn . posLineCol . getPos . head) e) ++ ":" ++ ((show . getColPosn . posLineCol . getPos . head) e)
                                     Nothing -> Ok (insEnv lexp nme tipo posn env)
                                        
--- type?
+ 
 
-checkArrayType array a 
-                          | a == AbsBnfc.BasicType_Bool = 
-                              if (all(\x-> typeOf x == typeOf(True)) array)
-                                then ""
-                              else 
-                                "Mismatch type between elements and array definition" 
-                          | a == BasicType_Int = 
-                              if (all (\x-> typeOf x == typeOf(toInteger(1))) array)
-                                then ""
-                              else 
-                                "Mismatch type between elements and array definition" 
-                          | a == BasicType_Float = 
-                              if (all (\x-> typeOf x == typeOf(1::Double)) array)
-                                then ""
-                              else 
-                                "Mismatch type between elements and array definition"
-                          | a == BasicType_String = 
-                              if (all(\x-> typeOf x == typeOf("a")) array)
-                                then ""
-                              else 
-                                "Mismatch type between elements and array definition"
-                          | a == BasicType_Char = 
-                              if (all(\x-> typeOf x == typeOf('a')) array)
-                                then ""
-                              else 
-                                "Mismatch type between elements and array definition" 
-                
-checkSameTypeEl []         = 1
-checkSameTypeEl (x:[])     = 1
-checkSameTypeEl (x:xs:xss) = if (typeOf x == typeOf xs) 
-                                then checkSameTypeEl xss
-                             else 0      
+
 
 checkArrayLenght array len = if (length array) == len then      
                                 ""
@@ -123,4 +92,60 @@ indexOutOfBound index len = if (index < len && index > 0) then
                                 ""
                             else 
                                 "Index out of bound"
+
+flatten :: ArrD -> [VType]
+flatten (Arr1D x) = x
+flatten (ArrND x) = concatMap flatten x
+
+
+getTypeOf (VTypeInteger integer) = AbsBnfc.BasicType_Int
+getTypeOf (VTypeString string) = AbsBnfc.BasicType_String
+getTypeOf (VTypeChar char) = AbsBnfc.BasicType_Char
+getTypeOf (VTypeDouble double) = AbsBnfc.BasicType_Float
+getTypeOf (VTypeBoolean bool) = AbsBnfc.BasicType_Bool
+
+                    
+
+
+checkType :: ArrD -> BasicType -> String
+checkType (Arr1D array) basicT 
+                            | basicT == AbsBnfc.BasicType_Bool = 
+                              if (all(\x-> getTypeOf x == AbsBnfc.BasicType_Bool) array)
+                                then " typeOf x"
+                              else 
+                                "Mismatch type between elements and array definition" 
+                            | basicT == BasicType_Int = 
+                              if (all (\x-> getTypeOf x == AbsBnfc.BasicType_Int) array)
+                                then ""
+                              else 
+                                "Mismatch type between elements and array definition" 
+                            | basicT == BasicType_Float = 
+                              if (all (\x-> getTypeOf x == AbsBnfc.BasicType_Float) array)
+                                then ""
+                              else 
+                                "Mismatch type between elements and array definition"
+                            | basicT == BasicType_String = 
+                              if (all(\x-> getTypeOf x == AbsBnfc.BasicType_String) array)
+                                then ""
+                              else 
+                                "Mismatch type between elements and array definition"
+                            | basicT == BasicType_Char = 
+                              if (all(\x-> getTypeOf x == AbsBnfc.BasicType_Char) array)
+                                then ""
+                              else 
+                                "Mismatch type between elements and array definition" 
+checkType (ArrND x) basicT = checkType (Arr1D flattenArray) basicT
+                                where 
+                                    flattenArray = flatten (ArrND x)
+
+
+
+
+
+
+
+
+
+
+
 
