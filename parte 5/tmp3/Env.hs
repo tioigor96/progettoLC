@@ -91,7 +91,6 @@ insertEnv tipo lexp env posn = let nme = (getLIdentlexp lexp)
 -- ====================================
 -- =========== TYPE SYSTEM ============
 -- ====================================
-<<<<<<< Updated upstream
 
 checkArrayLenght array len = if (length array) == len then      
                                 ""
@@ -127,7 +126,6 @@ checkArrayType array a
                           | a == AbsBnfc.BasicType_Bool = 
                               if (all(\x-> typeOf x == typeOf(True)) array)
                                 then ""
->>>>>>> Stashed changes
                               else 
                                 "Mismatch type between elements and array definition" 
                             | basicT == BasicType_Int = 
