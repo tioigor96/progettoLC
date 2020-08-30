@@ -37,6 +37,11 @@ data Entity = Var { getTypeV :: AbsBnfc.BasicType,
                     }
             deriving (Show, Eq)
 
+-- creo func check Var,... Env
+isVarEnv :: Entity -> Bool
+isVarEnv (Var _ _ _) = True
+isVarEnv _ = False
+
 --crea l'env vuoto
 emptyEnv :: EnvT
 emptyEnv = Map.empty
@@ -76,12 +81,16 @@ insertEnv tipo lexp env posn = let nme = (getLIdentlexp lexp)
                                    name = fromLIdent nme
                                    lkup = Map.lookup name env
                                   in case lkup of
-                                    Just e  -> Bad $ name ++ " is already declared at line " ++ ((show . getLinePosn . posLineCol . getPos . head) e) ++ ":" ++ ((show . getColPosn . posLineCol . getPos . head) e)
+                                    Just e  -> Bad $ name ++ 
+                                        " is already declared at line " ++ 
+                                        ((show . getLinePosn . posLineCol . getPos . head) e) ++ 
+                                        ":" ++ 
+                                        ((show . getColPosn . posLineCol . getPos . head) e)
                                     Nothing -> Ok (insEnv lexp nme tipo posn env)
-                                       
  
-
-
+-- ====================================
+-- =========== TYPE SYSTEM ============
+-- ====================================
 
 checkArrayLenght array len = if (length array) == len then      
                                 ""
@@ -137,15 +146,4 @@ checkType (Arr1D array) basicT
 checkType (ArrND x) basicT = checkType (Arr1D flattenArray) basicT
                                 where 
                                     flattenArray = flatten (ArrND x)
-
-
-
-
-
-
-
-
-
-
-
 
