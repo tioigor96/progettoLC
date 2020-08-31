@@ -6,6 +6,16 @@ import ErrM
 import Control.Applicative
 import Data.Maybe
 
+-- per lo show
+
+showBBType AbsBnfc.BasicType_Float = "Float"
+showBBType AbsBnfc.BasicType_Void = "Void"
+showBBType AbsBnfc.BasicType_Bool = "Bool"
+showBBType AbsBnfc.BasicType_Int = "Int"
+showBBType AbsBnfc.BasicType_String = "String"
+showBBType AbsBnfc.BasicType_Char = "Char"
+
+
 -- controllo compatibilità tipi
 {- 
 AbsBnfc.BasicType_Float   AbsBnfc.BasicType_Void

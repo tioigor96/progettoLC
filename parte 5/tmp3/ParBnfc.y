@@ -269,7 +269,10 @@ Stm : Decl ';'
     }
     | Ass ';' 
     { 
-        $$.parsetree = AbsBnfc.SAss $1.parsetree 
+        $1.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.SAss $1.parsetree 
+        ; $$.envout = $1.envout
+        ; $$.errs = $1.errs
     }
     | While 
     { 
@@ -300,7 +303,9 @@ Stm : Decl ';'
     }
     | Return ';' 
     { 
-        $$.parsetree = AbsBnfc.SReturn $1.parsetree 
+        $1.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.SReturn $1.parsetree
+        ; 
     }
     | Break ';' 
     { 
@@ -349,8 +354,21 @@ Local : 'local' Decl
 
 Ass : LExp '=' RExp 
     { 
-        $$.parsetree = AbsBnfc.AssD $1.parsetree $3.parsetree 
+        $3.envin = $$.envin
+        ; $$.parsetree = AbsBnfc.AssD $1.parsetree $3.parsetree
+        ; $$.tipo = (if (isJust (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
+                        then (if ((isVarEnv . head . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
+                                then ((getTypeV . head . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
+                                else BasicType_Void )
+                        else BasicType_Void )
+        ; $$.errs = (if ($$.tipo == BasicType_Void)
+                         then []
+                         else if ($$.tipo == $3.tipo)
+                                  then []
+                                  else ["error at " ++ ((showFromPosn . tokenPosn) $2) ++ ": expects argument of type '" ++ (showBBType $$.tipo) ++ "' but has type '"++ (showBBType $3.tipo) ++"'"]) ++ $3.errs
+        ; $$.envout = $3.envout 
     }
+
 
 Func : FuncWrite 
     { 

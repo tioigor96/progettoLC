@@ -88,9 +88,9 @@ insertEnv tipo lexp env posn = let nme = (getLIdentlexp lexp)
                                         ((show . getColPosn . posLineCol . getPos . head) e)
                                     Nothing -> Ok (insEnv lexp nme tipo posn env)
  
--- ====================================
+{- ====================================
 -- =========== TYPE SYSTEM ============
--- ====================================
+-- ==================================== -}
 
 checkArrayLenght array len = if (length array) == len then      
                                 ""
@@ -121,11 +121,6 @@ checkType (Arr1D array) basicT
                             | basicT == AbsBnfc.BasicType_Bool = 
                               if (all(\x-> getTypeOf x == AbsBnfc.BasicType_Bool) array)
                                 then " typeOf x"
-=======
-checkArrayType array a 
-                          | a == AbsBnfc.BasicType_Bool = 
-                              if (all(\x-> typeOf x == typeOf(True)) array)
-                                then ""
                               else 
                                 "Mismatch type between elements and array definition" 
                             | basicT == BasicType_Int = 
