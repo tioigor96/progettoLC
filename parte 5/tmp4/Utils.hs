@@ -1,0 +1,95 @@
+module Utils where
+
+import AbsAuL
+import LexAuL
+import ErrM
+import Control.Applicative
+import Data.Maybe
+
+-- per lo show
+
+showBBType AbsAuL.BasicType_Float = "Float"
+showBBType AbsAuL.BasicType_Void = "Void"
+showBBType AbsAuL.BasicType_Bool = "Bool"
+showBBType AbsAuL.BasicType_Int = "Int"
+showBBType AbsAuL.BasicType_String = "String"
+showBBType AbsAuL.BasicType_Char = "Char"
+
+
+-- controllo compatibilità tipi
+{- 
+AbsAuL.BasicType_Float   AbsAuL.BasicType_Void
+AbsAuL.BasicType_Bool    AbsAuL.BasicType_Int
+AbsAuL.BasicType_Char    AbsAuL.BasicType_String
+-}
+isValidCmp :: AbsAuL.BasicType -> AbsAuL.BasicType -> Bool                    -- canonici
+isValidCmp (AbsAuL.BasicType_Int) (AbsAuL.BasicType_Int) = True
+isValidCmp (AbsAuL.BasicType_Float) (AbsAuL.BasicType_Float) = True
+isValidCmp (AbsAuL.BasicType_Void) (AbsAuL.BasicType_Void) = True
+isValidCmp (AbsAuL.BasicType_Bool) (AbsAuL.BasicType_Bool) = True
+isValidCmp (AbsAuL.BasicType_Char) (AbsAuL.BasicType_Char) = True
+isValidCmp (AbsAuL.BasicType_String) (AbsAuL.BasicType_String) = True
+isValidCmp (AbsAuL.BasicType_Float) (AbsAuL.BasicType_Int) = True             -- compatibilità tra tipi
+isValidCmp (AbsAuL.BasicType_Int) (AbsAuL.BasicType_Float) = True             -- compatibilità tra tipi
+-- isValidCmp (AbsAuL.BasicType_Char) (AbsAuL.BasicType_String) = True        -- e qui che famo?
+-- isValidCmp (AbsAuL.BasicType_String) (AbsAuL.BasicType_Char) = True        -- e qui che famo?
+isValidCmp _ _ = False                                                          -- default case
+
+--controllo token per errori
+getLIdentT :: Token -> String
+getLIdentT (PT _ (T_LIdent s)) = s
+
+getLinePosn :: (Int, Int) -> Int
+getLinePosn (ln, _) = ln
+getColPosn :: (Int, Int) -> Int
+getColPosn (_, cl) = cl
+
+showFromPosn :: Posn -> String
+showFromPosn psn = ((show . getLinePosn . posLineCol) psn) ++ ":" ++ 
+                   ((show . getColPosn . posLineCol) psn)
+
+-- prende dal parse tree il nome
+getLIdentlexp x = case x of
+    (LExpS x) -> x
+    (LExpDR x) -> getLIdentlexp x
+    (LExpA x _) -> x
+-- get string from lident
+fromLIdent :: LIdent -> String
+fromLIdent (LIdent s) = s
+
+--controlla il tipo di dichiarazione
+isVar :: LExp -> Bool
+isVar (LExpS _) = True
+isVar _ = False
+
+isArr :: LExp -> Bool
+isArr (LExpA _ _) = True
+isArr _ = False
+
+isPtr :: LExp -> Bool
+isPtr (LExpDR _) = True
+isPtr _ = False
+
+--prende la dimensione
+getDim :: LExp -> Maybe [Integer] 
+getDim (LExpA _ d) = Just $ seqADim d
+getDim _ = Nothing
+
+-- passa da [Dim] a [Integer] per semplificare codice 
+seqADim xs = map (\(Dims x)-> x) xs
+
+--controlla tipo per array
+isVTBool (VTypeBoolean _) = True
+isVTBool _ = False
+
+-- controllo errm 
+isOk (Ok _) = True
+isOk _ = False
+
+fromOk :: Err a -> a
+fromOk (Ok x) = x
+
+isBad (Bad _) = True
+isBad _ = False
+
+fromBad (Bad s) = s

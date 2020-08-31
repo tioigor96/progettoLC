@@ -1,0 +1,205 @@
+comment "--";
+
+Prog.          Program ::= [PGlobl] ;
+
+separator nonempty PGlobl "";
+
+ProgGlobB.     PGlobl ::= Stm;
+ProgGlobF.     PGlobl ::= FuncD ;
+
+
+-----------
+--BLOCCHI--
+-----------
+
+Blk.           Block ::= [Stm] ;
+
+separator Stm "";
+
+------------
+--GESTIONE TIPI--
+-------------
+
+rules          BasicType ::= "Bool" | "Char" | "Float" | "Int" | "String" | "Void" ;
+rules          Boolean   ::= "true" | "false";
+PtrType.       PtrVoid   ::= "nil";
+
+CompTypeP.     CompoundType ::= "*"  CompoundType ;
+CompTypeM.     CompoundType ::=  CompoundType "[" "]" ;
+CompTypeB.     CompoundType ::= BasicType ;
+
+------------
+--STATEMENT-
+------------
+
+SDecl.      Stm ::= Decl ";";
+SLocal.     Stm ::= Local ";";
+SAss.       Stm ::= Ass ";";
+SWhile.     Stm ::= While ;
+SRepeat.    Stm ::= Repeat ";";
+SFor.       Stm ::= For ;
+SIf.        Stm ::= If ;
+SRExp.      Stm ::= Func ";";
+SEBlk.      Stm ::= EBlk ;
+SReturn.    Stm ::= Return ";";
+SBreak.     Stm ::= Break ";";
+
+
+-------------
+----BLCK-----
+-------------
+EBlkS.       EBlk ::= "do" Block "end" ;
+
+-------------
+----DECL-----
+-------------
+
+DeclSP.      Decl ::= BasicType LExp VarInit ;
+VarINil.     VarInit ::= {- empty -} ;
+VarExp.      VarInit ::= "=" RExp ;
+VarMat.      VarInit ::= "=" Array ;
+
+-- Array definition "inline"
+-- TODO: ridefinisci. niente ibridi
+ArrayV0.       Array ::= "{" [Array] "}" ;
+ArrayV1.       Array ::= "{" [VType] "}" ;
+
+rules VType ::= Boolean | Char | Double | Integer | String | PtrVoid;
+separator nonempty VType "," ;
+separator nonempty Array "," ;
+
+
+DeclLocal.   Local ::= "local" Decl;
+
+token LIdent (letter|'_'lower)(letter|digit|'_')*;
+
+
+-------------
+----ASGN-----
+-------------
+AssD.        Ass ::= LExp "=" RExp;
+
+------------
+--Base Fnct-
+------------
+FuncBW.      Func ::= FuncWrite ;
+FuncBR.      Func ::= FuncRead ;
+
+WriteI.    FuncWrite ::= "writeInt" "(" RExp ")";
+WriteF.    FuncWrite ::= "writeFloat" "(" RExp ")";
+WriteC.    FuncWrite ::= "writeChar" "(" RExp ")";
+WriteS.    FuncWrite ::= "writeString" "(" RExp ")";
+
+ReadI.     FuncRead ::= "readInt" "(" ")";
+ReadF.     FuncRead ::= "readFloat" "(" ")";
+ReadC.     FuncRead ::= "readChar" "(" ")";
+ReadS.     FuncRead ::= "readString" "(" ")";
+
+-----------
+---LOOPS---
+-----------
+LoopW.         While ::= "while" RExp EBlk ;
+LoopR.         Repeat ::= "repeat" Block "until" RExp;
+LoopF.         For ::= "for" LIdent "=" RExp "," RExp Increment EBlk ;
+FIncE.         Increment ::= {- empty, assumiamo 1 -};
+FInc.          Increment ::= "," RExp ;
+LoopFE.        For ::= "for" LIdent "in" LIdent EBlk;
+
+
+------------
+---IFELSE---
+------------
+IfM.        If     ::= "if" RExp "then" Block [ElseIf] Else "end" ;
+ElseS.      Else ::= "else" Block;
+ElseE.      Else ::= {- empty -};
+
+ElseIfD.    ElseIf ::= "elseif" RExp "then" Block ;
+separator ElseIf "";
+
+
+
+------------
+----JUMPS---
+------------
+JumpR.      Return ::= "return" RValue ;
+JumpRE.     RValue ::= {- empty -};
+JumpRV.     RValue ::= RExp;
+
+-- break accettabile solo dentro loops!! (da gestire similmente a side effect?)
+JumpB.      Break ::= "break";
+
+------------
+--FUNCTIONS && PARAMETERS-
+------------
+
+FnctCall.   Func ::= LIdent "(" [RExp] ")";
+separator RExp ",";
+
+
+
+
+FnctDecl.   FuncD ::= CompoundType "function" LIdent "(" [ParamF] ")" Block "end";
+ParmDeclF.   ParamF ::= Modality BasicType LExp;
+separator ParamF "," ;
+
+rules Modality ::= {-empty-} | "val" | "ref" | "const" | "res" | "valres" | "name" ;
+
+
+-------------
+----LEXP-----
+-------------
+
+LExpS.  LExp ::= LIdent;
+LExpDR. LExp ::= "*" LExp ;
+
+-- LExp array
+LExpA.  LExp ::= LIdent [Dim] ;
+separator nonempty Dim "";
+
+Dims.   Dim ::= "[" Integer "]" ;
+
+
+--------------
+-----REXP-----
+--------------
+
+Or.            RExp ::= RExp "or" RExp1;
+And.           RExp ::= RExp1 "and" RExp2;
+Not.           RExp2 ::= "not" RExp3;
+
+Eq.            RExp3 ::= RExp3 "==" RExp5;
+Neq.           RExp3 ::= RExp3 "~=" RExp5;
+Lt.            RExp3 ::= RExp3 "<"  RExp5;
+LtE.           RExp3 ::= RExp3 "<=" RExp5;
+Gt.            RExp3 ::= RExp3 ">"  RExp5;
+GtE.           RExp3 ::= RExp3 ">=" RExp5;
+
+Add.           RExp6 ::= RExp6 "+" RExp7;
+Sub.           RExp6 ::= RExp6 "-" RExp7;
+
+Mul.           RExp7 ::= RExp7 "*" RExp8;
+Div.           RExp7 ::= RExp7 "/" RExp8;
+Rem.           RExp7 ::= RExp7 "%" RExp8;
+
+
+Pow.           RExp8 ::= RExp9 "^" RExp8 ;
+
+Neg.           RExp9 ::= "-" RExp10 ;
+FCall.         RExp10 ::= Func ;
+FStrCnt.       RExp10 ::= RExp10 ".." RExp11 ;
+FLen.          RExp10 ::= "#" RExp11 ;
+
+ValInt.        RExp11 ::= Integer;
+ValVariable.   RExp11 ::= LExp;
+ValRef.        RExp11 ::= "&" LExp;
+ValDouble.     RExp11 ::= Double;
+ValString.     RExp11 ::= String;
+ValChar.       RExp11 ::= Char;
+ValBoolean.    RExp11 ::= Boolean;
+ValPtr.        RExp11 ::= PtrVoid;
+
+coercions RExp 12;
+
+
+
+
