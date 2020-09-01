@@ -5,8 +5,9 @@ module ParAuL where
 import AbsAuL
 import LexAuL
 import ErrM
-
-
+import Utils
+import Data.Maybe
+import Env
 
 }
 
@@ -134,205 +135,986 @@ import ErrM
   '}' { PT _ (TS _ 64) }
   '~=' { PT _ (TS _ 65) }
 
-L_charac { PT _ (TC $$) }
-L_doubl  { PT _ (TD $$) }
 L_integ  { PT _ (TI $$) }
+L_doubl  { PT _ (TD $$) }
 L_quoted { PT _ (TL $$) }
-L_LIdent { PT _ (T_LIdent $$) }
+L_charac { PT _ (TC $$) }
+L_LIdent { PT _ (T_LIdent _) }
+
+-- tipi per gli attributi di $$
+%attributetype { AttrTree a }
+%attribute res { Result }
+%attribute parsetree { a }
+%attribute vint { Integer }
+%attribute vdbl { Double }
+%attribute vchr { Char }
+%attribute vstr { String }
+%attribute vlident { LIdent }
+
+-- attributi per il frontend
+%attribute envin { EnvT }
+%attribute envout { EnvT }
+%attribute errs { [String] }
+%attribute posn { Posn }
+%attribute tipo { BasicType }
 
 
 %%
 
-Char    :: { Char }    : L_charac { (read ( $1)) :: Char }
-Double  :: { Double }  : L_doubl  { (read ( $1)) :: Double }
-Integer :: { Integer } : L_integ  { (read ( $1)) :: Integer }
-String  :: { String }  : L_quoted {  $1 }
-LIdent    :: { LIdent} : L_LIdent { LIdent ($1)}
+Integer : L_integ  { $$.vint = (read ( $1)) :: Integer }
+Double : L_doubl  {  $$.vdbl = (read ( $1)) :: Double }
+String : L_quoted { $$.vstr = $1 }
+Char : L_charac {  $$.vchr = (read ( $1)) :: Char }
+LIdent : L_LIdent 
+    {         
+            $$.posn =  (tokenPosn $1)                           
+            ; $$.vlident = LIdent (getLIdentT $1)
+    }
 
-Program :: { Program }
-Program : ListPGlobl { AbsAuL.Prog $1 }
-ListPGlobl :: { [PGlobl] }
-ListPGlobl : PGlobl { (:[]) $1 } | PGlobl ListPGlobl { (:) $1 $2 }
-PGlobl :: { PGlobl }
-PGlobl : Stm { AbsAuL.ProgGlobB $1 }
-       | FuncD { AbsAuL.ProgGlobF $1 }
-Block :: { Block }
-Block : ListStm { AbsAuL.Blk (reverse $1) }
-ListStm :: { [Stm] }
-ListStm : {- empty -} { [] } | ListStm Stm { flip (:) $1 $2 }
-BasicType :: { BasicType }
-BasicType : 'Bool' { AbsAuL.BasicType_Bool }
-          | 'Char' { AbsAuL.BasicType_Char }
-          | 'Float' { AbsAuL.BasicType_Float }
-          | 'Int' { AbsAuL.BasicType_Int }
-          | 'String' { AbsAuL.BasicType_String }
-          | 'Void' { AbsAuL.BasicType_Void }
-Boolean :: { Boolean }
-Boolean : 'true' { AbsAuL.Boolean_true }
-        | 'false' { AbsAuL.Boolean_false }
-PtrVoid :: { PtrVoid }
-PtrVoid : 'nil' { AbsAuL.PtrType }
-CompoundType :: { CompoundType }
-CompoundType : '*' CompoundType { AbsAuL.CompTypeP $2 }
-             | CompoundType '[' ']' { AbsAuL.CompTypeM $1 }
-             | BasicType { AbsAuL.CompTypeB $1 }
-Stm :: { Stm }
-Stm : Decl ';' { AbsAuL.SDecl $1 }
-    | Local ';' { AbsAuL.SLocal $1 }
-    | Ass ';' { AbsAuL.SAss $1 }
-    | While { AbsAuL.SWhile $1 }
-    | Repeat ';' { AbsAuL.SRepeat $1 }
-    | For { AbsAuL.SFor $1 }
-    | If { AbsAuL.SIf $1 }
-    | Func ';' { AbsAuL.SRExp $1 }
-    | EBlk { AbsAuL.SEBlk $1 }
-    | Return ';' { AbsAuL.SReturn $1 }
-    | Break ';' { AbsAuL.SBreak $1 }
-EBlk :: { EBlk }
-EBlk : 'do' Block 'end' { AbsAuL.EBlkS $2 }
-Decl :: { Decl }
-Decl : BasicType LExp VarInit { AbsAuL.DeclSP $1 $2 $3 }
-VarInit :: { VarInit }
-VarInit : {- empty -} { AbsAuL.VarINil }
-        | '=' RExp { AbsAuL.VarExp $2 }
-        | '=' Array { AbsAuL.VarMat $2 }
-Array :: { Array }
-Array : '{' ListArray '}' { AbsAuL.ArrayV0 $2 }
-      | '{' ListVType '}' { AbsAuL.ArrayV1 $2 }
-VType :: { VType }
-VType : Boolean { AbsAuL.VTypeBoolean $1 }
-      | Char { AbsAuL.VTypeChar $1 }
-      | Double { AbsAuL.VTypeDouble $1 }
-      | Integer { AbsAuL.VTypeInteger $1 }
-      | String { AbsAuL.VTypeString $1 }
-      | PtrVoid { AbsAuL.VTypePtrVoid $1 }
-ListVType :: { [VType] }
-ListVType : VType { (:[]) $1 } | VType ',' ListVType { (:) $1 $3 }
-ListArray :: { [Array] }
-ListArray : Array { (:[]) $1 } | Array ',' ListArray { (:) $1 $3 }
-Local :: { Local }
-Local : 'local' Decl { AbsAuL.DeclLocal $2 }
-Ass :: { Ass }
-Ass : LExp '=' RExp { AbsAuL.AssD $1 $3 }
-Func :: { Func }
-Func : FuncWrite { AbsAuL.FuncBW $1 }
-     | FuncRead { AbsAuL.FuncBR $1 }
-     | LIdent '(' ListRExp ')' { AbsAuL.FnctCall $1 $3 }
-FuncWrite :: { FuncWrite }
-FuncWrite : 'writeInt' '(' RExp ')' { AbsAuL.WriteI $3 }
-          | 'writeFloat' '(' RExp ')' { AbsAuL.WriteF $3 }
-          | 'writeChar' '(' RExp ')' { AbsAuL.WriteC $3 }
-          | 'writeString' '(' RExp ')' { AbsAuL.WriteS $3 }
-FuncRead :: { FuncRead }
-FuncRead : 'readInt' '(' ')' { AbsAuL.ReadI }
-         | 'readFloat' '(' ')' { AbsAuL.ReadF }
-         | 'readChar' '(' ')' { AbsAuL.ReadC }
-         | 'readString' '(' ')' { AbsAuL.ReadS }
-While :: { While }
-While : 'while' RExp EBlk { AbsAuL.LoopW $2 $3 }
-Repeat :: { Repeat }
-Repeat : 'repeat' Block 'until' RExp { AbsAuL.LoopR $2 $4 }
-For :: { For }
-For : 'for' LIdent '=' RExp ',' RExp Increment EBlk { AbsAuL.LoopF $2 $4 $6 $7 $8 }
-    | 'for' LIdent 'in' LIdent EBlk { AbsAuL.LoopFE $2 $4 $5 }
-Increment :: { Increment }
-Increment : {- empty -} { AbsAuL.FIncE }
-          | ',' RExp { AbsAuL.FInc $2 }
-If :: { If }
-If : 'if' RExp 'then' Block ListElseIf Else 'end' { AbsAuL.IfM $2 $4 (reverse $5) $6 }
-Else :: { Else }
-Else : 'else' Block { AbsAuL.ElseS $2 }
-     | {- empty -} { AbsAuL.ElseE }
-ElseIf :: { ElseIf }
-ElseIf : 'elseif' RExp 'then' Block { AbsAuL.ElseIfD $2 $4 }
-ListElseIf :: { [ElseIf] }
-ListElseIf : {- empty -} { [] }
-           | ListElseIf ElseIf { flip (:) $1 $2 }
-Return :: { Return }
-Return : 'return' RValue { AbsAuL.JumpR $2 }
-RValue :: { RValue }
-RValue : {- empty -} { AbsAuL.JumpRE } | RExp { AbsAuL.JumpRV $1 }
-Break :: { Break }
-Break : 'break' { AbsAuL.JumpB }
-ListRExp :: { [RExp] }
-ListRExp : {- empty -} { [] }
-         | RExp { (:[]) $1 }
-         | RExp ',' ListRExp { (:) $1 $3 }
-FuncD :: { FuncD }
-FuncD : CompoundType 'function' LIdent '(' ListParamF ')' Block 'end' { AbsAuL.FnctDecl $1 $3 $5 $7 }
-ParamF :: { ParamF }
-ParamF : Modality BasicType LExp { AbsAuL.ParmDeclF $1 $2 $3 }
-ListParamF :: { [ParamF] }
-ListParamF : {- empty -} { [] }
-           | ParamF { (:[]) $1 }
-           | ParamF ',' ListParamF { (:) $1 $3 }
-Modality :: { Modality }
-Modality : {- empty -} { AbsAuL.Modality1 }
-         | 'val' { AbsAuL.Modality_val }
-         | 'ref' { AbsAuL.Modality_ref }
-         | 'const' { AbsAuL.Modality_const }
-         | 'res' { AbsAuL.Modality_res }
-         | 'valres' { AbsAuL.Modality_valres }
-         | 'name' { AbsAuL.Modality_name }
-LExp :: { LExp }
-LExp : LIdent { AbsAuL.LExpS $1 }
-     | '*' LExp { AbsAuL.LExpDR $2 }
-     | LIdent ListDim { AbsAuL.LExpA $1 $2 }
-ListDim :: { [Dim] }
-ListDim : Dim { (:[]) $1 } | Dim ListDim { (:) $1 $2 }
-Dim :: { Dim }
-Dim : '[' Integer ']' { AbsAuL.Dims $2 }
-RExp :: { RExp }
-RExp : RExp 'or' RExp1 { AbsAuL.Or $1 $3 }
-     | RExp1 'and' RExp2 { AbsAuL.And $1 $3 }
-     | RExp1 { $1 }
-RExp2 :: { RExp }
-RExp2 : 'not' RExp3 { AbsAuL.Not $2 } | RExp3 { $1 }
-RExp3 :: { RExp }
-RExp3 : RExp3 '==' RExp5 { AbsAuL.Eq $1 $3 }
-      | RExp3 '~=' RExp5 { AbsAuL.Neq $1 $3 }
-      | RExp3 '<' RExp5 { AbsAuL.Lt $1 $3 }
-      | RExp3 '<=' RExp5 { AbsAuL.LtE $1 $3 }
-      | RExp3 '>' RExp5 { AbsAuL.Gt $1 $3 }
-      | RExp3 '>=' RExp5 { AbsAuL.GtE $1 $3 }
-      | RExp4 { $1 }
-RExp6 :: { RExp }
-RExp6 : RExp6 '+' RExp7 { AbsAuL.Add $1 $3 }
-      | RExp6 '-' RExp7 { AbsAuL.Sub $1 $3 }
-      | RExp7 { $1 }
-RExp7 :: { RExp }
-RExp7 : RExp7 '*' RExp8 { AbsAuL.Mul $1 $3 }
-      | RExp7 '/' RExp8 { AbsAuL.Div $1 $3 }
-      | RExp7 '%' RExp8 { AbsAuL.Rem $1 $3 }
-      | RExp8 { $1 }
-RExp8 :: { RExp }
-RExp8 : RExp9 '^' RExp8 { AbsAuL.Pow $1 $3 } | RExp9 { $1 }
-RExp9 :: { RExp }
-RExp9 : '-' RExp10 { AbsAuL.Neg $2 } | RExp10 { $1 }
-RExp10 :: { RExp }
-RExp10 : Func { AbsAuL.FCall $1 }
-       | RExp10 '..' RExp11 { AbsAuL.FStrCnt $1 $3 }
-       | '#' RExp11 { AbsAuL.FLen $2 }
-       | RExp11 { $1 }
-RExp11 :: { RExp }
-RExp11 : Integer { AbsAuL.ValInt $1 }
-       | LExp { AbsAuL.ValVariable $1 }
-       | '&' LExp { AbsAuL.ValRef $2 }
-       | Double { AbsAuL.ValDouble $1 }
-       | String { AbsAuL.ValString $1 }
-       | Char { AbsAuL.ValChar $1 }
-       | Boolean { AbsAuL.ValBoolean $1 }
-       | PtrVoid { AbsAuL.ValPtr $1 }
-       | RExp12 { $1 }
-RExp1 :: { RExp }
-RExp1 : RExp2 { $1 }
-RExp4 :: { RExp }
-RExp4 : RExp5 { $1 }
-RExp5 :: { RExp }
-RExp5 : RExp6 { $1 }
-RExp12 :: { RExp }
-RExp12 : '(' RExp ')' { $2 }
+Program : ListPGlobl
+    { 
+        $1.envin = emptyEnv
+        ; $$.res = Result (AbsAuL.Prog $1.parsetree ) "qui TAC" $1.envout $1.errs
+    }
+
+ListPGlobl : PGlobl 
+    { 
+        $1.envin = $$.envin
+        ; $$.parsetree = (:[]) $1.parsetree
+        ; $$.envout = $1.envout
+        ; $$.errs = $1.errs
+    } 
+    | PGlobl ListPGlobl
+    { 
+        $1.envin = $$.envin
+        ; $2.envin = $1.envout
+        ; $$.parsetree = (:) $1.parsetree $2.parsetree
+        ; $$.envout = mergeEnv $1.envout $2.envout
+        ; $$.errs = $1.errs ++ $2.errs
+        
+    }
+
+PGlobl : Stm 
+    { 
+        $1.envin = $$.envin
+        ; $$.parsetree = AbsAuL.ProgGlobB $1.parsetree
+        ; $$.envout = $1.envout 
+        ; $$.errs = $1.errs
+    }
+       | FuncD 
+    { 
+        $$.parsetree = AbsAuL.ProgGlobF $1.parsetree
+        ; $1.envin = $$.envin 
+        ; $$.envout = $1.envout 
+        ; $$.errs = $1.errs
+    }
+
+Block : ListStm 
+    { 
+        $$.parsetree = AbsAuL.Blk $1.parsetree 
+    }
+ListStm : {- empty -} 
+    { 
+        $$.parsetree = [] 
+    } 
+    | ListStm Stm 
+    { 
+        $$.parsetree =  flip (:) $1.parsetree $2.parsetree
+    }
+
+--  ========================
+--  ======= TIPI   =========
+--  ========================
+
+BasicType : 'Bool' 
+    { 
+        $$.parsetree = AbsAuL.BasicType_Bool 
+    }
+    | 'Char' 
+    { 
+        $$.parsetree = AbsAuL.BasicType_Char 
+    }
+    | 'Float' 
+    { 
+        $$.parsetree = AbsAuL.BasicType_Float 
+    }
+    | 'Int' 
+    { 
+        $$.parsetree = AbsAuL.BasicType_Int 
+    }
+    | 'String' 
+    { 
+        $$.parsetree = AbsAuL.BasicType_String 
+    }
+    | 'Void' 
+    { 
+        $$.parsetree = AbsAuL.BasicType_Void 
+    }
+
+Boolean : 'true' { $$.parsetree = AbsAuL.Boolean_true }
+        | 'false' { $$.parsetree = AbsAuL.Boolean_false }
+
+PtrVoid : 'nil' { $$.parsetree = AbsAuL.PtrType }
+
+CompoundType : '*' CompoundType { $$.parsetree = AbsAuL.CompTypeP $2.parsetree }
+             | CompoundType '[' ']' { $$.parsetree = AbsAuL.CompTypeM $1.parsetree }
+             | BasicType { $$.parsetree = AbsAuL.CompTypeB $1.parsetree }
+
+--  ========================
+--  =======  STM   =========
+--  ========================
+
+Stm : Decl ';' 
+    { 
+        $1.envin = $$.envin
+        ; $$.parsetree = AbsAuL.SDecl $1.parsetree
+        ; $$.envout = $1.envout
+        ; $$.errs = $1.errs
+    }
+    | Local ';' 
+    { 
+        $$.parsetree = AbsAuL.SLocal $1.parsetree 
+    }
+    | Ass ';' 
+    { 
+        $1.envin = $$.envin
+        ; $$.parsetree = AbsAuL.SAss $1.parsetree 
+        ; $$.envout = $1.envout
+        ; $$.errs = $1.errs
+    }
+    | While 
+    { 
+        $$.parsetree = AbsAuL.SWhile $1.parsetree 
+    }
+    | Repeat ';' 
+    { 
+        $$.parsetree = AbsAuL.SRepeat $1.parsetree 
+    }
+    | For 
+    { 
+        $$.parsetree = AbsAuL.SFor $1.parsetree 
+    }
+    | If 
+    { 
+        $$.parsetree = AbsAuL.SIf $1.parsetree 
+    }
+    | Func ';' 
+    { 
+        $1.envin = $$.envin
+        ; $$.parsetree = AbsAuL.SRExp $1.parsetree
+        ; $$.envout = $1.envout
+        ; $$.errs = $1.errs
+    }
+    | EBlk 
+    { 
+        $$.parsetree = AbsAuL.SEBlk $1.parsetree 
+    }
+    | Return ';' 
+    { 
+        $1.envin = $$.envin
+        ; $$.parsetree = AbsAuL.SReturn $1.parsetree
+        ; 
+    }
+    | Break ';' 
+    { 
+        $$.parsetree = AbsAuL.SBreak $1.parsetree
+    }
+
+--  ========================
+--  =======  EBLK  =========
+--  ========================
+
+EBlk : 'do' Block 'end' 
+    { 
+        $$.parsetree = AbsAuL.EBlkS $2.parsetree 
+    }
+
+--  ========================
+--  =======  DECL  =========
+--  ========================
+-- passa a VarInit env e variem implementa controllo tipo
+Decl : BasicType LExp VarInit 
+    { 
+        $3.envin = $$.envin
+        ; $$.parsetree = AbsAuL.DeclSP $1.parsetree $2.parsetree $3.parsetree
+        ; $$.envout = ( if (isOk (insertEnv $1.parsetree $2.parsetree $$.envin $2.posn))
+                         then (fromOk (insertEnv $1.parsetree $2.parsetree $$.envin $2.posn))
+                         else $3.envin
+                        )
+        ; $$.errs = ( if (isJust (lookupEnv ( (fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))
+                         then ["error: variable " ++ (fromBad (insertEnv $1.parsetree $2.parsetree $$.envin $2.posn))]
+                         else []
+                        ) ++ $3.errs
+                            
+    }
+
+VarInit : {- empty -} 
+    { 
+        
+        $$.parsetree = AbsAuL.VarINil
+        ; $$.envout = $$.envin
+        ; $$.errs = []
+    }
+    | '=' RExp 
+    {
+        $$.parsetree = AbsAuL.VarExp $2.parsetree 
+        ; $$.envout = $$.envin
+        ; $$.errs = []
+    }
+        | '=' Array 
+    { 
+        $$.parsetree = AbsAuL.VarMat $2.parsetree 
+    }
+
+
+Array : '{' ListArray '}'
+    { 
+        $$.parsetree = AbsAuL.ArrayV0 $2.parsetree 
+    }
+    | '{' ListVType '}' 
+    { 
+        $$.parsetree = AbsAuL.ArrayV1 $2.parsetree 
+    }
+VType : Boolean 
+    { 
+        $$.parsetree = AbsAuL.VTypeBoolean $1.parsetree 
+    }
+    | Char --modded
+    { 
+        $$.parsetree = AbsAuL.VTypeChar $1.vchr 
+    }
+    | Double --modded
+    { 
+        $$.parsetree = AbsAuL.VTypeDouble $1.vdbl 
+    }
+    | Integer --modded
+    { 
+        $$.parsetree = AbsAuL.VTypeInteger $1.vint
+    }
+    | String --modded
+    { 
+        $$.parsetree = AbsAuL.VTypeString $1.vstr 
+    }
+    | PtrVoid 
+    { 
+        $$.parsetree = AbsAuL.VTypePtrVoid $1.parsetree 
+    }
+ListVType : VType 
+    { 
+        $$.parsetree = (:[]) $1.parsetree 
+    } 
+    | VType ',' ListVType 
+    { 
+        $$.parsetree = (:) $1.parsetree $3.parsetree 
+    }
+ListArray : Array 
+    { 
+        $$.parsetree = (:[]) $1.parsetree 
+    } 
+    | Array ',' ListArray 
+    { 
+        $$.parsetree = (:) $1.parsetree $3.parsetree
+    }
+
+--  ========================
+--  =======  LOCL  =========
+--  ========================
+
+Local : 'local' Decl 
+    { 
+        $$.parsetree = AbsAuL.DeclLocal $2.parsetree 
+    }
+
+--  ========================
+--  =======  ASSG  =========
+--  ========================
+
+Ass : LExp '=' RExp 
+    { 
+        $3.envin = $$.envin
+        ; $$.parsetree = AbsAuL.AssD $1.parsetree $3.parsetree
+        ; $$.tipo = (if (isJust (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
+                        then (if ((isVarEnv . head . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
+                                then ((getTypeV . head . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
+                                else BasicType_Void )
+                        else BasicType_Void )
+        ; $$.errs = (if ($$.tipo == BasicType_Void)
+                         then []
+                         else if ($$.tipo == $3.tipo)
+                                  then []
+                                  else ["error at " ++ ((showFromPosn . tokenPosn) $2) ++ ": expects argument of type '" ++ (showBBType $$.tipo) ++ "' but has type '"++ (showBBType $3.tipo) ++"'"]) ++ $3.errs
+        ; $$.envout = $3.envout 
+    }
+
+--  ========================
+--  =======  FUNC  =========
+--  ========================
+
+Func : FuncWrite 
+    { 
+        $1.envin = $$.envin
+        ; $$.parsetree = AbsAuL.FuncBW $1.parsetree
+        ; $$.envout = $1.envout
+        ; $$.errs = $1.errs
+        ; $$.tipo = AbsAuL.BasicType_Void
+    }
+    | FuncRead 
+    { 
+        $1.envin = $$.envin
+        ; $$.parsetree = AbsAuL.FuncBR $1.parsetree 
+        ; $$.envout = $1.envout
+        ; $$.errs = $1.errs
+        ; $$.tipo = $1.tipo
+    }
+    | LIdent '(' ListRExp ')' --modded
+    { 
+        $$.parsetree = AbsAuL.FnctCall $1.vlident $3.parsetree 
+    }
+ListRExp : {- empty -} 
+    { 
+        $$.parsetree = [] 
+    }
+    | RExp 
+    { 
+        $$.parsetree = (:[]) $1.parsetree 
+    }
+    | RExp ',' ListRExp 
+    { 
+        $$.parsetree = (:) $1.parsetree $3.parsetree 
+    }
+
+FuncWrite : 'writeInt' '(' RExp ')' 
+    { 
+        $3.envin = $$.envin
+        ; $$.parsetree = AbsAuL.WriteI $3.parsetree 
+        ; $$.envout = $3.envout
+        ; $$.errs = (if (not($3.tipo == BasicType_Int))
+                        then ["error at " ++ ((showFromPosn . tokenPosn) $1) ++ ": type for 'writeInt' need to be Int!"]
+                        else []
+                     ) ++ $3.errs
+    }
+    | 'writeFloat' '(' RExp ')' 
+    { 
+        $3.envin = $$.envin
+        ; $$.parsetree = AbsAuL.WriteF $3.parsetree
+        ; $$.envout = $3.envout
+        ; $$.errs = (if (not ($3.tipo == BasicType_Float))
+                        then ["error at " ++ ((showFromPosn . tokenPosn) $1) ++ ": type for 'writeFloat' need to be Float!"]
+                        else []
+                     ) ++ $3.errs
+    }
+    | 'writeChar' '(' RExp ')' 
+    { 
+        $3.envin = $$.envin
+        ; $$.parsetree = AbsAuL.WriteC $3.parsetree
+        ; $$.envout = $3.envout
+        ; $$.errs = (if (not ($3.tipo == BasicType_Char))
+                        then ["error at " ++ ((showFromPosn . tokenPosn) $1) ++ ": type for 'writeChar' need to be Char!"]
+                        else []
+                     ) ++ $3.errs
+    }
+    | 'writeString' '(' RExp ')' 
+    { 
+        $3.envin = $$.envin
+        ; $$.parsetree = AbsAuL.WriteS $3.parsetree
+        ; $$.envout = $3.envout
+        ; $$.errs = (if (not ($3.tipo == BasicType_String))
+                        then ["error at " ++ ((showFromPosn . tokenPosn) $1) ++ ": type for 'writeString' need to be String!"]
+                        else []
+                     ) ++ $3.errs
+    }
+
+FuncRead : 'readInt' '(' ')' 
+    { 
+        $$.parsetree = AbsAuL.ReadI
+        ; $$.tipo = BasicType_Int
+        ; $$.errs = []
+        ; $$.envout = $$.envin
+    }
+    | 'readFloat' '(' ')' 
+    { 
+        $$.parsetree = AbsAuL.ReadF
+        ; $$.tipo = BasicType_Float
+        ; $$.errs = []
+        ; $$.envout = $$.envin
+    }
+    | 'readChar' '(' ')' 
+    { 
+        $$.parsetree = AbsAuL.ReadC
+        ; $$.tipo = BasicType_Char
+        ; $$.errs = []
+        ; $$.envout = $$.envin 
+    }
+    | 'readString' '(' ')' 
+    { 
+        $$.parsetree = AbsAuL.ReadS
+        ; $$.tipo = BasicType_String
+        ; $$.errs = []
+        ; $$.envout = $$.envin 
+    }
+
+--  ========================
+--  =======  WHLE  =========
+--  ========================
+
+While : 'while' RExp EBlk 
+    { 
+        $$.parsetree = AbsAuL.LoopW $2.parsetree $3.parsetree 
+    }
+
+--  ========================
+--  =======  REPT  =========
+--  ========================
+
+Repeat : 'repeat' Block 'until' RExp 
+    { 
+        $$.parsetree = AbsAuL.LoopR $2.parsetree $4.parsetree 
+    }
+
+--  ========================
+--  =======  FORS  =========
+--  ========================
+
+For : 'for' LIdent '=' RExp ',' RExp Increment EBlk --modded
+    { 
+        $$.parsetree = AbsAuL.LoopF $2.vlident $4.parsetree $6.parsetree $7.parsetree $8.parsetree 
+    }
+    | 'for' LIdent 'in' LIdent EBlk --modded
+    { 
+        $$.parsetree = AbsAuL.LoopFE $2.vlident $4.vlident $5.parsetree 
+    }
+Increment : {- empty -} -- per l'appunto, assumiamo sia 1 l'incremento
+    { 
+        $$.parsetree = AbsAuL.FInc ( AbsAuL.ValInt 1 )
+    }
+    | ',' RExp 
+    { 
+        $$.parsetree = AbsAuL.FInc $2.parsetree 
+    }
+    
+--  ========================
+--  =======   IF   =========
+--  ========================
+If : 'if' RExp 'then' Block ListElseIf Else 'end' --occhio al $5
+    { 
+        $$.parsetree = AbsAuL.IfM $2.parsetree $4.parsetree (reverse $5.parsetree) $6.parsetree    
+    }
+
+Else : 'else' Block 
+    { 
+        $$.parsetree = AbsAuL.ElseS $2.parsetree 
+    }
+    | {- empty -} 
+    { 
+        $$.parsetree = AbsAuL.ElseE 
+    }
+
+ElseIf : 'elseif' RExp 'then' Block 
+    { 
+        $$.parsetree = AbsAuL.ElseIfD $2.parsetree $4.parsetree 
+    }
+
+ListElseIf : {- empty -} 
+    { 
+        $$.parsetree = [] 
+    }
+    | ListElseIf ElseIf 
+    { 
+        $$.parsetree = flip (:) $1.parsetree $2.parsetree 
+    }
+
+--  ========================
+--  =======  JUMP  =========
+--  ========================
+
+Return : 'return' RValue 
+    { 
+        $$.parsetree = AbsAuL.JumpR $2.parsetree 
+    }
+
+RValue : {- empty -} 
+    { 
+        $$.parsetree = AbsAuL.JumpRE 
+    }
+    | RExp 
+    { 
+        $$.parsetree = AbsAuL.JumpRV $1.parsetree 
+    }
+
+Break : 'break' 
+    { 
+        $$.parsetree = AbsAuL.JumpB 
+    }
+
+--  ========================
+--  =======  FUND  =========
+--  ========================
+
+FuncD : CompoundType 'function' LIdent '(' ListParamF ')' Block 'end' --modded
+    { 
+        $$.parsetree = AbsAuL.FnctDecl $1.parsetree $3.vlident $5.parsetree $7.parsetree 
+    }
+ParamF : Modality BasicType LExp 
+    { 
+        $$.parsetree = AbsAuL.ParmDeclF $1.parsetree $2.parsetree $3.parsetree 
+    }
+ListParamF : {- empty -} 
+    { 
+        $$.parsetree = [] 
+    }
+    | ParamF 
+    { 
+        $$.parsetree = (:[]) $1.parsetree 
+    }
+    | ParamF ',' ListParamF 
+    { 
+        $$.parsetree = (:) $1.parsetree $3.parsetree 
+    }
+Modality : {- empty -} 
+    { 
+        $$.parsetree = AbsAuL.Modality1 
+    }
+    | 'val' 
+    { 
+        $$.parsetree = AbsAuL.Modality_val
+    }
+    | 'ref' 
+    { 
+        $$.parsetree = AbsAuL.Modality_ref 
+    }
+    | 'const' 
+    { 
+        $$.parsetree = AbsAuL.Modality_const 
+    }
+    | 'res' 
+    { 
+        $$.parsetree = AbsAuL.Modality_res 
+    }
+    | 'valres' 
+    { 
+        $$.parsetree = AbsAuL.Modality_valres 
+    }
+    | 'name' 
+    { 
+        $$.parsetree = AbsAuL.Modality_name 
+    }
+--  ========================
+--  =======  LEXP  =========
+--  ========================
+LExp : LIdent --modded
+    { 
+        $$.parsetree = AbsAuL.LExpS $1.vlident
+        ; $$.posn = $1.posn
+    }
+    | '*' LExp 
+    { 
+        $$.parsetree = AbsAuL.LExpDR $2.parsetree 
+        ; $$.posn = $2.posn
+    }
+    | LIdent ListDim --modded
+    { 
+        $$.parsetree = AbsAuL.LExpA $1.vlident $2.parsetree
+        ; $$.posn = $1.posn
+    }
+
+ListDim : Dim 
+    { 
+        $$.parsetree = (:[]) $1.parsetree 
+    } 
+    | Dim ListDim 
+    { 
+        $$.parsetree = (:) $1.parsetree $2.parsetree 
+    }
+
+Dim : '[' Integer ']' --modded
+    { 
+        $$.parsetree = AbsAuL.Dims $2.vint 
+    }
+
+--  ========================
+--  =======  REXP  =========
+--  ========================
+
+RExp : RExp 'or' RExp1 
+    { 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsAuL.Or $1.parsetree $3.parsetree
+        ; $$.errs = (if (($1.tipo == BasicType_Bool) && ($3.tipo == BasicType_Bool))
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for 'or' operations!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = BasicType_Bool 
+    }
+    | RExp1 'and' RExp2 
+    { 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsAuL.And $1.parsetree $3.parsetree
+        ; $$.errs = (if (($1.tipo == BasicType_Bool) && ($3.tipo == BasicType_Bool))
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for 'and' operations!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = BasicType_Bool
+    }
+    | RExp1 
+    { 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo 
+    }
+RExp2 : 'not' RExp3 
+    { 
+        $2.envin = $$.envin
+        ; $$.parsetree = AbsAuL.Not $2.parsetree
+        ; $$.errs = (if ($2.tipo == BasicType_Bool)
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $1) ++ ": type need to be compatible for 'and' operations!"]) ++ $2.errs
+        ; $$.envout = $2.envout
+        ; $$.tipo = BasicType_Bool
+    } 
+    | RExp3 
+    { 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo 
+    }
+RExp3 : RExp3 '==' RExp5 
+    { 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsAuL.Eq $1.parsetree $3.parsetree
+        ; $$.errs = (if (isValidCmp $1.tipo $3.tipo)
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '==' operations!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = BasicType_Bool 
+    }
+    | RExp3 '~=' RExp5 
+    { 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsAuL.Neq $1.parsetree $3.parsetree
+        ; $$.errs = (if (isValidCmp $1.tipo $3.tipo)
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '~=' operations!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = BasicType_Bool 
+    }
+    | RExp3 '<' RExp5 
+    { 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsAuL.Lt $1.parsetree $3.parsetree
+        ; $$.errs = (if (isValidCmp $1.tipo $3.tipo)
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '<' operations!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = BasicType_Bool
+    }
+    | RExp3 '<=' RExp5 
+    { 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsAuL.LtE $1.parsetree $3.parsetree
+        ; $$.errs = (if (isValidCmp $1.tipo $3.tipo)
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '<=' operations!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = BasicType_Bool
+    }
+    | RExp3 '>' RExp5 
+    { 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsAuL.Gt $1.parsetree $3.parsetree
+        ; $$.errs = (if (isValidCmp $1.tipo $3.tipo)
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '>' operations!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = BasicType_Bool
+    }
+    | RExp3 '>=' RExp5 
+    { 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsAuL.GtE $1.parsetree $3.parsetree
+        ; $$.errs = (if (isValidCmp $1.tipo $3.tipo)
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '>=' operations!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = BasicType_Bool
+    }
+    | RExp4 
+    { 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo 
+    }
+RExp6 : RExp6 '+' RExp7 
+    { 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsAuL.Add $1.parsetree $3.parsetree
+        ; $$.errs = (if ((($1.tipo == BasicType_Int) || ($1.tipo == BasicType_Float)) && (($3.tipo == BasicType_Int) || ($3.tipo == BasicType_Float)))
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be Int or Float!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = (if (($1.tipo == BasicType_Float) || ($3.tipo == BasicType_Float))
+                         then BasicType_Float
+                         else BasicType_Int )  
+    }
+    | RExp6 '-' RExp7 
+    { 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsAuL.Sub $1.parsetree $3.parsetree
+        ; $$.errs = (if ((($1.tipo == BasicType_Int) || ($1.tipo == BasicType_Float)) && (($3.tipo == BasicType_Int) || ($3.tipo == BasicType_Float)))
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be Int or Float!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = (if (($1.tipo == BasicType_Float) || ($3.tipo == BasicType_Float))
+                         then BasicType_Float
+                         else BasicType_Int )  
+    }
+    | RExp7 
+    { 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo 
+    }
+RExp7 : RExp7 '*' RExp8 
+    { 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsAuL.Mul $1.parsetree $3.parsetree
+        ; $$.errs = (if ((($1.tipo == BasicType_Int) || ($1.tipo == BasicType_Float)) && (($3.tipo == BasicType_Int) || ($3.tipo == BasicType_Float)))
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be Int or Float!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = (if (($1.tipo == BasicType_Float) || ($3.tipo == BasicType_Float))
+                         then BasicType_Float
+                         else BasicType_Int ) 
+    }
+    | RExp7 '/' RExp8 
+    {
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsAuL.Div $1.parsetree $3.parsetree
+        ; $$.errs = (if ((($1.tipo == BasicType_Int) || ($1.tipo == BasicType_Float)) && (($3.tipo == BasicType_Int) || ($3.tipo == BasicType_Float)))
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be Int or Float!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = (if (($1.tipo == BasicType_Float) || ($3.tipo == BasicType_Float))
+                         then BasicType_Float
+                         else BasicType_Int )
+    }
+    | RExp7 '%' RExp8 
+    {   
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsAuL.Rem $1.parsetree $3.parsetree
+        ; $$.errs = (if ((($1.tipo == BasicType_Int) || ($1.tipo == BasicType_Float)) && (($3.tipo == BasicType_Int) || ($3.tipo == BasicType_Float)))
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be Int or Float!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = BasicType_Int
+    }
+    | RExp8 
+    { 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo 
+    }
+RExp8 : RExp9 '^' RExp8 
+    {   
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.parsetree = AbsAuL.Pow $1.parsetree $3.parsetree
+        ; $$.errs = (if ((($1.tipo == BasicType_Int) || ($1.tipo == BasicType_Float)) && (($3.tipo == BasicType_Int) || ($3.tipo == BasicType_Float)))
+                         then []
+                         else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be Int or Float!"]) ++ $1.errs ++ $3.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = ( if ((($1.tipo == BasicType_Int) || ($1.tipo == BasicType_Float)) && (($3.tipo == BasicType_Int) || ($3.tipo == BasicType_Float)))
+                         then $1.tipo
+                         else BasicType_Float )
+    } 
+    | RExp9 
+    { 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo
+    }
+RExp9 : '-' RExp10 -- tipo numerico!! per il momento lasciamo sia int o float
+    { 
+        $2.envin = $$.envin
+        ; $$.parsetree = AbsAuL.Neg $2.parsetree
+        ; $$.errs = ( if (($2.tipo == BasicType_Int) || ($2.tipo == BasicType_Float))
+                         then []
+                         else ["error at " ++ ((showFromPosn . tokenPosn) $1) ++ ": type need to be Int or Float!"]   ) ++ $2.errs
+        ; $$.envout = $2.envout
+        ; $$.tipo = ( if (($2.tipo == BasicType_Int) || ($2.tipo == BasicType_Float))
+                         then $2.tipo
+                         else BasicType_Float )
+    } 
+    | RExp10 
+    { 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo 
+    }
+RExp10 : Func --TODO: sistema la roba dentro func
+    { 
+        $1.envin = $$.envin
+        ; $$.parsetree = AbsAuL.FCall $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo
+    }
+    | RExp10 '..' RExp11 -- temporaneamente ignorato
+    { 
+        $$.parsetree = AbsAuL.FStrCnt $1.parsetree $3.parsetree 
+    }
+    | '#' RExp11 -- temporaneamente ignorato
+    { 
+        $$.parsetree = AbsAuL.FLen $2.parsetree 
+    }
+    | RExp11 
+    { 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo
+    }
+RExp11 : Integer --modded
+    { 
+        $$.parsetree = AbsAuL.ValInt $1.vint
+        ; $$.tipo = BasicType_Int
+        ; $$.envout = $$.envin
+        ; $$.errs = []
+    }
+    | LExp 
+    { 
+        $$.parsetree = AbsAuL.ValVariable $1.parsetree 
+        ; $$.tipo = (if (isJust (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
+                        then (if ((isVarEnv . head . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
+                                then ((getTypeV . head . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
+                                else BasicType_Void )
+                        else BasicType_Void ) 
+        ; $$.envout = $$.envin
+        ; $$.errs = (if ($$.tipo == BasicType_Void)
+                        then ["error: reference to " ++ ((fromLIdent . getLIdentlexp) $1.parsetree) ++ " at line " ++
+                                (showFromPosn $1.posn) ++ "is invalid (maybe a function or not declared variable?)"]
+                        else [])
+    }
+    | '&' LExp 
+    { 
+        $$.parsetree = AbsAuL.ValRef $2.parsetree
+        ; $$.envout = $$.envin
+        ; $$.tipo = (if (isJust (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))
+                        then (if ((isVarEnv . head . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))
+                                then ((getTypeV . head . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))
+                                else BasicType_Void )
+                        else BasicType_Void )
+        ; $$.errs = (if ($$.tipo == BasicType_Void)
+                        then ["error: reference to " ++ ((fromLIdent . getLIdentlexp) $2.parsetree) ++ " at line " ++
+                                (showFromPosn $2.posn) ++ "is invalid (maybe a function or not declared variable?)"]
+                        else [])
+    }
+    | Double --modded
+    { 
+        $$.parsetree = AbsAuL.ValDouble $1.vdbl
+        ; $$.tipo = BasicType_Float
+        ; $$.envout = $$.envin
+        ; $$.errs = []
+    }
+    | String --modded
+    { 
+        $$.parsetree = AbsAuL.ValString $1.vstr
+        ; $$.tipo = BasicType_String
+        ; $$.envout = $$.envin
+        ; $$.errs = []
+    }
+    | Char --modded
+    { 
+        $$.parsetree = AbsAuL.ValChar $1.vchr
+        ; $$.tipo = BasicType_Char
+        ; $$.envout = $$.envin
+        ; $$.errs = []
+    }
+    | Boolean 
+    { 
+        $$.parsetree = AbsAuL.ValBoolean $1.parsetree
+        ; $$.tipo = BasicType_Int
+        ; $$.envout = $$.envin
+        ; $$.errs = []
+    }
+    | PtrVoid 
+    { 
+        $$.parsetree = AbsAuL.ValPtr $1.parsetree
+        ; $$.tipo = BasicType_Void
+        ; $$.envout = $$.envin
+        ; $$.errs = []
+    }
+    | RExp12 
+    { 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree 
+        ; $$.envout = $1.envout
+        ; $$.errs = $1.errs
+        ; $$.tipo = $1.tipo
+    }
+RExp1 : RExp2 
+    { 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo
+    }
+RExp4 : RExp5 
+    { 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo 
+    }
+RExp5 : RExp6 
+    { 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
+        ; $$.tipo = $1.tipo 
+    }
+RExp12 : '(' RExp ')' 
+    { 
+        $2.envin = $$.envin
+        ; $$.parsetree = $2.parsetree
+        ; $$.errs = $2.errs
+        ; $$.envout = $2.envout
+        ; $$.tipo = $2.tipo 
+    }
+
 {
+
+data Result = Result Program String EnvT [String]  deriving (Eq, Show)
 
 returnM :: a -> Err a
 returnM = return
