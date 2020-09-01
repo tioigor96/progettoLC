@@ -38,6 +38,10 @@ clean:
 	rm -f main.o
 	rm -f main.hi
 	rm -f main
+	rm -f Utils.o
+	rm -f Utils.hi
+	rm -f Env.hi
+	rm -f Env.o
 
 demo:   clean bnfc alex happy
 	$(GHC) main.hs

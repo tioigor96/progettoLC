@@ -152,8 +152,9 @@ L_LIdent { PT _ (T_LIdent _) }
 %attribute vlident { LIdent }
 
 -- attributi per il frontend
-%attribute envin { EnvT }
-%attribute envout { EnvT }
+%attribute envin { EnvT }       -- env più esterno
+%attribute envloc { EnvT }      -- env del blocco locale
+%attribute envout { EnvT }      -- env del blocco uscente
 %attribute errs { [String] }
 %attribute posn { Posn }
 %attribute tipo { BasicType }
@@ -174,12 +175,14 @@ LIdent : L_LIdent
 Program : ListPGlobl
     { 
         $1.envin = emptyEnv
+        ; $1.envloc = emptyEnv
         ; $$.res = Result (AbsAuL.Prog $1.parsetree ) "qui TAC" $1.envout $1.errs
     }
 
 ListPGlobl : PGlobl 
     { 
         $1.envin = $$.envin
+        ; $1.envloc = $$.envloc
         ; $$.parsetree = (:[]) $1.parsetree
         ; $$.envout = $1.envout
         ; $$.errs = $1.errs
@@ -187,9 +190,11 @@ ListPGlobl : PGlobl
     | PGlobl ListPGlobl
     { 
         $1.envin = $$.envin
-        ; $2.envin = $1.envout
+        ; $2.envin = $$.envin
+        ; $1.envloc = $$.envloc
+        ; $2.envloc = $1.envout
         ; $$.parsetree = (:) $1.parsetree $2.parsetree
-        ; $$.envout = mergeEnv $1.envout $2.envout
+        ; $$.envout = $2.envout
         ; $$.errs = $1.errs ++ $2.errs
         
     }
@@ -197,6 +202,7 @@ ListPGlobl : PGlobl
 PGlobl : Stm 
     { 
         $1.envin = $$.envin
+        ; $1.envloc = $$.envloc
         ; $$.parsetree = AbsAuL.ProgGlobB $1.parsetree
         ; $$.envout = $1.envout 
         ; $$.errs = $1.errs
@@ -209,17 +215,34 @@ PGlobl : Stm
         ; $$.errs = $1.errs
     }
 
+--  ========================
+--  =======  BLKS  =========
+--  ========================
+
 Block : ListStm 
     { 
-        $$.parsetree = AbsAuL.Blk $1.parsetree 
+        $1.envin = mergeEnv $$.envloc $$.envin
+        ; $1.envloc = emptyEnv
+        ; $$.parsetree = AbsAuL.Blk $1.parsetree
+        ; $$.envout = $$.envloc
+        ; $$.errs = $1.errs
+        
     }
 ListStm : {- empty -} 
     { 
         $$.parsetree = [] 
+        ; $$.envout = $$.envloc
+        ; $$.errs = []
     } 
-    | ListStm Stm 
+    | ListStm Stm
     { 
-        $$.parsetree =  flip (:) $1.parsetree $2.parsetree
+        $1.envin = $$.envin
+        ; $2.envin = $$.envin
+        ; $1.envloc = $$.envloc
+        ; $2.envloc = $1.envout
+        ; $$.parsetree =  flip (:) $1.parsetree $2.parsetree
+        ; $$.envout = $2.envout
+        ; $$.errs = $1.errs ++ $2.errs
     }
 
 --  ========================
@@ -267,19 +290,24 @@ CompoundType : '*' CompoundType { $$.parsetree = AbsAuL.CompTypeP $2.parsetree }
 Stm : Decl ';' 
     { 
         $1.envin = $$.envin
+        ; $1.envloc = $$.envloc
         ; $$.parsetree = AbsAuL.SDecl $1.parsetree
         ; $$.envout = $1.envout
         ; $$.errs = $1.errs
     }
     | Local ';' 
     { 
-        $$.parsetree = AbsAuL.SLocal $1.parsetree 
+        $1.envin = $$.envin
+        ; $1.envloc = $$.envloc
+        ; $$.parsetree = AbsAuL.SLocal $1.parsetree
+        ; $$.envout = $1.envout
+        ; $$.errs = $1.errs
     }
     | Ass ';' 
     { 
-        $1.envin = $$.envin
+        $1.envin = mergeEnv $$.envloc $$.envin
         ; $$.parsetree = AbsAuL.SAss $1.parsetree 
-        ; $$.envout = $1.envout
+        ; $$.envout = $$.envloc
         ; $$.errs = $1.errs
     }
     | While 
@@ -300,20 +328,23 @@ Stm : Decl ';'
     }
     | Func ';' 
     { 
-        $1.envin = $$.envin
+        $1.envin = mergeEnv $$.envloc $$.envin
         ; $$.parsetree = AbsAuL.SRExp $1.parsetree
-        ; $$.envout = $1.envout
+        ; $$.envout = $$.envloc
         ; $$.errs = $1.errs
     }
     | EBlk 
-    { 
-        $$.parsetree = AbsAuL.SEBlk $1.parsetree 
+    {
+        $1.envin = mergeEnv $$.envloc $$.envin
+        ; $1.envloc = $1.envloc
+        ; $$.parsetree = AbsAuL.SEBlk $1.parsetree
+        ; $$.envout = $$.envloc
+        ; $$.errs = $1.errs
     }
     | Return ';' 
     { 
         $1.envin = $$.envin
         ; $$.parsetree = AbsAuL.SReturn $1.parsetree
-        ; 
     }
     | Break ';' 
     { 
@@ -326,7 +357,10 @@ Stm : Decl ';'
 
 EBlk : 'do' Block 'end' 
     { 
-        $$.parsetree = AbsAuL.EBlkS $2.parsetree 
+        $2.envin = $$.envin
+        ; $2.envloc = $$.envloc
+        ; $$.parsetree = AbsAuL.EBlkS $2.parsetree
+        ; $$.errs = $2.errs
     }
 
 --  ========================
@@ -335,15 +369,19 @@ EBlk : 'do' Block 'end'
 -- passa a VarInit env e variem implementa controllo tipo
 Decl : BasicType LExp VarInit 
     { 
-        $3.envin = $$.envin
+        $3.envin = (mergeEnv $$.envloc $$.envin)
         ; $$.parsetree = AbsAuL.DeclSP $1.parsetree $2.parsetree $3.parsetree
-        ; $$.envout = ( if (isOk (insertEnv $1.parsetree $2.parsetree $$.envin $2.posn))
-                         then (fromOk (insertEnv $1.parsetree $2.parsetree $$.envin $2.posn))
-                         else $3.envin
+        ; $$.envout = ( if (isOk (insertEnv $1.parsetree Modality1 $2.parsetree $$.envloc $2.posn))
+                         then (fromOk (insertEnv $1.parsetree Modality1 $2.parsetree $$.envloc $2.posn))
+                         else $3.envloc
                         )
-        ; $$.errs = ( if (isJust (lookupEnv ( (fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))
-                         then ["error: variable " ++ (fromBad (insertEnv $1.parsetree $2.parsetree $$.envin $2.posn))]
-                         else []
+        ; $$.errs = ( if (isJust (lookupEnv ( (fromLIdent . getLIdentlexp) $2.parsetree) $$.envloc))
+                         then ["error at "++ (showFromPosn $2.posn) ++": variable " ++ 
+                                (fromBad (insertEnv $1.parsetree Modality1 $2.parsetree $$.envloc $2.posn))]
+                         else if(not($3.tipo == BasicType_Void) && not($1.parsetree == $3.tipo))
+                            then ["error at "++ (showFromPosn $2.posn) ++": variable was defined as '"++ 
+                                  (showBBType $1.parsetree) ++ "' but initialization has type of '"++(showBBType $3.tipo)++"'"]
+                            else []
                         ) ++ $3.errs
                             
     }
@@ -352,16 +390,17 @@ VarInit : {- empty -}
     { 
         
         $$.parsetree = AbsAuL.VarINil
-        ; $$.envout = $$.envin
         ; $$.errs = []
+        ; $$.tipo = BasicType_Void
     }
     | '=' RExp 
     {
-        $$.parsetree = AbsAuL.VarExp $2.parsetree 
-        ; $$.envout = $$.envin
+        $2.envin = $$.envin
+        ; $$.parsetree = AbsAuL.VarExp $2.parsetree 
         ; $$.errs = []
+        ; $$.tipo = $2.tipo
     }
-        | '=' Array 
+    | '=' Array 
     { 
         $$.parsetree = AbsAuL.VarMat $2.parsetree 
     }
@@ -422,7 +461,11 @@ ListArray : Array
 
 Local : 'local' Decl 
     { 
-        $$.parsetree = AbsAuL.DeclLocal $2.parsetree 
+        $2.envin = (mergeEnv $$.envloc $$.envin)
+        ; $2.envloc = emptyEnv
+        ; $$.parsetree = AbsAuL.DeclLocal $2.parsetree 
+        ; $$.envout = (mergeEnv $2.envout $$.envloc)
+        ; $$.errs = $2.errs
     }
 
 --  ========================
@@ -434,16 +477,19 @@ Ass : LExp '=' RExp
         $3.envin = $$.envin
         ; $$.parsetree = AbsAuL.AssD $1.parsetree $3.parsetree
         ; $$.tipo = (if (isJust (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
-                        then (if ((isVarEnv . head . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
-                                then ((getTypeV . head . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
+                        then (if ((isVarEnv . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
+                                then ((fst . getTypeV . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
                                 else BasicType_Void )
                         else BasicType_Void )
         ; $$.errs = (if ($$.tipo == BasicType_Void)
                          then []
                          else if ($$.tipo == $3.tipo)
-                                  then []
+                                  then if((snd . getTypeV . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin) == Modality_const)
+                                         then ["error at " ++ ((showFromPosn . tokenPosn) $2) ++
+                                               ": cannot assign value to a constant variable "++
+                                               ((fromLIdent . getLIdentlexp) $1.parsetree) ++"!"]
+                                         else []
                                   else ["error at " ++ ((showFromPosn . tokenPosn) $2) ++ ": expects argument of type '" ++ (showBBType $$.tipo) ++ "' but has type '"++ (showBBType $3.tipo) ++"'"]) ++ $3.errs
-        ; $$.envout = $3.envout 
     }
 
 --  ========================
@@ -454,7 +500,6 @@ Func : FuncWrite
     { 
         $1.envin = $$.envin
         ; $$.parsetree = AbsAuL.FuncBW $1.parsetree
-        ; $$.envout = $1.envout
         ; $$.errs = $1.errs
         ; $$.tipo = AbsAuL.BasicType_Void
     }
@@ -462,7 +507,6 @@ Func : FuncWrite
     { 
         $1.envin = $$.envin
         ; $$.parsetree = AbsAuL.FuncBR $1.parsetree 
-        ; $$.envout = $1.envout
         ; $$.errs = $1.errs
         ; $$.tipo = $1.tipo
     }
@@ -486,8 +530,7 @@ ListRExp : {- empty -}
 FuncWrite : 'writeInt' '(' RExp ')' 
     { 
         $3.envin = $$.envin
-        ; $$.parsetree = AbsAuL.WriteI $3.parsetree 
-        ; $$.envout = $3.envout
+        ; $$.parsetree = AbsAuL.WriteI $3.parsetree
         ; $$.errs = (if (not($3.tipo == BasicType_Int))
                         then ["error at " ++ ((showFromPosn . tokenPosn) $1) ++ ": type for 'writeInt' need to be Int!"]
                         else []
@@ -497,7 +540,6 @@ FuncWrite : 'writeInt' '(' RExp ')'
     { 
         $3.envin = $$.envin
         ; $$.parsetree = AbsAuL.WriteF $3.parsetree
-        ; $$.envout = $3.envout
         ; $$.errs = (if (not ($3.tipo == BasicType_Float))
                         then ["error at " ++ ((showFromPosn . tokenPosn) $1) ++ ": type for 'writeFloat' need to be Float!"]
                         else []
@@ -507,7 +549,6 @@ FuncWrite : 'writeInt' '(' RExp ')'
     { 
         $3.envin = $$.envin
         ; $$.parsetree = AbsAuL.WriteC $3.parsetree
-        ; $$.envout = $3.envout
         ; $$.errs = (if (not ($3.tipo == BasicType_Char))
                         then ["error at " ++ ((showFromPosn . tokenPosn) $1) ++ ": type for 'writeChar' need to be Char!"]
                         else []
@@ -517,7 +558,6 @@ FuncWrite : 'writeInt' '(' RExp ')'
     { 
         $3.envin = $$.envin
         ; $$.parsetree = AbsAuL.WriteS $3.parsetree
-        ; $$.envout = $3.envout
         ; $$.errs = (if (not ($3.tipo == BasicType_String))
                         then ["error at " ++ ((showFromPosn . tokenPosn) $1) ++ ": type for 'writeString' need to be String!"]
                         else []
@@ -529,28 +569,24 @@ FuncRead : 'readInt' '(' ')'
         $$.parsetree = AbsAuL.ReadI
         ; $$.tipo = BasicType_Int
         ; $$.errs = []
-        ; $$.envout = $$.envin
     }
     | 'readFloat' '(' ')' 
     { 
         $$.parsetree = AbsAuL.ReadF
         ; $$.tipo = BasicType_Float
         ; $$.errs = []
-        ; $$.envout = $$.envin
     }
     | 'readChar' '(' ')' 
     { 
         $$.parsetree = AbsAuL.ReadC
         ; $$.tipo = BasicType_Char
         ; $$.errs = []
-        ; $$.envout = $$.envin 
     }
     | 'readString' '(' ')' 
     { 
         $$.parsetree = AbsAuL.ReadS
         ; $$.tipo = BasicType_String
         ; $$.errs = []
-        ; $$.envout = $$.envin 
     }
 
 --  ========================
@@ -743,7 +779,6 @@ RExp : RExp 'or' RExp1
         ; $$.errs = (if (($1.tipo == BasicType_Bool) && ($3.tipo == BasicType_Bool))
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for 'or' operations!"]) ++ $1.errs ++ $3.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = BasicType_Bool 
     }
     | RExp1 'and' RExp2 
@@ -754,7 +789,6 @@ RExp : RExp 'or' RExp1
         ; $$.errs = (if (($1.tipo == BasicType_Bool) && ($3.tipo == BasicType_Bool))
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for 'and' operations!"]) ++ $1.errs ++ $3.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = BasicType_Bool
     }
     | RExp1 
@@ -762,7 +796,6 @@ RExp : RExp 'or' RExp1
         $1.envin = $$.envin
         ; $$.parsetree = $1.parsetree
         ; $$.errs = $1.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = $1.tipo 
     }
 RExp2 : 'not' RExp3 
@@ -772,7 +805,6 @@ RExp2 : 'not' RExp3
         ; $$.errs = (if ($2.tipo == BasicType_Bool)
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $1) ++ ": type need to be compatible for 'and' operations!"]) ++ $2.errs
-        ; $$.envout = $2.envout
         ; $$.tipo = BasicType_Bool
     } 
     | RExp3 
@@ -780,7 +812,6 @@ RExp2 : 'not' RExp3
         $1.envin = $$.envin
         ; $$.parsetree = $1.parsetree
         ; $$.errs = $1.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = $1.tipo 
     }
 RExp3 : RExp3 '==' RExp5 
@@ -791,7 +822,6 @@ RExp3 : RExp3 '==' RExp5
         ; $$.errs = (if (isValidCmp $1.tipo $3.tipo)
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '==' operations!"]) ++ $1.errs ++ $3.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = BasicType_Bool 
     }
     | RExp3 '~=' RExp5 
@@ -802,7 +832,6 @@ RExp3 : RExp3 '==' RExp5
         ; $$.errs = (if (isValidCmp $1.tipo $3.tipo)
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '~=' operations!"]) ++ $1.errs ++ $3.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = BasicType_Bool 
     }
     | RExp3 '<' RExp5 
@@ -813,7 +842,6 @@ RExp3 : RExp3 '==' RExp5
         ; $$.errs = (if (isValidCmp $1.tipo $3.tipo)
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '<' operations!"]) ++ $1.errs ++ $3.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = BasicType_Bool
     }
     | RExp3 '<=' RExp5 
@@ -824,7 +852,6 @@ RExp3 : RExp3 '==' RExp5
         ; $$.errs = (if (isValidCmp $1.tipo $3.tipo)
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '<=' operations!"]) ++ $1.errs ++ $3.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = BasicType_Bool
     }
     | RExp3 '>' RExp5 
@@ -835,7 +862,6 @@ RExp3 : RExp3 '==' RExp5
         ; $$.errs = (if (isValidCmp $1.tipo $3.tipo)
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '>' operations!"]) ++ $1.errs ++ $3.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = BasicType_Bool
     }
     | RExp3 '>=' RExp5 
@@ -846,7 +872,6 @@ RExp3 : RExp3 '==' RExp5
         ; $$.errs = (if (isValidCmp $1.tipo $3.tipo)
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '>=' operations!"]) ++ $1.errs ++ $3.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = BasicType_Bool
     }
     | RExp4 
@@ -854,7 +879,6 @@ RExp3 : RExp3 '==' RExp5
         $1.envin = $$.envin
         ; $$.parsetree = $1.parsetree
         ; $$.errs = $1.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = $1.tipo 
     }
 RExp6 : RExp6 '+' RExp7 
@@ -865,7 +889,6 @@ RExp6 : RExp6 '+' RExp7
         ; $$.errs = (if ((($1.tipo == BasicType_Int) || ($1.tipo == BasicType_Float)) && (($3.tipo == BasicType_Int) || ($3.tipo == BasicType_Float)))
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be Int or Float!"]) ++ $1.errs ++ $3.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = (if (($1.tipo == BasicType_Float) || ($3.tipo == BasicType_Float))
                          then BasicType_Float
                          else BasicType_Int )  
@@ -878,7 +901,6 @@ RExp6 : RExp6 '+' RExp7
         ; $$.errs = (if ((($1.tipo == BasicType_Int) || ($1.tipo == BasicType_Float)) && (($3.tipo == BasicType_Int) || ($3.tipo == BasicType_Float)))
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be Int or Float!"]) ++ $1.errs ++ $3.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = (if (($1.tipo == BasicType_Float) || ($3.tipo == BasicType_Float))
                          then BasicType_Float
                          else BasicType_Int )  
@@ -888,7 +910,6 @@ RExp6 : RExp6 '+' RExp7
         $1.envin = $$.envin
         ; $$.parsetree = $1.parsetree
         ; $$.errs = $1.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = $1.tipo 
     }
 RExp7 : RExp7 '*' RExp8 
@@ -899,7 +920,6 @@ RExp7 : RExp7 '*' RExp8
         ; $$.errs = (if ((($1.tipo == BasicType_Int) || ($1.tipo == BasicType_Float)) && (($3.tipo == BasicType_Int) || ($3.tipo == BasicType_Float)))
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be Int or Float!"]) ++ $1.errs ++ $3.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = (if (($1.tipo == BasicType_Float) || ($3.tipo == BasicType_Float))
                          then BasicType_Float
                          else BasicType_Int ) 
@@ -912,7 +932,6 @@ RExp7 : RExp7 '*' RExp8
         ; $$.errs = (if ((($1.tipo == BasicType_Int) || ($1.tipo == BasicType_Float)) && (($3.tipo == BasicType_Int) || ($3.tipo == BasicType_Float)))
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be Int or Float!"]) ++ $1.errs ++ $3.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = (if (($1.tipo == BasicType_Float) || ($3.tipo == BasicType_Float))
                          then BasicType_Float
                          else BasicType_Int )
@@ -925,7 +944,6 @@ RExp7 : RExp7 '*' RExp8
         ; $$.errs = (if ((($1.tipo == BasicType_Int) || ($1.tipo == BasicType_Float)) && (($3.tipo == BasicType_Int) || ($3.tipo == BasicType_Float)))
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be Int or Float!"]) ++ $1.errs ++ $3.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = BasicType_Int
     }
     | RExp8 
@@ -933,7 +951,6 @@ RExp7 : RExp7 '*' RExp8
         $1.envin = $$.envin
         ; $$.parsetree = $1.parsetree
         ; $$.errs = $1.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = $1.tipo 
     }
 RExp8 : RExp9 '^' RExp8 
@@ -944,7 +961,6 @@ RExp8 : RExp9 '^' RExp8
         ; $$.errs = (if ((($1.tipo == BasicType_Int) || ($1.tipo == BasicType_Float)) && (($3.tipo == BasicType_Int) || ($3.tipo == BasicType_Float)))
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be Int or Float!"]) ++ $1.errs ++ $3.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = ( if ((($1.tipo == BasicType_Int) || ($1.tipo == BasicType_Float)) && (($3.tipo == BasicType_Int) || ($3.tipo == BasicType_Float)))
                          then $1.tipo
                          else BasicType_Float )
@@ -954,7 +970,6 @@ RExp8 : RExp9 '^' RExp8
         $1.envin = $$.envin
         ; $$.parsetree = $1.parsetree
         ; $$.errs = $1.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = $1.tipo
     }
 RExp9 : '-' RExp10 -- tipo numerico!! per il momento lasciamo sia int o float
@@ -964,7 +979,6 @@ RExp9 : '-' RExp10 -- tipo numerico!! per il momento lasciamo sia int o float
         ; $$.errs = ( if (($2.tipo == BasicType_Int) || ($2.tipo == BasicType_Float))
                          then []
                          else ["error at " ++ ((showFromPosn . tokenPosn) $1) ++ ": type need to be Int or Float!"]   ) ++ $2.errs
-        ; $$.envout = $2.envout
         ; $$.tipo = ( if (($2.tipo == BasicType_Int) || ($2.tipo == BasicType_Float))
                          then $2.tipo
                          else BasicType_Float )
@@ -974,7 +988,6 @@ RExp9 : '-' RExp10 -- tipo numerico!! per il momento lasciamo sia int o float
         $1.envin = $$.envin
         ; $$.parsetree = $1.parsetree
         ; $$.errs = $1.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = $1.tipo 
     }
 RExp10 : Func --TODO: sistema la roba dentro func
@@ -982,7 +995,6 @@ RExp10 : Func --TODO: sistema la roba dentro func
         $1.envin = $$.envin
         ; $$.parsetree = AbsAuL.FCall $1.parsetree
         ; $$.errs = $1.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = $1.tipo
     }
     | RExp10 '..' RExp11 -- temporaneamente ignorato
@@ -998,7 +1010,6 @@ RExp10 : Func --TODO: sistema la roba dentro func
         $1.envin = $$.envin
         ; $$.parsetree = $1.parsetree
         ; $$.errs = $1.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = $1.tipo
     }
 RExp11 : Integer --modded
@@ -1012,11 +1023,10 @@ RExp11 : Integer --modded
     { 
         $$.parsetree = AbsAuL.ValVariable $1.parsetree 
         ; $$.tipo = (if (isJust (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
-                        then (if ((isVarEnv . head . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
-                                then ((getTypeV . head . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
+                        then (if ((isVarEnv . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
+                                then ((fst . getTypeV . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
                                 else BasicType_Void )
                         else BasicType_Void ) 
-        ; $$.envout = $$.envin
         ; $$.errs = (if ($$.tipo == BasicType_Void)
                         then ["error: reference to " ++ ((fromLIdent . getLIdentlexp) $1.parsetree) ++ " at line " ++
                                 (showFromPosn $1.posn) ++ "is invalid (maybe a function or not declared variable?)"]
@@ -1025,10 +1035,9 @@ RExp11 : Integer --modded
     | '&' LExp 
     { 
         $$.parsetree = AbsAuL.ValRef $2.parsetree
-        ; $$.envout = $$.envin
         ; $$.tipo = (if (isJust (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))
-                        then (if ((isVarEnv . head . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))
-                                then ((getTypeV . head . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))
+                        then (if ((isVarEnv . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))
+                                then ((fst . getTypeV . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))
                                 else BasicType_Void )
                         else BasicType_Void )
         ; $$.errs = (if ($$.tipo == BasicType_Void)
@@ -1040,42 +1049,36 @@ RExp11 : Integer --modded
     { 
         $$.parsetree = AbsAuL.ValDouble $1.vdbl
         ; $$.tipo = BasicType_Float
-        ; $$.envout = $$.envin
         ; $$.errs = []
     }
     | String --modded
     { 
         $$.parsetree = AbsAuL.ValString $1.vstr
         ; $$.tipo = BasicType_String
-        ; $$.envout = $$.envin
         ; $$.errs = []
     }
     | Char --modded
     { 
         $$.parsetree = AbsAuL.ValChar $1.vchr
         ; $$.tipo = BasicType_Char
-        ; $$.envout = $$.envin
         ; $$.errs = []
     }
     | Boolean 
     { 
         $$.parsetree = AbsAuL.ValBoolean $1.parsetree
         ; $$.tipo = BasicType_Int
-        ; $$.envout = $$.envin
         ; $$.errs = []
     }
     | PtrVoid 
     { 
         $$.parsetree = AbsAuL.ValPtr $1.parsetree
         ; $$.tipo = BasicType_Void
-        ; $$.envout = $$.envin
         ; $$.errs = []
     }
     | RExp12 
     { 
         $1.envin = $$.envin
         ; $$.parsetree = $1.parsetree 
-        ; $$.envout = $1.envout
         ; $$.errs = $1.errs
         ; $$.tipo = $1.tipo
     }
@@ -1084,7 +1087,6 @@ RExp1 : RExp2
         $1.envin = $$.envin
         ; $$.parsetree = $1.parsetree
         ; $$.errs = $1.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = $1.tipo
     }
 RExp4 : RExp5 
@@ -1092,7 +1094,6 @@ RExp4 : RExp5
         $1.envin = $$.envin
         ; $$.parsetree = $1.parsetree
         ; $$.errs = $1.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = $1.tipo 
     }
 RExp5 : RExp6 
@@ -1100,7 +1101,6 @@ RExp5 : RExp6
         $1.envin = $$.envin
         ; $$.parsetree = $1.parsetree
         ; $$.errs = $1.errs
-        ; $$.envout = $1.envout
         ; $$.tipo = $1.tipo 
     }
 RExp12 : '(' RExp ')' 
@@ -1108,7 +1108,6 @@ RExp12 : '(' RExp ')'
         $2.envin = $$.envin
         ; $$.parsetree = $2.parsetree
         ; $$.errs = $2.errs
-        ; $$.envout = $2.envout
         ; $$.tipo = $2.tipo 
     }
 
