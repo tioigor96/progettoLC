@@ -27,22 +27,23 @@ type Verbosity = Int
 putStrV :: Verbosity -> String -> IO ()
 putStrV v s = if v > 1 then putStrLn s else return ()
 
-runFile :: Verbosity -> ParseFun ParBnfc.Result -> FilePath -> IO ()
+runFile :: Verbosity -> ParseFun ParAuL.Result -> FilePath -> IO ()
 runFile v p f = putStrLn f >> readFile f >>= run v p
 
-run :: Verbosity -> ParseFun ParBnfc.Result -> String -> IO ()
+run :: Verbosity -> ParseFun ParAuL.Result -> String -> IO ()
 run v p s = let ts = myLLexer s in case p ts of
            Bad s    -> do putStrLn "\nParse              Failed...\n"
                           putStrV v "Tokens:"
                           putStrV v $ show ts
                           putStrLn s
                           exitFailure
-           (Ok  (Result prog _ _ env)) -> do putStrLn "\nParse Successful!"
-                                             showTree v prog
-                                             putStrLn "\n[Environment]"
-                                             putStrLn $ show env
-
-                                             exitSuccess
+           (Ok  (Result prog _ env errs)) -> do (if (length errs) /= 0
+                                                 then (showErr $ reverse errs)
+                                                 else (do { putStrLn "\nParse Successful!"
+                                                           ; showTree v prog
+                                                           ; putStrLn "\n[Environment]"
+                                                           ; putStrLn $ show env }))
+                                                 ; exitSuccess
 
 showTree :: (Show a, Print a) => Int -> a -> IO ()
 showTree v tree
@@ -50,6 +51,10 @@ showTree v tree
       putStrV v $ "\n[Abstract Syntax]\n\n" ++ show tree
       putStrV v $ "\n[Linearized tree]\n\n" ++ printTree tree
 
+showErr [x] = putStrLn x
+showErr (x:xs) = do {
+                    putStrLn x
+                    ; showErr xs }
 usage :: IO ()
 usage = do
   putStrLn $ unlines
