@@ -6,7 +6,7 @@ HC = happy
 bnfc = bnfc
 
 
-all:    bnfc alex happy
+all:    clean bnfc alex happy
 
 clean:
 	rm -f AbsAuL.hi

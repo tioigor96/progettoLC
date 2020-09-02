@@ -312,7 +312,11 @@ Stm : Decl ';'
     }
     | While 
     { 
-        $$.parsetree = AbsAuL.SWhile $1.parsetree 
+        $1.envin = $$.envin
+        ; $1.envloc = $$.envloc
+        ; $$.parsetree = AbsAuL.SWhile $1.parsetree
+        ; $$.envout = $1.envout
+        ; $$.errs = $1.errs
     }
     | Repeat ';' 
     { 
@@ -336,7 +340,7 @@ Stm : Decl ';'
     | EBlk 
     {
         $1.envin = mergeEnv $$.envloc $$.envin
-        ; $1.envloc = $1.envloc
+        ; $1.envloc = $$.envloc
         ; $$.parsetree = AbsAuL.SEBlk $1.parsetree
         ; $$.envout = $$.envloc
         ; $$.errs = $1.errs
@@ -595,7 +599,12 @@ FuncRead : 'readInt' '(' ')'
 
 While : 'while' RExp EBlk 
     { 
-        $$.parsetree = AbsAuL.LoopW $2.parsetree $3.parsetree 
+        $2.envin = mergeEnv $$.envloc $$.envin
+        ; $3.envin = $$.envin
+        ; $3.envloc = $$.envloc
+        ; $$.parsetree = AbsAuL.LoopW $2.parsetree $3.parsetree
+        ; $$.envout = $$.envloc
+        ; $$.errs = $2.errs ++ $3.errs
     }
 
 --  ========================
