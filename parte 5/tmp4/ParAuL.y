@@ -158,6 +158,10 @@ L_LIdent { PT _ (T_LIdent _) }
 %attribute errs { [String] }
 %attribute posn { Posn }
 %attribute tipo { BasicType }
+-- %attribute jmpi { TAC }      -- conviene gestirlo da TAC, in quanto il jmp è 
+                                -- all'etichetta fuori del ciclo
+-- %attribute jmpo { TAC }      -- come sopra
+
 
 
 %%
@@ -319,12 +323,20 @@ Stm : Decl ';'
         ; $$.errs = $1.errs
     }
     | Repeat ';' 
-    { 
-        $$.parsetree = AbsAuL.SRepeat $1.parsetree 
+    {
+        $1.envin = $$.envin
+        ; $1.envloc = $$.envloc 
+        ; $$.parsetree = AbsAuL.SRepeat $1.parsetree
+        ; $$.envout = $1.envout
+        ; $$.errs = $1.errs 
     }
     | For 
-    { 
-        $$.parsetree = AbsAuL.SFor $1.parsetree 
+    {
+        $1.envin = $$.envin
+        ; $1.envloc = $$.envloc
+        ; $$.parsetree = AbsAuL.SFor $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
     }
     | If 
     { 
@@ -613,7 +625,12 @@ While : 'while' RExp EBlk
 
 Repeat : 'repeat' Block 'until' RExp 
     { 
-        $$.parsetree = AbsAuL.LoopR $2.parsetree $4.parsetree 
+        $2.envin = $$.envin
+        ; $2.envloc = $$.envloc
+        ; $4.envin = mergeEnv $$.envloc $$.envin
+        ; $$.parsetree = AbsAuL.LoopR $2.parsetree $4.parsetree
+        ; $$.envout = $2.envout
+        ; $$.errs = $2.errs ++ $4.errs
     }
 
 --  ========================
@@ -622,7 +639,21 @@ Repeat : 'repeat' Block 'until' RExp
 
 For : 'for' LIdent '=' RExp ',' RExp Increment EBlk --modded
     { 
-        $$.parsetree = AbsAuL.LoopF $2.vlident $4.parsetree $6.parsetree $7.parsetree $8.parsetree 
+        $4.envin = mergeEnv $$.envloc $$.envin
+        ; $6.envin = mergeEnv $$.envloc $$.envin
+        ; $7.envin = mergeEnv $$.envloc $$.envin
+        
+        ; $8.envin = mergeEnv $$.envloc $$.envin
+        ; $8.envloc = if((all (\(x,y) -> x == y ) [($4.tipo,$6.tipo),($6.tipo,$7.tipo),($7.tipo,$4.tipo)]) )
+                        then (fromOk (insertEnv $7.tipo Modality1 (LExpS $2.vlident) emptyEnv $2.posn))
+                        else (fromOk (insertEnv BasicType_Int Modality1 (LExpS $2.vlident) emptyEnv $2.posn))
+        
+        ; $$.parsetree = AbsAuL.LoopF $2.vlident $4.parsetree $6.parsetree $7.parsetree $8.parsetree
+        ; $$.envout = $$.envloc
+        ; $$.errs = (if ( all (\(x,y) -> x == y ) [($4.tipo,$6.tipo),($6.tipo,$7.tipo),($7.tipo,$4.tipo)])
+                        then []
+                        else ["error at "++ (showFromPosn $2.posn) ++": incompatible types in 'for' loop conditions!"])
+                               ++ $4.errs ++ $6.errs ++ $7.errs ++ $8.errs
     }
     | 'for' LIdent 'in' LIdent EBlk --modded
     { 
@@ -630,11 +661,15 @@ For : 'for' LIdent '=' RExp ',' RExp Increment EBlk --modded
     }
 Increment : {- empty -} -- per l'appunto, assumiamo sia 1 l'incremento
     { 
-        $$.parsetree = AbsAuL.FInc ( AbsAuL.ValInt 1 )
+        $$.parsetree = AbsAuL.FIncE
+        ; $$.tipo = BasicType_Int
+        ; $$.errs = []
     }
     | ',' RExp 
     { 
-        $$.parsetree = AbsAuL.FInc $2.parsetree 
+        $$.parsetree = AbsAuL.FInc $2.parsetree
+        ; $$.tipo = $2.tipo
+        ; $$.errs = $2.errs
     }
     
 --  ========================
