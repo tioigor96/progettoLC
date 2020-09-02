@@ -340,7 +340,11 @@ Stm : Decl ';'
     }
     | If 
     { 
-        $$.parsetree = AbsAuL.SIf $1.parsetree 
+        $1.envin = $$.envin
+        ; $1.envloc = $$.envloc
+        ; $$.parsetree = AbsAuL.SIf $1.parsetree 
+        ; $$.errs = $1.errs
+        ; $$.envout = $1.envout
     }
     | Func ';' 
     { 
@@ -505,7 +509,9 @@ Ass : LExp '=' RExp
                                                ": cannot assign value to a constant variable "++
                                                ((fromLIdent . getLIdentlexp) $1.parsetree) ++"!"]
                                          else []
-                                  else ["error at " ++ ((showFromPosn . tokenPosn) $2) ++ ": expects argument of type '" ++ (showBBType $$.tipo) ++ "' but has type '"++ (showBBType $3.tipo) ++"'"]) ++ $3.errs
+                                  else ["error at " ++ ((showFromPosn . tokenPosn) $2) ++ 
+                                        ": expects argument of type '" ++ (showBBType $$.tipo) ++ 
+                                        "' but has type '"++ (showBBType $3.tipo) ++"'"]) ++ $3.errs
     }
 
 --  ========================
@@ -677,30 +683,54 @@ Increment : {- empty -} -- per l'appunto, assumiamo sia 1 l'incremento
 --  ========================
 If : 'if' RExp 'then' Block ListElseIf Else 'end' --occhio al $5
     { 
-        $$.parsetree = AbsAuL.IfM $2.parsetree $4.parsetree (reverse $5.parsetree) $6.parsetree    
+        $2.envin = mergeEnv $$.envloc $$.envin
+        ; $4.envin = $$.envin
+        ; $4.envloc = $$.envloc
+        ; $5.envin = $$.envin
+        ; $5.envloc = $$.envloc
+        ; $6.envin = $$.envin
+        ; $6.envloc = $$.envloc
+        ; $$.parsetree = AbsAuL.IfM $2.parsetree $4.parsetree (reverse $5.parsetree) $6.parsetree
+        ; $$.envout = $$.envloc
+        ; $$.errs = $2.errs ++ $4.errs ++ $5.errs ++ $6.errs
     }
 
 Else : 'else' Block 
     { 
-        $$.parsetree = AbsAuL.ElseS $2.parsetree 
+        $2.envin = $$.envin
+        ; $2.envloc = $$.envloc
+        ; $$.parsetree = AbsAuL.ElseS $2.parsetree
+        ; $$.errs = $2.errs
     }
     | {- empty -} 
     { 
-        $$.parsetree = AbsAuL.ElseE 
+        $$.parsetree = AbsAuL.ElseE
+        ; $$.envout = $$.envloc
+        ; $$.errs = []
     }
 
 ElseIf : 'elseif' RExp 'then' Block 
     { 
-        $$.parsetree = AbsAuL.ElseIfD $2.parsetree $4.parsetree 
+        $2.envin = mergeEnv $$.envloc $$.envin
+        ; $4.envin = $$.envin
+        ; $4.envloc = $$.envloc
+        ; $$.parsetree = AbsAuL.ElseIfD $2.parsetree $4.parsetree
+        ; $$.errs = $2.errs ++ $4.errs
     }
 
 ListElseIf : {- empty -} 
     { 
-        $$.parsetree = [] 
+        $$.parsetree = []
+        ; $$.errs = [] 
     }
     | ListElseIf ElseIf 
     { 
-        $$.parsetree = flip (:) $1.parsetree $2.parsetree 
+        $1.envin = $$.envin
+        ; $1.envloc = $$.envloc
+        ; $2.envin = $$.envin
+        ; $2.envloc = $$.envloc
+        ; $$.parsetree = flip (:) $1.parsetree $2.parsetree
+        ; $$.errs = $1.errs ++ $2.errs
     }
 
 --  ========================

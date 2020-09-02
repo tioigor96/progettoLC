@@ -38,7 +38,7 @@ run v p s = let ts = myLLexer s in case p ts of
                           putStrLn s
                           exitFailure
            (Ok  (Result prog _ env errs)) -> do (if (length errs) /= 0
-                                                 then (showErr $ reverse errs)
+                                                 then (showErr errs)
                                                  else (do { putStrLn "\nParse Successful!"
                                                            ; showTree v prog
                                                            ; putStrLn "\n[Environment]"

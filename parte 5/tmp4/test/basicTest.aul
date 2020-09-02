@@ -1,0 +1,29 @@
+Int e =0;
+Float xs = 4.4/e;
+for i = 0, 10 do
+  writeFloat(xs+i);
+  e=e+1;
+end
+writeString("ciao mamma!");
+Int s =0;
+if s ~=0 then 
+    do
+        writeInt(3);
+        writeInt(3);
+        writeInt(xs);
+        writeInt(3);
+    end
+elseif (s == 0) then 
+    for i = 0,10,9 do
+        readInt();
+    end
+    readFloat();
+    readInt();
+    readFloat();
+else
+    repeat
+        readInt();
+    until false;
+    readFloat();
+    writeInt("ss");
+end
