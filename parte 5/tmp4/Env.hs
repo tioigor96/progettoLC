@@ -20,7 +20,7 @@ data Entity = Var { getTypeV :: (AbsAuL.BasicType, AbsAuL.Modality),
                     }
             | Fnct { getTypeF :: AbsAuL.BasicType,
                      getNameF :: String,
-                     getParamF :: [(Entity, AbsAuL.Modality)], -- siamo sicuri saranno
+                     getParamF :: [(Entity, AbsAuL.Modality)],  -- siamo sicuri saranno
                                                                 -- solo Var grazie alla
                                                                 -- BNF
                      getPos :: Posn

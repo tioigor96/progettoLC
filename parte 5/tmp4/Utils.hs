@@ -6,8 +6,37 @@ import ErrM
 import Control.Applicative
 import Data.Maybe
 
--- per lo show
 
+-- controllo array
+isVarArr (VarMat _) = True
+isVarArr _ = False
+
+--controllo array per tipo omogeneo
+sameTChk isTpe (ArrayV0 xs) = all (\x -> sameTChk isTpe x) xs
+sameTChk isTpe (ArrayV1 xs) = all (\x -> isTpe x) xs
+
+sameLenChk [l] (ArrayV1 xs) = l == (length xs)
+sameLenChk _ (ArrayV1 xs) = False
+sameLenChk (l:ls) (ArrayV0 xs)
+                            | length xs == l = all (\x -> sameLenChk ls x) xs
+                            | otherwise = False
+
+
+--funtypecheck per array
+isFloat (VTypeDouble _) = True
+isFloat _ = False
+isBool (VTypeBoolean _) = True
+isBool _ = False
+isChar (VTypeChar _) = True
+isChar _ = False
+isInt (VTypeInteger _) = True
+isInt _ = False
+isString (VTypeString _) = True
+isString _ = False
+isVoid (VTypePtrVoid _) = True
+isVoid _ = False
+
+-- per lo show type
 showBBType AbsAuL.BasicType_Float = "Float"
 showBBType AbsAuL.BasicType_Void = "Void"
 showBBType AbsAuL.BasicType_Bool = "Bool"
