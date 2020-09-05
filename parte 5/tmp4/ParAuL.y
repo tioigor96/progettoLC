@@ -398,10 +398,11 @@ Decl : BasicType LExp VarInit
         ; $$.errs = ( if (isJust (lookupEnv ( (fromLIdent . getLIdentlexp) $2.parsetree) $$.envloc))
                          then ["error at "++ (showFromPosn $2.posn) ++": variable " ++ 
                                 (fromBad (insertEnv $1.parsetree Modality1 $2.parsetree $$.envloc $2.posn))]
-                         else if(not($3.tipo == BasicType_Void) && not($1.parsetree == $3.tipo))
-                            then ["error at "++ (showFromPosn $2.posn) ++": variable was defined as '"++ 
-                                  (showBBType $1.parsetree) ++ "' but initialization has type of '"++(showBBType $3.tipo)++"'"]
-                            else []
+                         else if (not($3.tipo == BasicType_Void) && not($1.parsetree == $3.tipo))
+                                 then ["error at "++ (showFromPosn $2.posn) ++": variable was defined as '"++ 
+                                       (showBBType $1.parsetree) ++ "' but initialization has type of '"
+                                       ++(showBBType $3.tipo)++"'"]
+                                 else []
                         ) ++ $3.errs
                             
     }

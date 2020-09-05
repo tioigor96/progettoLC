@@ -7,20 +7,38 @@ import Control.Applicative
 import Data.Maybe
 
 
--- controllo array
+-- controllo array e decl
+isVarArr :: VarInit -> Bool
 isVarArr (VarMat _) = True
 isVarArr _ = False
 
+isRExp :: VarInit -> Bool
+isRExp (VarExp _) =True
+isRExp _ = False
+
+fromVarMat :: VarInit -> Array
+fromVarMat (VarMat x) = x
+
 --controllo array per tipo omogeneo
+sameTChk :: (VType -> Bool) -> Array -> Bool
 sameTChk isTpe (ArrayV0 xs) = all (\x -> sameTChk isTpe x) xs
 sameTChk isTpe (ArrayV1 xs) = all (\x -> isTpe x) xs
 
+sameLenChk :: [Int] -> Array -> Bool
 sameLenChk [l] (ArrayV1 xs) = l == (length xs)
 sameLenChk _ (ArrayV1 xs) = False
 sameLenChk (l:ls) (ArrayV0 xs)
                             | length xs == l = all (\x -> sameLenChk ls x) xs
                             | otherwise = False
 
+checkTypeInit :: BasicType -> Array -> Bool
+checkTypeInit btpe arr = case btpe of
+                     BasicType_Float -> sameTChk isFloat arr
+                     BasicType_Void -> sameTChk isVoid arr
+                     BasicType_Bool -> sameTChk isBool arr
+                     BasicType_Int -> sameTChk isInt arr
+                     BasicType_String -> sameTChk isString arr
+                     BasicType_Char -> sameTChk isChar arr
 
 --funtypecheck per array
 isFloat (VTypeDouble _) = True
