@@ -158,6 +158,9 @@ showBBType (Base BasicType_String) = "String"
 showBBType (Base BasicType_Char) = "Char"
 
 
+showCmpType (Base x) = showBBType (Base x)
+showCmpType (PtrT x) = "*" ++ (showCmpType x)
+showCmpType (ArrT x) = (showCmpType x) ++ "[]"
 --------------
 -----TIPI-----
 --------------

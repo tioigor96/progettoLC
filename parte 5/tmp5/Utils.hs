@@ -96,7 +96,7 @@ getPtrLev (LExpDR x) = 1 + ( getPtrLev x)
 -- quante dimensioni ha array
 getArrLev :: LExp -> Int
 getArrLev (LExpS _) = 0
-getArrLev (LExpDR _) = 0                                                                -- caso comulativo
+getArrLev (LExpDR x) = getArrLev x                                                                -- caso comulativo
 getArrLev (LExpA x ds) = length ds
 
 --controlla il tipo di dichiarazione

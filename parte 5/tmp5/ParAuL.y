@@ -396,6 +396,7 @@ EBlk : 'do' Block 'end'
 Decl : BasicType LExp VarInit 
     { 
         $3.envin = (mergeEnv $$.envloc $$.envin)
+        ; $3.tipo = makeCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree) $1.parsetree
         ; $$.parsetree = AbsAuL.DeclSP $1.parsetree $2.parsetree $3.parsetree
         ; $$.envout = ( if (isOk (insertEnv $1.parsetree Modality1 $2.parsetree $$.envloc $2.posn))
                          then (fromOk (insertEnv $1.parsetree Modality1 $2.parsetree $$.envloc $2.posn))
@@ -420,8 +421,12 @@ VarInit : {- empty -}   --TODO: completaaa
     {
         $2.envin = $$.envin
         ; $$.parsetree = AbsAuL.VarExp $2.parsetree 
-        ; $$.errs = []
-        ; $$.tipo = Base BasicType_Void
+        ; $$.errs = (if (not ($2.tipo == ErrT))
+                        then if (compCmpType $$.tipo $2.tipo) == ErrT
+                                then ["error at "++ ((showFromPosn . tokenPosn) $1) ++ ": cannot assign '" ++ (showCmpType $2.tipo) ++
+                                        "' to a variable with type '"++(showCmpType $$.tipo)++"'"]
+                                else []
+                        else [])++ $2.errs
     }
     | '=' Array 
     { 
@@ -526,7 +531,7 @@ Func : FuncWrite
         $1.envin = $$.envin
         ; $$.parsetree = AbsAuL.FuncBW $1.parsetree
         ; $$.errs = $1.errs
-        ; $$.tipo = ErrT
+        ; $$.tipo = Base BasicType_Void
     }
     | FuncRead 
     { 
@@ -892,7 +897,7 @@ RExp : RExp 'or' RExp1
         $1.envin = $$.envin
         ; $3.envin = $$.envin
         ; $$.parsetree = AbsAuL.Or $1.parsetree $3.parsetree
-        ; $$.errs = (if (not (op2CompType OrO $1.tipo $3.tipo) == ErrT)
+        ; $$.errs = (if (not ((op2CompType OrO $1.tipo $3.tipo) == ErrT))
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for 'or' operations!"]) ++ $1.errs ++ $3.errs
         ; $$.tipo = Base BasicType_Bool 
@@ -902,7 +907,7 @@ RExp : RExp 'or' RExp1
         $1.envin = $$.envin
         ; $3.envin = $$.envin
         ; $$.parsetree = AbsAuL.And $1.parsetree $3.parsetree
-        ; $$.errs = (if (not (op2CompType AndO $1.tipo $3.tipo) == ErrT)
+        ; $$.errs = (if (not ((op2CompType AndO $1.tipo $3.tipo) == ErrT))
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for 'and' operations!"]) ++ $1.errs ++ $3.errs
         ; $$.tipo = Base BasicType_Bool
@@ -918,7 +923,7 @@ RExp2 : 'not' RExp3
     { 
         $2.envin = $$.envin
         ; $$.parsetree = AbsAuL.Not $2.parsetree
-        ; $$.errs = (if (not (op1CompType NotO $1.tipo) == ErrT))
+        ; $$.errs = (if (not ((op1CompType NotO $2.tipo) == ErrT))
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $1) ++ ": type need to be compatible in 'not' operations!"]) ++ $2.errs
         ; $$.tipo = Base BasicType_Bool
@@ -935,60 +940,60 @@ RExp3 : RExp3 '==' RExp5
         $1.envin = $$.envin
         ; $3.envin = $$.envin
         ; $$.parsetree = AbsAuL.Eq $1.parsetree $3.parsetree
-        ; $$.errs = (if (not (op2CompType EqO $1.tipo $3.tipo) == ErrT)
+        ; $$.errs = (if (not ((op2CompType EqO $1.tipo $3.tipo) == ErrT))
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '==' operations!"]) ++ $1.errs ++ $3.errs
-        ; $$.tipo = BasicType_Bool 
+        ; $$.tipo = Base BasicType_Bool 
     }
     | RExp3 '~=' RExp5 
     { 
         $1.envin = $$.envin
         ; $3.envin = $$.envin
         ; $$.parsetree = AbsAuL.Neq $1.parsetree $3.parsetree
-        ; $$.errs = (if (not (op2CompType NeqO $1.tipo $3.tipo) == ErrT)
+        ; $$.errs = (if (not ((op2CompType NeqO $1.tipo $3.tipo) == ErrT))
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '~=' operations!"]) ++ $1.errs ++ $3.errs
-        ; $$.tipo = BasicType_Bool 
+        ; $$.tipo = Base BasicType_Bool 
     }
     | RExp3 '<' RExp5 
     { 
         $1.envin = $$.envin
         ; $3.envin = $$.envin
         ; $$.parsetree = AbsAuL.Lt $1.parsetree $3.parsetree
-        ; $$.errs = (if (not (op2CompType LtO $1.tipo $3.tipo) == ErrT)
+        ; $$.errs = (if (not ((op2CompType LtO $1.tipo $3.tipo) == ErrT))
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '<' operations!"]) ++ $1.errs ++ $3.errs
-        ; $$.tipo = BasicType_Bool
+        ; $$.tipo = Base BasicType_Bool
     }
     | RExp3 '<=' RExp5 
     { 
         $1.envin = $$.envin
         ; $3.envin = $$.envin
         ; $$.parsetree = AbsAuL.LtE $1.parsetree $3.parsetree
-        ; $$.errs = (if (not (op2CompType LtEO $1.tipo $3.tipo) == ErrT)
+        ; $$.errs = (if (not ((op2CompType LtEO $1.tipo $3.tipo) == ErrT))
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '<=' operations!"]) ++ $1.errs ++ $3.errs
-        ; $$.tipo = BasicType_Bool
+        ; $$.tipo = Base BasicType_Bool
     }
     | RExp3 '>' RExp5 
     { 
         $1.envin = $$.envin
         ; $3.envin = $$.envin
         ; $$.parsetree = AbsAuL.Gt $1.parsetree $3.parsetree
-        ; $$.errs = (if (not (op2CompType GtO $1.tipo $3.tipo) == ErrT)
+        ; $$.errs = (if (not ((op2CompType GtO $1.tipo $3.tipo) == ErrT))
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '>' operations!"]) ++ $1.errs ++ $3.errs
-        ; $$.tipo = BasicType_Bool
+        ; $$.tipo = Base BasicType_Bool
     }
     | RExp3 '>=' RExp5 
     { 
         $1.envin = $$.envin
         ; $3.envin = $$.envin
         ; $$.parsetree = AbsAuL.GtE $1.parsetree $3.parsetree
-        ; $$.errs = (if (not (op2CompType GtEO $1.tipo $3.tipo) == ErrT)
+        ; $$.errs = (if (not ((op2CompType GtEO $1.tipo $3.tipo) == ErrT))
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '>=' operations!"]) ++ $1.errs ++ $3.errs
-        ; $$.tipo = BasicType_Bool
+        ; $$.tipo = Base BasicType_Bool
     }
     | RExp4 
     { 
@@ -1002,7 +1007,7 @@ RExp6 : RExp6 '+' RExp7
         $1.envin = $$.envin
         ; $3.envin = $$.envin
         ; $$.parsetree = AbsAuL.Add $1.parsetree $3.parsetree
-        ; $$.errs = (if (not (op2CompType AddO $1.tipo $3.tipo) == ErrT)
+        ; $$.errs = (if (not ((op2CompType AddO $1.tipo $3.tipo) == ErrT))
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": '+' arguments' types need to be Int, Float or Char!"]) ++ $1.errs ++ $3.errs
         ; $$.tipo = ( if ((op2CompType AddO $1.tipo $3.tipo) == ErrT) 
@@ -1014,7 +1019,7 @@ RExp6 : RExp6 '+' RExp7
         $1.envin = $$.envin
         ; $3.envin = $$.envin
         ; $$.parsetree = AbsAuL.Sub $1.parsetree $3.parsetree
-        ; $$.errs = (if (not (op2CompType SubO $1.tipo $3.tipo) == ErrT)
+        ; $$.errs = (if (not ((op2CompType SubO $1.tipo $3.tipo) == ErrT))
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": '-' arguments' types need to be Int, Float or Char!"]) ++ $1.errs ++ $3.errs
         ; $$.tipo = ( if ((op2CompType SubO $1.tipo $3.tipo) == ErrT) 
@@ -1033,7 +1038,7 @@ RExp7 : RExp7 '*' RExp8
         $1.envin = $$.envin
         ; $3.envin = $$.envin
         ; $$.parsetree = AbsAuL.Mul $1.parsetree $3.parsetree
-        ; $$.errs = (if (not (op2CompType MulO $1.tipo $3.tipo) == ErrT)
+        ; $$.errs = (if (not ((op2CompType MulO $1.tipo $3.tipo) == ErrT))
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": '*' arguments' types need to be Int or Float!"]) ++ $1.errs ++ $3.errs
         ; $$.tipo = ( if ((op2CompType MulO $1.tipo $3.tipo) == ErrT) 
@@ -1045,7 +1050,7 @@ RExp7 : RExp7 '*' RExp8
         $1.envin = $$.envin
         ; $3.envin = $$.envin
         ; $$.parsetree = AbsAuL.Div $1.parsetree $3.parsetree
-        ; $$.errs = (if (not (op2CompType DivO $1.tipo $3.tipo) == ErrT)
+        ; $$.errs = (if (not ((op2CompType DivO $1.tipo $3.tipo) == ErrT))
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": '/' arguments' types need to be Int or Float!"]) ++ $1.errs ++ $3.errs
         ; $$.tipo = ( if ((op2CompType DivO $1.tipo $3.tipo) == ErrT) 
@@ -1057,7 +1062,7 @@ RExp7 : RExp7 '*' RExp8
         $1.envin = $$.envin
         ; $3.envin = $$.envin
         ; $$.parsetree = AbsAuL.Rem $1.parsetree $3.parsetree
-        ; $$.errs = (if (not (op2CompType RemO $1.tipo $3.tipo) == ErrT)
+        ; $$.errs = (if (not ((op2CompType RemO $1.tipo $3.tipo) == ErrT))
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": '%' arguments' types need to be Int or Float!"]) ++ $1.errs ++ $3.errs
         ; $$.tipo = (Base BasicType_Int)
@@ -1074,7 +1079,7 @@ RExp8 : RExp9 '^' RExp8
         $1.envin = $$.envin
         ; $3.envin = $$.envin
         ; $$.parsetree = AbsAuL.Pow $1.parsetree $3.parsetree
-        ; $$.errs = (if ((($1.tipo == BasicType_Int) || ($1.tipo == BasicType_Float)) && (($3.tipo == BasicType_Int) || ($3.tipo == BasicType_Float)))
+        ; $$.errs = (if (not ((op2CompType PowO $1.tipo $3.tipo) == ErrT))
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be Int or Float!"]) ++ $1.errs ++ $3.errs
         ; $$.tipo = ( if ((op2CompType PowO $1.tipo $3.tipo) == ErrT) 
@@ -1092,12 +1097,12 @@ RExp9 : '-' RExp10
     { 
         $2.envin = $$.envin
         ; $$.parsetree = AbsAuL.Neg $2.parsetree
-        ; $$.errs = if (not (op1CompType NeqO $2.tipo) == ErrT)
+        ; $$.errs = (if (not ((op1CompType NeqO $2.tipo) == ErrT))
                          then []
                          else ["error at " ++ ((showFromPosn . tokenPosn) $1) ++ ": in negation operator type need to be 'Int' or 'Float'!"]   ) ++ $2.errs
-        ; $$.tipo = ( if (op1CompType NegO $2.tipo) == ErrT
+        ; $$.tipo = if (op1CompType NegO $2.tipo) == ErrT
                          then (Base BasicType_Float)
-                         else (op1CompType NeqO $2.tipo) )
+                         else (op1CompType NeqO $2.tipo)
     } 
     | RExp10 
     { 
@@ -1128,6 +1133,7 @@ RExp10 : Func --TODO: controlla tipi ritorno func
         ; $$.errs = $1.errs
         ; $$.tipo = $1.tipo
     }
+
 RExp11 : Integer --TODO: controlla tipi LEXP e &LEXP: se dereferenzio o indirizzo [] in LExp devo togliere strati
     { 
         $$.parsetree = AbsAuL.ValInt $1.vint
@@ -1147,7 +1153,7 @@ RExp11 : Integer --TODO: controlla tipi LEXP e &LEXP: se dereferenzio o indirizz
                                 (showFromPosn $1.posn) ++ "is invalid (maybe a function or not declared variable?)"]
                         else (if ((downCmpType (getPtrLev $1.parsetree) (getArrLev $1.parsetree)
                                         ((fst . getTypeV . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))) == ErrT)
-                                then ["error at "++ ((showFromPosn . tokenPosn) $1) ++"too many dereferencing refering to '"++ 
+                                then ["error at "++ (showFromPosn $1.posn) ++"too many dereferencing refering to '"++ 
                                         ((fromLIdent . getLIdentlexp) $1.parsetree) ++"'"]
                                 else [] ))
     }
@@ -1155,13 +1161,13 @@ RExp11 : Integer --TODO: controlla tipi LEXP e &LEXP: se dereferenzio o indirizz
     { 
         $$.parsetree = AbsAuL.ValRef $2.parsetree
         ; $$.tipo = (if (isJust (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))
-                        then (addPrtT ( downCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree)
+                        then (addPtrT ( downCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree)
                                 ((fst . getTypeV . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))))
                         else ErrT )
         ; $$.errs = (if (isNothing (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))
                         then ["error: reference to " ++ ((fromLIdent . getLIdentlexp) $2.parsetree) ++ " at line " ++
                                 (showFromPosn $2.posn) ++ "is invalid (maybe a function or not declared variable?)"]
-                        else (if ((addPrtT ( downCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree)
+                        else (if ((addPtrT ( downCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree)
                                         ((fst . getTypeV . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin)))) == ErrT)
                                 then ["error at "++ ((showFromPosn . tokenPosn) $1) ++"too many dereferencing refering to '"
                                         ++ ((fromLIdent . getLIdentlexp) $2.parsetree) ++"'"]
