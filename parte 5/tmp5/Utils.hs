@@ -88,7 +88,7 @@ fromLIdent (LIdent s) = s
 
 
 -- quante volte è dereferenziabile la LExp
-getPtrLev :: LExp -> Integer
+getPtrLev :: LExp -> Int
 getPtrLev (LExpS _) = 0
 getPtrLev (LExpA _ _) = 0                                                                -- caso comulativo
 getPtrLev (LExpDR x) = 1 + ( getPtrLev x)

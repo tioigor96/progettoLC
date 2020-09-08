@@ -14,7 +14,7 @@ type EnvT = Map.Map String Entity
 data CmpType = Base BasicType
              | ArrT CmpType
              | PtrT CmpType
-             | ErrT CmpType
+             | ErrT
              deriving (Show, Eq)
 
 
@@ -105,10 +105,39 @@ insertEnv tipo mdl lexp env posn = let nme = (getLIdentlexp lexp)
 ---- MANIPOLARE COMPLEX TYPE ----
 ---------------------------------
 
+isBaseT :: CmpType -> Bool
+isBaseT (Base _) = True
+isBaseT _ = False
+
+isPtrT :: CmpType -> Bool
+isPtrT (PtrT _) = True
+isPtrT (ArrT x) = isPtrT x
+isPtrT _ = False
+
+isArrT :: CmpType -> Bool
+isArrT (ArrT _) = True
+isArrT _ = False
+
+-- crea un cmptype dati i gradi
+makeCmpType :: Int -> Int -> BasicType -> CmpType
 makeCmpType 0   0   tpe = Base tpe
 makeCmpType 0   arr tpe = ArrT $ makeCmpType 0 (arr - 1) tpe
 makeCmpType ptr 0   tpe = PtrT $ makeCmpType (ptr - 1) 0 tpe
 makeCmpType ptr arr tpe = ArrT $ makeCmpType ptr (arr - 1) tpe
+
+-- aggiunge prima del Base un livello di puntatore
+addPtrT (Base x) = PtrT ( Base x )
+addPtrT (PtrT x) = PtrT ( PtrT x )
+addPtrT (ArrT x) = ArrT (addPtrT x)
+addPtrT ErrT = ErrT
+
+-- abbassa un cmptype dati i gradi
+downCmpType :: Int -> Int -> CmpType -> CmpType
+downCmpType 0   0   ctp = ctp
+downCmpType 0   arr (ArrT x) = downCmpType 0 (arr - 1) x
+downCmpType ptr 0   (PtrT x) = downCmpType (ptr - 1) 0 x
+downCmpType ptr   arr (ArrT x) = downCmpType ptr (arr - 1) x
+downCmpType _ _ _ = ErrT
 
 getBaseType :: CmpType -> BasicType
 getBaseType (Base x) = x
@@ -138,7 +167,7 @@ showBBType (Base BasicType_Char) = "Char"
 AbsAuL.BasicType_Float   AbsAuL.BasicType_Void
 AbsAuL.BasicType_Bool    AbsAuL.BasicType_Int
 AbsAuL.BasicType_Char    AbsAuL.BasicType_String
--}
+
 isValidCmp :: AbsAuL.BasicType -> AbsAuL.BasicType -> Bool                    -- canonici
 isValidCmp (AbsAuL.BasicType_Int) (AbsAuL.BasicType_Int) = True
 isValidCmp (AbsAuL.BasicType_Float) (AbsAuL.BasicType_Float) = True
@@ -151,6 +180,123 @@ isValidCmp (AbsAuL.BasicType_Int) (AbsAuL.BasicType_Float) = True             --
 -- isValidCmp (AbsAuL.BasicType_Char) (AbsAuL.BasicType_String) = True        -- e qui che famo?
 -- isValidCmp (AbsAuL.BasicType_String) (AbsAuL.BasicType_Char) = True        -- e qui che famo?
 isValidCmp _ _ = False 
+-}
+
+-- controllo compatibilità tipi per assegnamenti
+-- tipi canonici
+compCmpType :: CmpType -> CmpType -> CmpType
+compCmpType (Base BasicType_Int) (Base BasicType_Int) = Base BasicType_Int
+compCmpType (Base BasicType_Float) (Base BasicType_Float) = Base BasicType_Float
+compCmpType (Base BasicType_Bool) (Base BasicType_Bool) = Base BasicType_Bool
+compCmpType (Base BasicType_Char) (Base BasicType_Char) = Base BasicType_Char
+compCmpType (Base BasicType_String) (Base BasicType_String) = Base BasicType_String
+compCmpType (PtrT t1) (PtrT t2) = compCmpType t1 t2
+compCmpType (ArrT t1) (ArrT t2) = compCmpType t1 t2
+-- compatibilità tra tipi eterogenei
+-- compCmpType (Base x) (Base BasicType_Void) = Base x
+-- compCmpType (Base BasicType_Void) (Base x) = Base x
+compCmpType (Base BasicType_Float) (Base BasicType_Int) = Base BasicType_Float  
+compCmpType (Base BasicType_Int) (Base BasicType_Float) = Base BasicType_Float
+-- compCmpType (Base BasicType_String) (Base BasicType_Char) = Base BasicType_String
+-- compCmpType (Base BasicType_Char) (Base BasicType_String) = Base BasicType_String
+--tipi ricorsivi PtrT e ArrT
+compCmpType (ArrT t1) (PtrT t2) = compCmpType t1 t2
+compCmpType (PtrT t1) (ArrT t2) = compCmpType t1 t2
+-- gestione errori
+-- compCmpType x ErrT = x                                                          
+-- compCmpType ErrT x = x
+compCmpType _ _ = ErrT
+
+---------------------
+-----TYPE SYSTEM-----
+---------------------
+
+data Opers = OrO | AndO | NotO | EqO | NeqO | LtO | LtEO | GtO 
+           | GtEO | AddO | SubO | MulO | DivO | RemO | PowO | NegO deriving (Show, Eq)
+
+op2CompType :: Opers -> CmpType -> CmpType -> CmpType
+op2CompType OrO (Base BasicType_Bool) (Base BasicType_Bool) = (Base BasicType_Bool)
+
+op2CompType AndO (Base BasicType_Bool) (Base BasicType_Bool) = (Base BasicType_Bool)
+
+op2CompType EqO t1 t2 | t1 == t2 = (Base BasicType_Bool)
+op2CompType EqO (Base BasicType_Float) (Base BasicType_Int) = (Base BasicType_Bool)
+op2CompType EqO (Base BasicType_Int) (Base BasicType_Float) = (Base BasicType_Bool)
+
+op2CompType NeqO t1 t2 | t1 == t2 = (Base BasicType_Bool)
+op2CompType NeqO (Base BasicType_Float) (Base BasicType_Int) = (Base BasicType_Bool)
+op2CompType NeqO (Base BasicType_Int) (Base BasicType_Float) = (Base BasicType_Bool)
+
+op2CompType LtO t1 t2 | t1 == t2 = (Base BasicType_Bool)
+op2CompType LtO (Base BasicType_Float) (Base BasicType_Int) = (Base BasicType_Bool)
+op2CompType LtO (Base BasicType_Int) (Base BasicType_Float) = (Base BasicType_Bool)
+
+op2CompType LtEO t1 t2 | t1 == t2 = (Base BasicType_Bool)
+op2CompType LtEO (Base BasicType_Float) (Base BasicType_Int) = (Base BasicType_Bool)
+op2CompType LtEO (Base BasicType_Int) (Base BasicType_Float) = (Base BasicType_Bool)
+
+op2CompType GtO t1 t2 | t1 == t2 = (Base BasicType_Bool)
+op2CompType GtO (Base BasicType_Float) (Base BasicType_Int) = (Base BasicType_Bool)
+op2CompType GtO (Base BasicType_Int) (Base BasicType_Float) = (Base BasicType_Bool)
+
+op2CompType GtEO t1 t2 | t1 == t2 = (Base BasicType_Bool)
+op2CompType GtEO (Base BasicType_Float) (Base BasicType_Int) = (Base BasicType_Bool)
+op2CompType GtEO (Base BasicType_Int) (Base BasicType_Float) = (Base BasicType_Bool)
+
+op2CompType AddO (Base BasicType_Float) (Base BasicType_Int)   = (Base BasicType_Float)
+op2CompType AddO (Base BasicType_Int) (Base BasicType_Float)   = (Base BasicType_Float)
+op2CompType AddO (Base BasicType_Int) (Base BasicType_Int)     = (Base BasicType_Int)
+op2CompType AddO (Base BasicType_Float) (Base BasicType_Float) = (Base BasicType_Float)
+op2CompType AddO (Base BasicType_Char) (Base BasicType_Char)   = (Base BasicType_Char)
+
+op2CompType SubO (Base BasicType_Float) (Base BasicType_Int)   = (Base BasicType_Float)
+op2CompType SubO (Base BasicType_Int) (Base BasicType_Float)   = (Base BasicType_Float)
+op2CompType SubO (Base BasicType_Int) (Base BasicType_Int)     = (Base BasicType_Int)
+op2CompType SubO (Base BasicType_Float) (Base BasicType_Float) = (Base BasicType_Float)
+op2CompType SubO (Base BasicType_Char) (Base BasicType_Char)   = (Base BasicType_Char)
+
+op2CompType MulO (Base BasicType_Float) (Base BasicType_Int)   = (Base BasicType_Float)
+op2CompType MulO (Base BasicType_Int) (Base BasicType_Float)   = (Base BasicType_Float)
+op2CompType MulO (Base BasicType_Int) (Base BasicType_Int)     = (Base BasicType_Int)
+op2CompType MulO (Base BasicType_Float) (Base BasicType_Float) = (Base BasicType_Float)
+
+op2CompType DivO (Base BasicType_Float) (Base BasicType_Int)   = (Base BasicType_Float)
+op2CompType DivO (Base BasicType_Int) (Base BasicType_Float)   = (Base BasicType_Float)
+op2CompType DivO (Base BasicType_Int) (Base BasicType_Int)     = (Base BasicType_Int)
+op2CompType DivO (Base BasicType_Float) (Base BasicType_Float) = (Base BasicType_Float)
+
+op2CompType PowO (Base BasicType_Float) (Base BasicType_Int)   = (Base BasicType_Float)
+op2CompType PowO (Base BasicType_Int) (Base BasicType_Float)   = (Base BasicType_Float)
+op2CompType PowO (Base BasicType_Int) (Base BasicType_Int)     = (Base BasicType_Float)
+op2CompType PowO (Base BasicType_Float) (Base BasicType_Float) = (Base BasicType_Float)
+
+op2CompType RemO (Base BasicType_Float) (Base BasicType_Int)   = (Base BasicType_Int)
+op2CompType RemO (Base BasicType_Int) (Base BasicType_Float)   = (Base BasicType_Int)
+op2CompType RemO (Base BasicType_Int) (Base BasicType_Int)     = (Base BasicType_Int)
+op2CompType RemO (Base BasicType_Float) (Base BasicType_Float) = (Base BasicType_Int)
+
+op2CompType _ _ _ = ErrT
+
+op1CompType :: Opers -> CmpType -> CmpType
+op1CompType NotO (Base BasicType_Bool) = (Base BasicType_Bool)
+
+op1CompType NegO (Base BasicType_Int)  = (Base BasicType_Int)
+op1CompType NegO (Base BasicType_Float) = (Base BasicType_Float)
+
+op1CompType _ _ = ErrT
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
