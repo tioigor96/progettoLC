@@ -33,9 +33,8 @@ data Entity = Var { getTypeV :: (CmpType, AbsAuL.Modality),
                     getNameA :: String,
                     getPos :: Posn
                     }
-            | Ptr { getTypeP :: (AbsAuL.BasicType, AbsAuL.Modality),
+            | Ptr { getTypeP :: (CmpType, AbsAuL.Modality),
                     getNameP :: String,
-                    getLevP  :: Integer,
                     getPos :: Posn
                     }
             deriving (Show, Eq)
@@ -44,6 +43,25 @@ data Entity = Var { getTypeV :: (CmpType, AbsAuL.Modality),
 isVarEnv :: Entity -> Bool
 isVarEnv (Var _ _ _) = True
 isVarEnv _ = False
+
+isArrEnv :: Entity -> Bool
+isArrEnv (Arr _ _ _) = True
+isArrEnv _ = False
+
+isPtrEnv :: Entity -> Bool
+isPtrEnv (Ptr _ _ _) = True
+isPtrEnv _ = False
+
+isFnctEnv :: Entity -> Bool
+isFnctEnv (Fnct _ _ _ _) = True
+isFnctEnv _ = False
+
+-- creo getType generico
+getType :: Entity -> (CmpType, Modality)
+getType x
+        | isVarEnv x = getTypeV x
+        | isArrEnv x = getTypeA x
+        | isPtrEnv x = getTypeP x
 
 --crea l'env vuoto
 emptyEnv :: EnvT
@@ -65,7 +83,7 @@ makeArr str tipo mdl posn= Arr (tipo,mdl) str posn
 
 --crea un Ptr
 makePtr :: String -> CmpType -> AbsAuL.Modality -> Posn  -> Entity
-makePtr str tipo mdl posn= Arr (tipo,mdl) str posn
+makePtr str tipo mdl posn= Ptr (tipo,mdl) str posn
 
 --inserisce una var
 insertVar :: LIdent -> CmpType -> AbsAuL.Modality -> Posn  -> EnvT -> EnvT
