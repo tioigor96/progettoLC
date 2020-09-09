@@ -28,12 +28,10 @@ sameTChk :: (VType -> Bool) -> Array -> Bool
 sameTChk isTpe (ArrayV0 xs) = all (\x -> sameTChk isTpe x) xs
 sameTChk isTpe (ArrayV1 xs) = all (\x -> isTpe x) xs
 
-sameLenChk :: [Int] -> Array -> Bool
-sameLenChk [l] (ArrayV1 xs) = l == (length xs)
+sameLenChk :: Int -> Array -> Bool
+sameLenChk 1 (ArrayV1 xs) = (length xs) /= 0
 sameLenChk _ (ArrayV1 xs) = False
-sameLenChk (l:ls) (ArrayV0 xs)
-                            | length xs == l = all (\x -> sameLenChk ls x) xs
-                            | otherwise = False
+sameLenChk n (ArrayV0 xs) = all (\x -> sameLenChk (n - 1) x) xs
 
 checkTypeInit :: BasicType -> Array -> Bool
 checkTypeInit btpe arr = case btpe of
@@ -46,6 +44,7 @@ checkTypeInit btpe arr = case btpe of
 
 --funtypecheck per array
 isFloat (VTypeDouble _) = True
+isFloat (VTypeInteger _) = True
 isFloat _ = False
 isBool (VTypeBoolean _) = True
 isBool _ = False

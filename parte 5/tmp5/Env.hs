@@ -136,6 +136,10 @@ isArrT :: CmpType -> Bool
 isArrT (ArrT _) = True
 isArrT _ = False
 
+-- prende quante dimensioni ha un array!
+getArrTLev (ArrT x) = 1 + getArrTLev x
+getArrTLev _ = 0
+
 -- crea un cmptype dati i gradi
 makeCmpType :: Int -> Int -> BasicType -> CmpType
 makeCmpType 0   0   tpe = Base tpe
@@ -152,9 +156,12 @@ addPtrT ErrT = ErrT
 -- abbassa un cmptype dati i gradi
 downCmpType :: Int -> Int -> CmpType -> CmpType
 downCmpType 0   0   ctp = ctp
+downCmpType 0   1   (Base BasicType_String) = (Base BasicType_Char)
 downCmpType 0   arr (ArrT x) = downCmpType 0 (arr - 1) x
+downCmpType 0   arr (PtrT x) = downCmpType 0 (arr - 1) x
 downCmpType ptr 0   (PtrT x) = downCmpType (ptr - 1) 0 x
 downCmpType ptr   arr (ArrT x) = downCmpType ptr (arr - 1) x
+downCmpType ptr   arr (PtrT x) = downCmpType ptr (arr - 1) x
 downCmpType _ _ _ = ErrT
 
 getBaseType :: CmpType -> BasicType
@@ -183,26 +190,6 @@ showCmpType (ArrT x) = (showCmpType x) ++ "[]"
 -----TIPI-----
 --------------
 
--- controllo compatibilità tipi
-{- 
-AbsAuL.BasicType_Float   AbsAuL.BasicType_Void
-AbsAuL.BasicType_Bool    AbsAuL.BasicType_Int
-AbsAuL.BasicType_Char    AbsAuL.BasicType_String
-
-isValidCmp :: AbsAuL.BasicType -> AbsAuL.BasicType -> Bool                    -- canonici
-isValidCmp (AbsAuL.BasicType_Int) (AbsAuL.BasicType_Int) = True
-isValidCmp (AbsAuL.BasicType_Float) (AbsAuL.BasicType_Float) = True
-isValidCmp (AbsAuL.BasicType_Void) (AbsAuL.BasicType_Void) = True
-isValidCmp (AbsAuL.BasicType_Bool) (AbsAuL.BasicType_Bool) = True
-isValidCmp (AbsAuL.BasicType_Char) (AbsAuL.BasicType_Char) = True
-isValidCmp (AbsAuL.BasicType_String) (AbsAuL.BasicType_String) = True
-isValidCmp (AbsAuL.BasicType_Float) (AbsAuL.BasicType_Int) = True             -- compatibilità tra tipi
-isValidCmp (AbsAuL.BasicType_Int) (AbsAuL.BasicType_Float) = True             -- compatibilità tra tipi
--- isValidCmp (AbsAuL.BasicType_Char) (AbsAuL.BasicType_String) = True        -- e qui che famo?
--- isValidCmp (AbsAuL.BasicType_String) (AbsAuL.BasicType_Char) = True        -- e qui che famo?
-isValidCmp _ _ = False 
--}
-
 -- controllo compatibilità tipi per assegnamenti
 -- tipi canonici
 compCmpType :: CmpType -> CmpType -> CmpType
@@ -216,13 +203,15 @@ compCmpType (ArrT t1) (ArrT t2) = compCmpType t1 t2
 -- compatibilità tra tipi eterogenei
 -- compCmpType (Base x) (Base BasicType_Void) = Base x
 -- compCmpType (Base BasicType_Void) (Base x) = Base x
-compCmpType (Base BasicType_Float) (Base BasicType_Int) = Base BasicType_Float  
-compCmpType (Base BasicType_Int) (Base BasicType_Float) = Base BasicType_Float
+compCmpType (Base BasicType_Float) (Base BasicType_Int) = Base BasicType_Float
+compCmpType (ArrT (Base BasicType_Char)) (Base BasicType_String) = (ArrT (Base BasicType_Char))
+compCmpType (PtrT (Base BasicType_Char)) (Base BasicType_String) = (PtrT (Base BasicType_Char)) 
+-- compCmpType (Base BasicType_Int) (Base BasicType_Float) = Base BasicType_Float
 -- compCmpType (Base BasicType_String) (Base BasicType_Char) = Base BasicType_String
 -- compCmpType (Base BasicType_Char) (Base BasicType_String) = Base BasicType_String
 --tipi ricorsivi PtrT e ArrT
-compCmpType (ArrT t1) (PtrT t2) = compCmpType t1 t2
-compCmpType (PtrT t1) (ArrT t2) = compCmpType t1 t2
+-- compCmpType (ArrT t1) (PtrT t2) = compCmpType t1 t2                          -- da ptr a arr no!
+compCmpType (PtrT t1) (ArrT t2) = compCmpType t1 t2                             -- da arr a ptr si!
 -- gestione errori
 -- compCmpType x ErrT = x                                                          
 -- compCmpType ErrT x = x
@@ -233,7 +222,9 @@ compCmpType _ _ = ErrT
 ---------------------
 
 data Opers = OrO | AndO | NotO | EqO | NeqO | LtO | LtEO | GtO 
-           | GtEO | AddO | SubO | MulO | DivO | RemO | PowO | NegO deriving (Show, Eq)
+           | GtEO | AddO | SubO | MulO | DivO | RemO | PowO | NegO 
+           | SizeO | ConcatO                                    -- per le oper. base in RExp10 # e ..
+           deriving (Show, Eq)
 
 op2CompType :: Opers -> CmpType -> CmpType -> CmpType
 op2CompType OrO (Base BasicType_Bool) (Base BasicType_Bool) = (Base BasicType_Bool)
@@ -296,6 +287,11 @@ op2CompType RemO (Base BasicType_Int) (Base BasicType_Float)   = (Base BasicType
 op2CompType RemO (Base BasicType_Int) (Base BasicType_Int)     = (Base BasicType_Int)
 op2CompType RemO (Base BasicType_Float) (Base BasicType_Float) = (Base BasicType_Int)
 
+op2CompType ConcatO (Base BasicType_Char) (Base BasicType_Char) = (Base BasicType_String)
+op2CompType ConcatO (Base BasicType_String) (Base BasicType_String) = (Base BasicType_String)
+op2CompType ConcatO (Base BasicType_Char) (Base BasicType_String) = (Base BasicType_String)
+op2CompType ConcatO (Base BasicType_String) (Base BasicType_Char) = (Base BasicType_String)
+
 op2CompType _ _ _ = ErrT
 
 op1CompType :: Opers -> CmpType -> CmpType
@@ -303,6 +299,10 @@ op1CompType NotO (Base BasicType_Bool) = (Base BasicType_Bool)
 
 op1CompType NegO (Base BasicType_Int)  = (Base BasicType_Int)
 op1CompType NegO (Base BasicType_Float) = (Base BasicType_Float)
+
+op1CompType SizeO (ArrT x) = (Base BasicType_Int)
+op1CompType SizeO (PtrT x) = (Base BasicType_Int)
+op1CompType SizeO (Base BasicType_String) = (Base BasicType_Int)
 
 op1CompType _ _ = ErrT
 
