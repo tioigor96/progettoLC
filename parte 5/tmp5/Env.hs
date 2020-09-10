@@ -144,6 +144,11 @@ getPtrTLev (ArrT x) = getPtrTLev x
 getPtrTLev (PtrT x) = 1 + getPtrTLev x
 getPtrTLev _ = 0
 
+getBaseType :: CmpType -> BasicType
+getBaseType (Base x) = x
+getBaseType (ArrT x) = (getBaseType x)
+getBaseType (PtrT x) = (getBaseType x)
+
 -- crea un cmptype dati i gradi
 makeCmpType :: Int -> Int -> BasicType -> CmpType
 makeCmpType 0   0   tpe = Base tpe
@@ -167,11 +172,6 @@ downCmpType ptr 0   (PtrT x) = downCmpType (ptr - 1) 0 x
 downCmpType ptr   arr (ArrT x) = downCmpType ptr (arr - 1) x
 downCmpType ptr   arr (PtrT x) = downCmpType ptr (arr - 1) x
 downCmpType _ _ _ = ErrT
-
-getBaseType :: CmpType -> BasicType
-getBaseType (Base x) = x
-getBaseType (ArrT x) = (getBaseType x)
-getBaseType (PtrT x) = (getBaseType x)
 
 
 --------------

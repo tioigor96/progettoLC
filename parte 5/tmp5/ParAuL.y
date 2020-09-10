@@ -409,8 +409,7 @@ Decl : BasicType LExp VarInit
                             
     }
 
-VarInit : {- empty -}   --TODO: se PTR accetta 'nil'
-                        --TODO: controllo tipi corretto per init dell'array! Ptr accetta un vettore? 
+VarInit : {- empty -}
     { 
         
         $$.parsetree = AbsAuL.VarINil
@@ -520,8 +519,8 @@ Ass : LExp '=' RExp -- TODO: finnisci errori : controlla perchè ERRT
                                                ((fromLIdent . getLIdentlexp) $1.parsetree) ++"!"]
                                          else []
                                   else ["error at " ++ ((showFromPosn . tokenPosn) $2) ++ 
-                                        ": expects argument of type '" ++ (showBBType $$.tipo) ++ 
-                                        "' but has type '"++ (showBBType $3.tipo) ++"'"]) ++ $1.errs ++ $3.errs
+                                        ": expects argument of type '" ++ (showCmpType $$.tipo) ++ 
+                                        "' but has type '"++ (showCmpType $3.tipo) ++"'"]) ++ $1.errs ++ $3.errs
     }
     
 --  ========================
@@ -1246,7 +1245,7 @@ RExp12 : '(' RExp ')'
         ; $$.errs = $2.errs
         ; $$.tipo = $2.tipo 
     }
----}
+
 {
 
 data Result = Result Program String EnvT [String]  deriving (Eq, Show)
