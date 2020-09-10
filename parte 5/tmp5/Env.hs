@@ -140,6 +140,10 @@ isArrT _ = False
 getArrTLev (ArrT x) = 1 + getArrTLev x
 getArrTLev _ = 0
 
+getPtrTLev (ArrT x) = getPtrTLev x
+getPtrTLev (PtrT x) = 1 + getPtrTLev x
+getPtrTLev _ = 0
+
 -- crea un cmptype dati i gradi
 makeCmpType :: Int -> Int -> BasicType -> CmpType
 makeCmpType 0   0   tpe = Base tpe
@@ -215,6 +219,8 @@ compCmpType (PtrT t1) (ArrT t2) = compCmpType t1 t2                             
 -- gestione errori
 -- compCmpType x ErrT = x                                                          
 -- compCmpType ErrT x = x
+compCmpType t1 t2                                                               -- posso assegnare nil a *tipo
+    | (isPtrT t1) && (not (isArrT t1)) && (t2 == (Base BasicType_Void)) = t1
 compCmpType _ _ = ErrT
 
 ---------------------

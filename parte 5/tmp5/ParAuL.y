@@ -431,13 +431,7 @@ VarInit : {- empty -}   --TODO: se PTR accetta 'nil'
     | '=' Array 
     { 
         $$.parsetree = AbsAuL.VarMat $2.parsetree
-        ; $$.errs = if (checkTypeInit (getBaseType $$.tipo) $2.parsetree)
-                      then if (sameLenChk (getArrTLev $$.tipo) $2.parsetree)
-                                then []
-                                else ["error at "++ ((showFromPosn . tokenPosn) $1) ++ ": array initialization hasn't same "++
-                                      "deferencing level of type definition (" ++ (show (getArrTLev $$.tipo)) ++")!"]
-                      else ["error at "++ ((showFromPosn . tokenPosn) $1) ++ ": array initialization isn't of the same type of " ++
-                            "variable type ('"++ (showCmpType (Base (getBaseType $$.tipo))) ++"')!"]
+        ; $$.errs  = (controlArrTipo $$.tipo $2.parsetree $1)
     }
 
 
@@ -702,7 +696,6 @@ Increment : {- empty -} -- per l'appunto, assumiamo sia 1 l'incremento
 --  ========================
 --  =======   IF   =========
 --  ========================
---TODO: controlla che errori per boolean expression funzionino
 If : 'if' RExp 'then' Block ListElseIf Else 'end'
     { 
         $2.envin = mergeEnv $$.envloc $$.envin
@@ -1113,8 +1106,12 @@ RExp10 : Func --TODO: controlla tipi ritorno func
     { 
         $1.envin = $$.envin
         ; $$.parsetree = AbsAuL.FCall $1.parsetree
-        ; $$.errs = $1.errs
-        ; $$.tipo = $1.tipo
+        ; $$.tipo = if (($1.tipo == (Base BasicType_Void)) || $1.tipo == ErrT)
+                        then ErrT
+                        else $1.tipo
+        ; $$.errs = (if (($1.tipo == (Base BasicType_Void)) || $1.tipo == ErrT)
+                        then ["error in RExp10: cannot use a 'Void' function in expression!"]
+                        else []) ++ $1.errs
     }
     | RExp10 '..' RExp11
     {
@@ -1253,6 +1250,41 @@ RExp12 : '(' RExp ')'
 {
 
 data Result = Result Program String EnvT [String]  deriving (Eq, Show)
+
+
+controlArrTipo :: CmpType -> Array -> Token -> [String]
+controlArrTipo ts arr tok
+    | (isArrT ts) && (not (isPtrT ts)) = if (checkTypeInit (getBaseType ts) arr)
+                                            then if (sameLenChk (getArrTLev ts) arr)
+                                                    then []
+                                                    else ["error at "++ ((showFromPosn . tokenPosn) tok) ++ 
+                                                          ": array initialization hasn't same "++
+                                                          "deferencing level of type definition (" ++ 
+                                                          (show (getArrTLev ts)) ++")!"]
+                                            else ["error at "++ ((showFromPosn . tokenPosn) tok) ++ 
+                                                  ": array initialization isn't of the same type of " ++
+                                                  "variable type ('"++ (showCmpType (Base (getBaseType ts))) ++"')!"]
+    | (isArrT ts) && (isPtrT ts) = if (checkTypeInit BasicType_Void arr)
+                                      then if (sameLenChk (getArrTLev ts) arr)
+                                              then []
+                                              else ["error at "++ ((showFromPosn . tokenPosn) tok) ++ 
+                                                    ": array initialization hasn't same "++
+                                                    "deferencing level of type definition (" ++ 
+                                                    (show (getArrTLev ts)) ++")!"]
+                                      else ["error at "++ ((showFromPosn . tokenPosn) tok) ++ 
+                                            ": array initialization isn't of the same type of " ++
+                                            "variable type ('"++ (showCmpType  ts) ++"')!"]
+    | (not (isArrT ts)) && (isPtrT ts) = let nts = makeCmpType  0 (getPtrTLev ts) (getBaseType ts)
+                                         in if (checkTypeInit (getBaseType nts) arr)
+                                                then if (sameLenChk (getArrTLev nts) arr)
+                                                        then []
+                                                        else ["error at "++ ((showFromPosn . tokenPosn) tok) ++ 
+                                                              ": array initialization hasn't same "++
+                                                              "deferencing level of type definition (" ++ 
+                                                              (show (getArrTLev ts)) ++")!"]
+                                                else ["error at "++ ((showFromPosn . tokenPosn) tok) ++ 
+                                                      ": array initialization isn't of the same type of " ++
+                                                      "variable type ('"++ (showCmpType (Base (getBaseType ts))) ++"')!"]
 
 returnM :: a -> Err a
 returnM = return
