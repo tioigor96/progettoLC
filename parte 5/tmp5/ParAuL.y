@@ -161,7 +161,7 @@ L_LIdent { PT _ (T_LIdent _) }
 %attribute tipo { CmpType }
 %attribute listparf { [(ParamF,Posn,String)] }
 %attribute parname { String }
-
+%attribute lrexptpe { [CmpType] }
 
 %%
 
@@ -555,19 +555,44 @@ Func : FuncWrite
     }
     | LIdent '(' ListRExp ')' --modded -> controllare tipo ritorno
     { 
-        $$.parsetree = AbsAuL.FnctCall $1.vlident $3.parsetree 
+        $$.parsetree = AbsAuL.FnctCall $1.vlident $3.parsetree
+        ; $3.envin = $$.envin
+        ; $$.tipo = if (isJust (lookupEnv (fromLIdent $1.vlident) $$.envin))
+                        then (if ((isFnctEnv . fromJust) (lookupEnv (fromLIdent $1.vlident) $$.envin))
+                              then ((getTypeF . fromJust) (lookupEnv (fromLIdent $1.vlident) $$.envin))
+                              else ErrT)
+                        else ErrT
+        ; $$.errs = (if (isJust (lookupEnv (fromLIdent $1.vlident) $$.envin))
+                        then (if ((isFnctEnv . fromJust) (lookupEnv (fromLIdent $1.vlident) $$.envin))
+                              then (controlFnctTipo
+                                        (map (\x -> (fst . getType) x) 
+                                            ((getParamF . fromJust) (lookupEnv (fromLIdent $1.vlident) $$.envin)))
+                                        $3.lrexptpe
+                                        $1.posn
+                                   )
+                              else ["error at "++(showFromPosn $1.posn)++": "++(fromLIdent $1.vlident)++"isn't defined as function!"])
+                        else ["error at "++(showFromPosn $1.posn)++": function "++(fromLIdent $1.vlident)++"is undefined!"]) ++ $3.errs
     }
 ListRExp : {- empty -} 
     { 
-        $$.parsetree = [] 
+        $$.parsetree = []
+        ; $$.lrexptpe = []
+        ; $$.errs = []
     }
     | RExp 
     { 
-        $$.parsetree = (:[]) $1.parsetree 
+        $$.parsetree = (:[]) $1.parsetree
+        ; $1.envin = $$.envin
+        ; $$.lrexptpe = (:[]) $1.tipo
+        ; $$.errs = $1.errs
     }
     | RExp ',' ListRExp 
     { 
-        $$.parsetree = (:) $1.parsetree $3.parsetree 
+        $$.parsetree = (:) $1.parsetree $3.parsetree
+        ; $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.lrexptpe = (:) $1.tipo $3.lrexptpe
+        ; $$.errs = $1.errs ++ $3.errs
     }
 
 FuncWrite : 'writeInt' '(' RExp ')' 
@@ -1177,7 +1202,7 @@ RExp10 : Func --TODO: controlla tipi ritorno func
         ; $$.tipo = $1.tipo
     }
 
-RExp11 : Integer --TODO: controlla tipi LEXP e &LEXP: controlla che arr non possa essere abbassato di grado con *
+RExp11 : Integer
     { 
         $$.parsetree = AbsAuL.ValInt $1.vint
         ; $$.tipo = Base BasicType_Int
@@ -1196,7 +1221,7 @@ RExp11 : Integer --TODO: controlla tipi LEXP e &LEXP: controlla che arr non poss
                                 (showFromPosn $1.posn) ++ "is invalid (maybe a function or not declared variable?)"]
                         else (if ((downCmpType (getPtrLev $1.parsetree) (getArrLev $1.parsetree)
                                         ((fst . getType . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))) == ErrT)
-                                then ["error at "++ (showFromPosn $1.posn) ++"too many dereferencing refering to '"++ 
+                                then ["error at "++ (showFromPosn $1.posn) ++" invalid dereferencing (maybe too much?) referring to '"++ 
                                         ((fromLIdent . getLIdentlexp) $1.parsetree) ++"'"]
                                 else [] )) ++ $1.errs
     }
@@ -1322,6 +1347,21 @@ controlArrTipo ts arr tok
                                                       ": array initialization isn't of the same type of " ++
                                                       "variable type ('"++ (showCmpType (Base (getBaseType ts))) ++"')!"]
 
+controlFnctTipo' :: [CmpType] -> [CmpType] -> [String]
+controlFnctTipo' ps rexps = foldr (\(te,tr,pn) xs -> (cmpType te tr pn) ++ xs) [] (zip3 ps rexps [1..])
+    where cmpType te tr pn = if (compCmpType te tr) == ErrT
+                                then ["    param "++ (show pn)++": expected type was '" ++ 
+                                     (showCmpType te) ++ "' but recieved type '" ++ 
+                                     (showCmpType tr) ++ "'"]
+                                else []
+
+controlFnctTipo ps rexps posn = let errs = controlFnctTipo' ps rexps
+                                 in if ((length ps) /= (length rexps))
+                                     then ["error at "++(showFromPosn posn)++
+                                           ": the parameters passed to function are insufficient!"]
+                                     else if ((length errs) == 0)
+                                            then []
+                                            else ["error at "++(showFromPosn posn)++":"]++errs
 returnM :: a -> Err a
 returnM = return
 

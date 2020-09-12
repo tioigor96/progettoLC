@@ -227,6 +227,7 @@ showBBType (Base BasicType_Char) = "Char"
 showCmpType (Base x) = showBBType (Base x)
 showCmpType (PtrT x) = "*" ++ (showCmpType x)
 showCmpType (ArrT x) = (showCmpType x) ++ "[]"
+showCmpType (ErrT) = "Undefined"
 --------------
 -----TIPI-----
 --------------
