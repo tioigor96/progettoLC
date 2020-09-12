@@ -86,6 +86,25 @@ fromLIdent :: LIdent -> String
 fromLIdent (LIdent s) = s
 
 
+--------------------------
+-----LEXP trattamenti-----
+--------------------------
+getPtrComType :: CompoundType -> Int
+getPtrComType (CompTypeB _) = 0
+getPtrComType (CompTypeP x) = 1 + (getPtrComType x)
+getPtrComType (CompTypeA _ _) = 0
+
+getArrComType :: CompoundType -> Int
+getArrComType (CompTypeB _) = 0
+getArrComType (CompTypeP x) = getArrComType x
+getArrComType (CompTypeA _ ls) = length ls
+
+getBaseComType :: CompoundType -> BasicType
+getBaseComType (CompTypeB b) = b
+getBaseComType (CompTypeP x) = getBaseComType x
+getBaseComType (CompTypeA b _) = b
+
+
 -- quante volte è dereferenziabile la LExp
 getPtrLev :: LExp -> Int
 getPtrLev (LExpS _) = 0

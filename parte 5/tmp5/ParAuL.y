@@ -15,6 +15,7 @@ import Env
 %name pListPGlobl ListPGlobl
 %name pPGlobl PGlobl
 %name pBlock Block
+%name pBlock BlockF
 %name pListStm ListStm
 %name pBasicType BasicType
 %name pBoolean Boolean
@@ -158,10 +159,8 @@ L_LIdent { PT _ (T_LIdent _) }
 %attribute errs { [String] }
 %attribute posn { Posn }
 %attribute tipo { CmpType }
--- %attribute jmpi { TAC }      -- conviene gestirlo da TAC, in quanto il jmp è 
-                                -- all'etichetta fuori del ciclo
--- %attribute jmpo { TAC }      -- come sopra
-
+%attribute listparf { [(ParamF,Posn,String)] }
+%attribute parname { String }
 
 
 %%
@@ -214,6 +213,7 @@ PGlobl : Stm
        | FuncD 
     { 
         $$.parsetree = AbsAuL.ProgGlobF $1.parsetree
+        ; $1.envloc = $$.envloc
         ; $1.envin = $$.envin 
         ; $$.envout = $1.envout 
         ; $$.errs = $1.errs
@@ -227,6 +227,17 @@ Block : ListStm
     { 
         $1.envin = mergeEnv $$.envloc $$.envin
         ; $1.envloc = emptyEnv
+        ; $$.parsetree = AbsAuL.Blk $1.parsetree
+        ; $$.envout = $$.envloc
+        ; $$.errs = $1.errs
+        
+    }
+-- N.d.R.: Per necessità di non switchare il envloc ed envin dichiaro una regola
+-- fittizia al fine di ottenere il medesimo tipo e non stravolgere l'AST
+BlockF : ListStm 
+    { 
+        $1.envin = $$.envin
+        ; $1.envloc = $$.envloc
         ; $$.parsetree = AbsAuL.Blk $1.parsetree
         ; $$.envout = $$.envloc
         ; $$.errs = $1.errs
@@ -781,26 +792,52 @@ Break : 'break'
 --  ========================
 --  =======  FUND  =========
 --  ========================
---TODO: implementa la creazione della funzione
-FuncD : CompoundType 'function' LIdent '(' ListParamF ')' Block 'end'
+-- if $7.envin; se bad vuol dire che è già dichiarata, ma se la funzione viene
+-- utilizzata correttamente nella "nuova" dichiarazione non vedo perchè deve 
+-- dare errori nelle chiamate interne alla funzione stessa!
+FuncD : CompoundType 'function' LIdent '(' ListParamF ')' BlockF 'end'
     { 
-        $$.parsetree = AbsAuL.FnctDecl $1.parsetree $3.vlident $5.parsetree $7.parsetree 
+        $$.parsetree = AbsAuL.FnctDecl $1.parsetree $3.vlident $5.parsetree $7.parsetree
+        ; $7.envloc = emptyEnv
+        ; $7.envin = if (isOk (insertFnctEnv $1.parsetree $3.vlident $5.listparf $3.posn $$.envloc))
+                         then (mergeEnv (mergeEnv 
+                                            (bypassEnvLoc $5.listparf) 
+                                            (fromOk (insertFnctEnv $1.parsetree $3.vlident $5.listparf $3.posn $$.envloc)))
+                                       $$.envin)
+                         else (mergeEnv (mergeEnv 
+                                            (mergeEnv
+                                                (bypassEnvLoc $5.listparf)
+                                                (fromOk (insertFnctEnv $1.parsetree $3.vlident $5.listparf $3.posn emptyEnv)))
+                                            $$.envloc) 
+                                       $$.envin)
+        ; $$.envout = if (isOk (insertFnctEnv $1.parsetree $3.vlident $5.listparf $3.posn $$.envloc))
+                         then (fromOk (insertFnctEnv $1.parsetree $3.vlident $5.listparf $3.posn $$.envloc))
+                         else $$.envloc
+        ; $$.errs = (if (isBad (insertFnctEnv $1.parsetree $3.vlident $5.listparf $3.posn $$.envloc))
+                         then [(fromBad (insertFnctEnv $1.parsetree $3.vlident $5.listparf $3.posn $$.envloc))]
+                         else []) ++ $7.errs
+         
     }
 ParamF : Modality BasicType LExp 
     { 
-        $$.parsetree = AbsAuL.ParmDeclF $1.parsetree $2.parsetree $3.parsetree 
+        $$.parsetree = AbsAuL.ParmDeclF $1.parsetree $2.parsetree $3.parsetree
+        ; $$.posn = $3.posn
+        ; $$.parname = (fromLIdent . getLIdentlexp) $3.parsetree
     }
 ListParamF : {- empty -} 
     { 
-        $$.parsetree = [] 
+        $$.parsetree = []
+        ; $$.listparf = []
     }
     | ParamF 
     { 
-        $$.parsetree = (:[]) $1.parsetree 
+        $$.parsetree = (:[]) $1.parsetree
+        ; $$.listparf = [($1.parsetree,$1.posn,$1.parname)]
     }
     | ParamF ',' ListParamF 
     { 
-        $$.parsetree = (:) $1.parsetree $3.parsetree 
+        $$.parsetree = (:) $1.parsetree $3.parsetree
+        ; $$.listparf = (:) ($1.parsetree,$1.posn,$1.parname) $3.listparf
     }
 Modality : {- empty -} 
     { 
@@ -810,9 +847,9 @@ Modality : {- empty -}
     { 
         $$.parsetree = AbsAuL.Modality_val
     }
-    | 'ref' 
+    | 'ref' -- $$.parsetree = AbsAuL.Modality_ref
     { 
-        $$.parsetree = AbsAuL.Modality_ref 
+        $$.parsetree = AbsAuL.Modality1
     }
     | 'const' 
     { 

@@ -24,9 +24,9 @@ data Entity = Var { getTypeV :: (CmpType, AbsAuL.Modality),
                     }
             | Fnct { getTypeF :: CmpType,
                      getNameF :: String,
-                     getParamF :: [(Entity, AbsAuL.Modality)],  -- siamo sicuri saranno
-                                                                -- solo Var grazie alla
-                                                                -- BNF
+                     getParamF :: [Entity],  -- siamo sicuri saranno
+                                             -- solo Var grazie alla
+                                             -- BNF
                      getPos :: Posn
                     }
             | Arr { getTypeA :: (CmpType, AbsAuL.Modality),
@@ -85,6 +85,10 @@ makeArr str tipo mdl posn= Arr (tipo,mdl) str posn
 makePtr :: String -> CmpType -> AbsAuL.Modality -> Posn  -> Entity
 makePtr str tipo mdl posn= Ptr (tipo,mdl) str posn
 
+--crea Fnct
+makeFnct :: String -> CmpType -> [Entity] -> Posn  -> Entity
+makeFnct str tipo parms posn = Fnct tipo str parms posn
+
 --inserisce una var
 insertVar :: LIdent -> CmpType -> AbsAuL.Modality -> Posn  -> EnvT -> EnvT
 insertVar x@(LIdent str) tipo mdl posn env = Map.insert str (makeVar str tipo mdl posn) env
@@ -97,14 +101,17 @@ insertArr x@(LIdent str) tipo mdl posn env = Map.insert str (makeArr str tipo md
 insertPtr :: LIdent -> CmpType -> AbsAuL.Modality  -> Posn -> EnvT -> EnvT
 insertPtr x@(LIdent str) tipo mdl posn env = Map.insert str (makePtr str tipo mdl posn) env
 
+insertFnct :: LIdent -> CmpType -> [Entity] -> Posn -> EnvT -> EnvT
+insertFnct x@(LIdent str) tipo pars posn env = Map.insert str (makeFnct str tipo pars posn) env
+
 insEnv :: LExp -> LIdent -> CmpType -> AbsAuL.Modality -> Posn -> EnvT -> EnvT
 insEnv lexp name tipo mdl posn env
                         | isVar lexp = insertVar name tipo mdl posn env
                         | isArr lexp = insertArr name tipo mdl posn env
                         | isPtr lexp = insertPtr name tipo mdl posn env
 
--- inserisce caso gen: controllo esistenza e 
 
+-- inserisce caso gen: controllo esistenza ed eventualmente inserisco
 insertEnv :: BasicType -> AbsAuL.Modality -> LExp -> EnvT -> Posn -> Err EnvT
 insertEnv tipo mdl lexp env posn = let nme = (getLIdentlexp lexp)
                                        name = fromLIdent nme
@@ -118,6 +125,36 @@ insertEnv tipo mdl lexp env posn = let nme = (getLIdentlexp lexp)
                                            ((show . getColPosn . posLineCol . getPos) e)
                                        Nothing -> Ok (insEnv lexp nme tpe mdl posn env)
 
+
+-- inserisce funzione nell'env, controllo esistenza ed eventualmente inserisco
+insertFnctEnv :: CompoundType -> LIdent -> [(ParamF,Posn,String)] -> Posn -> EnvT -> Err EnvT
+insertFnctEnv tipo lident@(LIdent str) lstpars posn env = let lkup = Map.lookup str env
+                                                              in case lkup of
+                                                                 Just e -> Bad $ "error: function "++ str ++
+                                                                     " is already declared at line " ++
+                                                                     (showFromPosn . getPos) e ++" !"
+                                                                 Nothing -> Ok(insertFnct lident 
+                                                                                (makeCmpType (getArrComType tipo) 
+                                                                                             (getArrComType tipo) 
+                                                                                             (getBaseComType tipo)) 
+                                                                                (map (\x -> fst x) (makeListPars lstpars)) 
+                                                                                posn env) 
+-- crea envloc per definizione funzioni
+bypassEnvLoc :: [(ParamF,Posn,String)] -> EnvT
+bypassEnvLoc ps = Prelude.foldr (\(x,y) m -> Map.insert y x m) Map.empty params
+                    where params = makeListPars ps
+---------------------------------
+---- Bse per creare funzioni ----
+---------------------------------
+-- per la lista di param
+makeParFun :: LExp -> LIdent -> CmpType -> AbsAuL.Modality -> Posn -> Entity
+makeParFun lexp name@(LIdent str) tipo mdl posn
+                        | isVar lexp = makeVar str tipo mdl posn
+                        | isArr lexp = makeArr str tipo mdl posn
+                        | isPtr lexp = makePtr str tipo mdl posn
+                        
+makeListPars :: [(ParamF,Posn,String)] -> [(Entity,String)]
+makeListPars ps = zip (map (\(x@(ParmDeclF md bs lexp), posn, nome) -> makeParFun lexp (LIdent nome) (makeCmpType (getPtrLev lexp) (getArrLev lexp) bs) md posn ) ps) (map (\(_,_,x)->x) ps)
 
 ---------------------------------
 ---- MANIPOLARE COMPLEX TYPE ----
