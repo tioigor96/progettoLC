@@ -37,6 +37,9 @@ data Entity = Var { getTypeV :: (CmpType, AbsAuL.Modality),
                     getNameP :: String,
                     getPos :: Posn
                     }
+            | Return { getTypeR :: CmpType,
+                       foundIstr :: Bool
+                    }
             deriving (Show, Eq)
 
 -- creo func check Var,... Env
@@ -73,6 +76,8 @@ lookupEnv name env = Map.lookup name env
 -- davanti sempre il locale
 mergeEnv e1 e2 = Map.union e1 e2
 
+-- elimina da env un elemento
+deleteEnv str env = Map.delete str env
 --crea una Var
 makeVar :: String -> CmpType -> AbsAuL.Modality -> Posn -> Entity
 makeVar str tipo mdl posn = Var (tipo,mdl) str posn
@@ -110,7 +115,6 @@ insEnv lexp name tipo mdl posn env
                         | isArr lexp = insertArr name tipo mdl posn env
                         | isPtr lexp = insertPtr name tipo mdl posn env
 
-
 -- inserisce caso gen: controllo esistenza ed eventualmente inserisco
 insertEnv :: BasicType -> AbsAuL.Modality -> LExp -> EnvT -> Posn -> Err EnvT
 insertEnv tipo mdl lexp env posn = let nme = (getLIdentlexp lexp)
@@ -134,7 +138,7 @@ insertFnctEnv tipo lident@(LIdent str) lstpars posn env = let lkup = Map.lookup 
                                                                      " is already declared at line " ++
                                                                      (showFromPosn . getPos) e ++" !"
                                                                  Nothing -> Ok(insertFnct lident 
-                                                                                (makeCmpType (getArrComType tipo) 
+                                                                                (makeCmpType (getPtrComType tipo) 
                                                                                              (getArrComType tipo) 
                                                                                              (getBaseComType tipo)) 
                                                                                 (map (\x -> fst x) (makeListPars lstpars)) 
@@ -143,6 +147,16 @@ insertFnctEnv tipo lident@(LIdent str) lstpars posn env = let lkup = Map.lookup 
 bypassEnvLoc :: [(ParamF,Posn,String)] -> EnvT
 bypassEnvLoc ps = Prelude.foldr (\(x,y) m -> Map.insert y x m) Map.empty params
                     where params = makeListPars ps
+
+
+--inserisce return
+insertRetEnv :: CompoundType -> Bool -> EnvT -> EnvT
+insertRetEnv tip bool env = let tpe = (makeCmpType (getPtrComType tip) (getArrComType tip) (getBaseComType tip))
+                            in let tipo = if ((getBaseType tpe) == (BasicType_Void)) then ErrT else tpe
+                               in Map.insert "return" (Return tipo bool) env
+
+reinsertRetEnv :: CmpType -> Bool -> EnvT -> EnvT
+reinsertRetEnv tip bool env = Map.insert "return" (Return tip bool) env
 ---------------------------------
 ---- Bse per creare funzioni ----
 ---------------------------------
@@ -240,8 +254,8 @@ compCmpType (Base BasicType_Float) (Base BasicType_Float) = Base BasicType_Float
 compCmpType (Base BasicType_Bool) (Base BasicType_Bool) = Base BasicType_Bool
 compCmpType (Base BasicType_Char) (Base BasicType_Char) = Base BasicType_Char
 compCmpType (Base BasicType_String) (Base BasicType_String) = Base BasicType_String
-compCmpType (PtrT t1) (PtrT t2) = compCmpType t1 t2
-compCmpType (ArrT t1) (ArrT t2) = compCmpType t1 t2
+compCmpType (PtrT t1) (PtrT t2) = PtrT (compCmpType t1 t2)
+compCmpType (ArrT t1) (ArrT t2) = ArrT (compCmpType t1 t2)
 -- compatibilità tra tipi eterogenei
 -- compCmpType (Base x) (Base BasicType_Void) = Base x
 -- compCmpType (Base BasicType_Void) (Base x) = Base x
@@ -253,7 +267,7 @@ compCmpType (PtrT (Base BasicType_Char)) (Base BasicType_String) = (PtrT (Base B
 -- compCmpType (Base BasicType_Char) (Base BasicType_String) = Base BasicType_String
 --tipi ricorsivi PtrT e ArrT
 -- compCmpType (ArrT t1) (PtrT t2) = compCmpType t1 t2                          -- da ptr a arr no!
-compCmpType (PtrT t1) (ArrT t2) = compCmpType t1 t2                             -- da arr a ptr si!
+compCmpType (PtrT t1) (ArrT t2) = PtrT (compCmpType t1 t2)                      -- da arr a ptr si!
 -- gestione errori
 -- compCmpType x ErrT = x                                                          
 -- compCmpType ErrT x = x
