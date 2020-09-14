@@ -14,6 +14,7 @@ import qualified AbsAuL
 import Data.Char
 
 -- | The top-level printing method.
+
 printTree :: Print a => a -> String
 printTree = render . prt 0
 
@@ -30,36 +31,7 @@ render d = rend 0 (map ($ "") $ d []) "" where
     "{"      :ts -> showChar '{' . new (i+1) . rend (i+1) ts
     "}" : ";":ts -> new (i-1) . space "}" . showChar ';' . new (i-1) . rend (i-1) ts
     "}"      :ts -> new (i-1) . showChar '}' . new (i-1) . rend (i-1) ts
-    ";"      :ts -> showChar ';' . (if ts /= [] then
-                                      (case (head ts) of "end" -> (new(i-1) . rend (i-1) ts)
-                                                         "until" -> (new i . rend (i-1) ts)
-                                                         "else" -> (new (i-1) . rend i ts) 
-                                                         "elseif" -> (new (i-1) . rend (i-1) ts) 
-                                                         _ -> new i . rend i ts)
-                                    else new i . rend i ts)
-    ")"      :ts -> showChar ')' . (if ts /= [] then
-                                      if (head ts /= "+" && head ts /= "-" && head ts /= "/" && head ts /= ";" && head ts /= "*" &&
-                                          head ts /= "%" && head ts /= "&") 
-                                          then new (i+1) . rend (i+1) ts
-                                      else  rend i ts
-                                    else new i . rend i ts)
-    "do"     :ts -> showString "do" . new (i+1) . rend (i+1) ts
-    "then"   :ts -> showString "then" . new (i+1) . rend (i+1) ts
-    "else"   :ts -> showString "else" .(if ts /= [] then
-                                        (case (head ts) of "if" -> (new(i) . rend i ts)
-                                                           "until" -> (new i . rend (i-1) ts)
-                                                           "else" -> (new (i-1) . rend i ts) 
-                                                           "elseif" -> (new (i-1) . rend (i-1) ts) 
-                                                           _ -> new i . rend i ts)
-                                        else new (i) . rend (i+1) ts)
-    "repeat" :ts -> showString "repeat" . new (i+1) . rend (i+1) ts
-    "end"    :ts -> showString "end" . (if ts /= [] then
-                                          (case (head ts) of "end" -> (new(i-1) . rend (i-1) ts)
-                                                             "until" -> (new i . rend (i-1) ts)
-                                                             "else" -> (new (i-1) . rend i ts) 
-                                                             "elseif" -> (new (i-1) . rend i ts) 
-                                                             _ -> new i . rend i ts)
-                                       else new i . rend i ts)
+    ";"      :ts -> showChar ';' . new i . rend i ts
     t  : ts@(p:_) | closingOrPunctuation p -> showString t . rend i ts
     t        :ts -> space t . rend i ts
     _            -> id
@@ -84,7 +56,6 @@ concatD = foldr (.) id
 
 replicateS :: Int -> ShowS -> ShowS
 replicateS n f = concatS (replicate n f)
-
 
 -- | The printer class does the job.
 
@@ -161,9 +132,18 @@ instance Print AbsAuL.PtrVoid where
 
 instance Print AbsAuL.CompoundType where
   prt i e = case e of
-    AbsAuL.CompTypeP compoundtype -> prPrec i 0 (concatD [doc (showString "*"), prt 0 compoundtype])
-    AbsAuL.CompTypeM compoundtype -> prPrec i 0 (concatD [prt 0 compoundtype, doc (showString "["), doc (showString "]")])
     AbsAuL.CompTypeB basictype -> prPrec i 0 (concatD [prt 0 basictype])
+    AbsAuL.CompTypeP compoundtype -> prPrec i 0 (concatD [doc (showString "*"), prt 0 compoundtype])
+    AbsAuL.CompTypeA basictype brackss -> prPrec i 0 (concatD [prt 0 basictype, prt 0 brackss])
+
+instance Print AbsAuL.Bracks where
+  prt i e = case e of
+    AbsAuL.Brack -> prPrec i 0 (concatD [doc (showString "["), doc (showString "]")])
+  prtList _ [x] = concatD [prt 0 x]
+  prtList _ (x:xs) = concatD [prt 0 x, prt 0 xs]
+
+instance Print [AbsAuL.Bracks] where
+  prt = prtList
 
 instance Print AbsAuL.Stm where
   prt i e = case e of
@@ -334,7 +314,7 @@ instance Print [AbsAuL.Dim] where
 
 instance Print AbsAuL.Dim where
   prt i e = case e of
-    AbsAuL.Dims n -> prPrec i 0 (concatD [doc (showString "["), prt 0 n, doc (showString "]")])
+    AbsAuL.Dims rexp -> prPrec i 0 (concatD [doc (showString "["), prt 0 rexp, doc (showString "]")])
   prtList _ [x] = concatD [prt 0 x]
   prtList _ (x:xs) = concatD [prt 0 x, prt 0 xs]
 

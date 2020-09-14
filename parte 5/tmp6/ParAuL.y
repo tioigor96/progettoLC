@@ -175,6 +175,7 @@ L_LIdent { PT _ (T_LIdent _) }
 %attribute stateout { State }
 %attribute addr { ArgOp }
 %attribute nextLabel { LabelTac }
+%attribute listDim { [ArgOp] }
 
 
 %%
@@ -595,8 +596,12 @@ Decl : BasicType LExp VarInit
         ; $3.statein = $2.stateout
         ; $$.stateout = if $3.parsetree == AbsAuL.VarINil then $3.stateout
                         else skipState $2.stateout 1 0
-        ; $$.code = if $3.parsetree == AbsAuL.VarINil then [(Rules (VarDecl (toTACType $$.tipo) $2.addr))]
-                                                      else [(Rules (Assgm (toTACType $$.tipo) $2.addr (gentemp $2.stateout 0)))]  ++ $3.code
+
+        ; $$.code = if (isArrayType $$.tipo && $3.parsetree == AbsAuL.VarINil)  then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr))] ++ listDimToTac $2.listDim
+                        else if (isArrayType $$.tipo ) then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr))] ++ listDimToTac $2.listDim ++ $3.code
+	                    else if $3.parsetree == AbsAuL.VarINil then [(Rules (VarDecl (toTACType $$.tipo) $2.addr))]
+		                        else   [(Rules (Assgm (toTACType $$.tipo) $2.addr (gentemp $2.stateout 0)))]  ++ $3.code
+                                                        
         
     }
 
@@ -1230,6 +1235,11 @@ LExp : LIdent
         ; $$.parsetree = AbsAuL.LExpA $1.vlident $2.parsetree
         ; $$.posn = $1.posn
         ; $$.errs = $2.errs
+        ; $1.statein = $$.statein
+        ; $2.statein = $1.stateout
+        ; $$.stateout = $2.stateout
+        ; $$.listDim = $2.listDim       
+        
     }
 
 ListDim : Dim 
@@ -1237,6 +1247,11 @@ ListDim : Dim
         $1.envin = $$.envin
         ; $$.parsetree = (:[]) $1.parsetree 
         ; $$.errs = $1.errs
+        ; $1.statein = $$.statein
+        ; $$.stateout = $1.stateout
+        ; $$.code = $1.code
+        ; $$.listDim = $1.listDim
+        
     } 
     | Dim ListDim 
     { 
@@ -1244,6 +1259,12 @@ ListDim : Dim
         ; $2.envin = $$.envin
         ; $$.parsetree = (:) $1.parsetree $2.parsetree
         ; $$.errs = $1.errs ++ $2.errs
+        ; $1.statein = $$.statein
+        ; $2.stateout = $1.stateout
+        ; $$.stateout = $2.stateout
+        ; $$.code = $1.code ++ $2.code
+        ; $$.addr = (:) $1.listDim $2.listDim
+        
     }
 
 Dim : '[' RExp ']' --VARA CHE GNOCCA STA COMPARAZIONE!!
@@ -1253,6 +1274,11 @@ Dim : '[' RExp ']' --VARA CHE GNOCCA STA COMPARAZIONE!!
         ; $$.errs = if (op2CompType EqO $2.tipo (Base BasicType_Int)) == ErrT
                        then ["error at "++ ((showFromPosn . tokenPosn) $1) ++ ": type for arrays referencing need to be 'Int'!"]
                        else []
+        ; $2.statein = $$.statein
+        ; $$.stateout = $2.stateout
+        ; $$.code = $2.code
+        ; $$.addr = $2.addr
+        ; $$.listDim = [$2.addr]
     }
 
 --  ========================

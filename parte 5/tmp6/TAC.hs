@@ -22,8 +22,10 @@ data RulesTac = AssgmBin TypeTac ArgOp ArgOp BinaryOp ArgOp             -- x = y
               | FuncCall ArgOp TypeTac FuncDef Int                        -- y =t call p, n
               | Load ArgOp                                                      
               | Func Int                                                -- func n   
+              | ListDimension ArgOp
               | ArrayEl ArgOp ArgOp ArgOp                               -- x =t y[i]
               | AssgmArrayEl ArgOp ArgOp ArgOp                          -- x[i] =t y
+              | ArrayDef TypeTac ArgOp                               -- Int pippo[3]
               | ArgFun ArgOp 
               | NoOperation                                             -- operazione vuota
               | Return ArgOp                                            -- return y
@@ -32,6 +34,7 @@ data RulesTac = AssgmBin TypeTac ArgOp ArgOp BinaryOp ArgOp             -- x = y
               | GetArg ArgOp                                            -- param x
               | Comment String                                          -- # s
   deriving (Eq, Show)
+
 
 
 data TypeTac = IntTypeTac | FloatTypeTac | CharTypeTac | StringTypeTac | BoolTypeTac | PointerTypeTac | ArrayTypeTac  --array?
