@@ -285,9 +285,19 @@ PGlobl : Stm
 Block : ListStm 
     { 
         $1.envin = mergeEnv $$.envloc $$.envin
-        ; $1.envloc = emptyEnv
+        ; $1.envloc = if (isJust (lookupEnv "return" $$.envloc))
+                         then (reinsertRetEnv 
+                                ((getTypeR . fromJust) (lookupEnv "return" $$.envloc))
+                                ((foundIstr . fromJust) (lookupEnv "return" $$.envloc))
+                                emptyEnv)
+                         else emptyEnv
         ; $$.parsetree = AbsAuL.Blk $1.parsetree
-        ; $$.envout = $$.envloc
+        ; $$.envout = if (isJust (lookupEnv "return" $$.envloc))
+                         then (reinsertRetEnv 
+                                    ((getTypeR . fromJust) (lookupEnv "return" $1.envout))
+                                    ((foundIstr . fromJust) (lookupEnv "return" $1.envout))
+                                    $$.envloc)
+                         else $$.envloc
         ; $$.errs = $1.errs
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
@@ -303,7 +313,13 @@ BlockF : ListStm
         ; $1.envloc = $$.envloc
         ; $$.parsetree = AbsAuL.Blk $1.parsetree
         ; $$.envout = $$.envloc
-        ; $$.errs = $1.errs
+        ; $$.errs = (if (isJust (lookupEnv "return" $1.envout))
+                    then (if (((getTypeR . fromJust) (lookupEnv "return" $1.envout)) == ErrT)
+                             then []
+                             else (if ((foundIstr . fromJust) (lookupEnv "return" $1.envout))
+                                    then []
+                                    else ["error: statement return not found in function definition!"]))
+                    else ["Compiler Frontend General Error: listen to me, you must go to sleep..."]) ++ $1.errs
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code        
@@ -511,7 +527,7 @@ Stm : Decl ';'
         $1.envin = mergeEnv $$.envloc $$.envin
         ; $1.envloc = $$.envloc
         ; $$.parsetree = AbsAuL.SEBlk $1.parsetree
-        ; $$.envout = $$.envloc
+        ; $$.envout = $1.envout
         ; $$.errs = $1.errs
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
@@ -520,8 +536,11 @@ Stm : Decl ';'
     }
     | Return ';'
     { 
-        $1.envin = $$.envin
+       $1.envin = $$.envin
+        ; $1.envloc = $$.envloc
         ; $$.parsetree = AbsAuL.SReturn $1.parsetree
+        ; $$.envout = $1.envout
+        ; $$.errs = $1.errs
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code
@@ -531,7 +550,7 @@ Stm : Decl ';'
     {   
         $$.parsetree = AbsAuL.SBreak $1.parsetree
         ; $$.envout = $$.envloc
-        ; $$.errs = $1.errs
+        ; $$.errs = []
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code
@@ -547,6 +566,7 @@ EBlk : 'do' Block 'end'
         ; $2.envloc = $$.envloc
         ; $$.parsetree = AbsAuL.EBlkS $2.parsetree
         ; $$.errs = $2.errs
+        ; $$.envout = $2.envout
         ; $2.statein = $$.statein
         ; $$.stateout = $2.stateout
         ; $2.nextLabel = $$.nextLabel
@@ -558,18 +578,18 @@ EBlk : 'do' Block 'end'
 --  ========================
 Decl : BasicType LExp VarInit 
     { 
-        $3.envin = (mergeEnv $$.envloc $$.envin)
-        ; $$.parsetree = AbsAuL.DeclSP $1.parsetree $2.parsetree $3.parsetree
+        $2.envin = (mergeEnv $$.envloc $$.envin)
+        ; $3.envin = (mergeEnv $$.envloc $$.envin)
         ; $3.tipo = makeCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree) $1.parsetree
+        ; $$.parsetree = AbsAuL.DeclSP $1.parsetree $2.parsetree $3.parsetree
         ; $$.envout = ( if (isOk (insertEnv $1.parsetree Modality1 $2.parsetree $$.envloc $2.posn))
                          then (fromOk (insertEnv $1.parsetree Modality1 $2.parsetree $$.envloc $2.posn))
-                         else $3.envloc
-                        )
+                         else $$.envloc)
         ; $$.errs = ( if (isJust (lookupEnv ( (fromLIdent . getLIdentlexp) $2.parsetree) $$.envloc))
                          then ["error at "++ (showFromPosn $2.posn) ++": variable " ++ 
                                 (fromBad (insertEnv $1.parsetree Modality1 $2.parsetree $$.envloc $2.posn))]
                          else []
-                        ) ++ $3.errs
+                        ) ++ $2.errs ++ $3.errs
         ; $$.tipo = makeCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree) $1.parsetree
         ; $2.statein = $$.statein
         ; $3.statein = $2.stateout
@@ -694,7 +714,7 @@ Local : 'local' Decl
 
 Ass : LExp '=' RExp -- TODO: finisci errori
     { 
-        $3.envin = $$.envin
+         $3.envin = $$.envin
         ; $$.parsetree = AbsAuL.AssD $1.parsetree $3.parsetree
         ; $$.tipo = (if (isJust (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
                         then if ((not . isFnctEnv . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
@@ -711,8 +731,8 @@ Ass : LExp '=' RExp -- TODO: finisci errori
                                                ((fromLIdent . getLIdentlexp) $1.parsetree) ++"!"]
                                          else []
                                   else ["error at " ++ ((showFromPosn . tokenPosn) $2) ++ 
-                                        ": expects argument of type '" ++ (showBBType $$.tipo) ++ 
-                                        "' but has type '"++ (showBBType $3.tipo) ++"'"]) ++ $3.errs
+                                        ": expects argument of type '" ++ (showCmpType $$.tipo) ++ 
+                                        "' but has type '"++ (showCmpType $3.tipo) ++"'"]) ++ $1.errs ++ $3.errs
         ; $1.statein = $$.statein
         ; $3.statein = $1.stateout
         ; $$.stateout = skipState $3.stateout 0 2
@@ -855,17 +875,19 @@ FuncRead : 'readInt' '(' ')'
     }
 
 --  ========================
---  =======  WHLE  =========
+--  =======  WHILE  =========
 --  ========================
 
 While : 'while' RExp EBlk 
     { 
-        $2.envin = mergeEnv $$.envloc $$.envin
+       $2.envin = mergeEnv $$.envloc $$.envin
         ; $3.envin = $$.envin
         ; $3.envloc = $$.envloc
         ; $$.parsetree = AbsAuL.LoopW $2.parsetree $3.parsetree
-        ; $$.envout = $$.envloc
-        ; $$.errs = $2.errs ++ $3.errs
+        ; $$.envout = $3.envout
+        ; $$.errs = (if (op2CompType EqO (Base BasicType_Bool) $2.tipo) == ErrT
+                        then ["error at "++ ((showFromPosn . tokenPosn) $1) ++": 'while' condition need to be 'Bool' expression!"]
+                        else []) ++ $2.errs ++ $3.errs
         ; $2.statein = $$.statein
         ; $3.statein = $2.stateout
         ; $$.stateout = skipState $3.stateout 0 2
@@ -883,12 +905,14 @@ While : 'while' RExp EBlk
 
 Repeat : 'repeat' Block 'until' RExp 
     { 
-        $2.envin = $$.envin
+          $2.envin = $$.envin
         ; $2.envloc = $$.envloc
         ; $4.envin = mergeEnv $$.envloc $$.envin
         ; $$.parsetree = AbsAuL.LoopR $2.parsetree $4.parsetree
         ; $$.envout = $2.envout
-        ; $$.errs = $2.errs ++ $4.errs
+        ; $$.errs = (if (op2CompType EqO (Base BasicType_Bool) $4.tipo) == ErrT
+                        then ["error at "++ ((showFromPosn . tokenPosn) $1) ++": 'repeat' condition need to be 'Bool' expression!"]
+                        else []) ++ $2.errs ++ $4.errs
         ; $2.statein = $$.statein
         ; $4.statein = $2.stateout
         ; $$.stateout = skipState $4.stateout 0 2
@@ -909,16 +933,16 @@ For : 'for' LIdent '=' RExp ',' RExp Increment EBlk --modded
         $4.envin = mergeEnv $$.envloc $$.envin
         ; $6.envin = mergeEnv $$.envloc $$.envin
         ; $7.envin = mergeEnv $$.envloc $$.envin
-        ; $8.envin = mergeEnv $$.envloc $$.envin
+        ; $8.envin = $$.envin
         ; $8.envloc = if((all (\(x,y) -> x == y ) [($4.tipo,$6.tipo),($6.tipo,$7.tipo),($7.tipo,$4.tipo)]) )
-                        then (fromOk (insertEnv (getBaseType $7.tipo) Modality1 (LExpS $2.vlident) emptyEnv $2.posn))
-                        else (fromOk (insertEnv (getBaseType $4.tipo) Modality1 (LExpS $2.vlident) emptyEnv $2.posn))
-        
+                        then (mergeEnv (fromOk (insertEnv (getBaseType $7.tipo) Modality1 (LExpS $2.vlident) emptyEnv $2.posn)) $$.envloc)
+                        else (mergeEnv (fromOk (insertEnv (getBaseType $4.tipo) Modality1 (LExpS $2.vlident) emptyEnv $2.posn)) $$.envloc)
         ; $$.parsetree = AbsAuL.LoopF $2.vlident $4.parsetree $6.parsetree $7.parsetree $8.parsetree
-        ; $$.envout = $$.envloc
-        ; $$.errs = (if ( all (\(x,y) -> x == y ) [($7.tipo,$4.tipo)])
+        ; $$.envout = $8.envout
+        ; $$.errs = (if ( all (\(x,y) -> x == y ) [($4.tipo,$6.tipo),($6.tipo,$7.tipo),($7.tipo,$4.tipo)])
                         then []
                         else ["error at "++ (showFromPosn $2.posn) ++": incompatible types in 'for' loop conditions!"])
+                               ++ $4.errs ++ $6.errs ++ $7.errs ++ $8.errs
                                ++ $4.errs ++ $6.errs ++ $7.errs ++ $8.errs
         ; $2.statein = $$.statein
         ; $4.statein = $2.stateout
@@ -964,15 +988,18 @@ Increment : {- empty -} -- per l'appunto, assumiamo sia 1 l'incremento
 --  ========================
 If : 'if' RExp 'then' Block ListElseIf Else 'end'
     { 
-        $2.envin = mergeEnv $$.envloc $$.envin
+         $2.envin = mergeEnv $$.envloc $$.envin
         ; $4.envin = $$.envin
-        ; $4.envloc = $$.envloc
         ; $5.envin = $$.envin
-        ; $5.envloc = $$.envloc
         ; $6.envin = $$.envin
-        ; $6.envloc = $$.envloc
+        ; $4.envloc = $$.envloc
+        ; $5.envloc = $4.envout
+        ; $6.envloc = $5.envout
         ; $$.parsetree = AbsAuL.IfM $2.parsetree $4.parsetree (reverse $5.parsetree) $6.parsetree
-        ; $$.envout = $$.envloc
+        ; $$.envout = $6.envout
+        ; $$.errs = (if (op2CompType EqO (Base BasicType_Bool) $2.tipo) == ErrT
+                        then ["error at "++ ((showFromPosn . tokenPosn) $1) ++": 'if' condition need to be 'Bool' expression!"]
+                        else []) ++ $2.errs ++ $4.errs ++ $5.errs ++ $6.errs
         ; $2.statein = $$.statein
         ; $4.statein = $2.stateout
         ; $5.statein = $2.stateout
@@ -985,7 +1012,6 @@ If : 'if' RExp 'then' Block ListElseIf Else 'end'
         ; $$.stateout = if (null $5.code) then if (null $6.code) then skipState $4.stateout 0 1
                                                                  else skipState $6.stateout 0 2
                                           else skipState $5.stateout 0 1
-        ; $$.errs = $2.errs ++ $4.errs ++ $5.errs ++ $6.errs
         ; $$.code = $2.code ++ (labelRules $2.condTrue $4.code) ++ [(Rules (Goto $$.nextLabel))] ++
                     if (null $5.code) then if (null $6.code) then []
                                                              else (labelRules $2.condFalse $6.code)
@@ -998,6 +1024,7 @@ Else : 'else' Block
         ; $2.envloc = $$.envloc
         ; $$.parsetree = AbsAuL.ElseS $2.parsetree
         ; $$.errs = $2.errs
+        ; $$.envout = $2.envout
         ; $2.statein = $$.statein
         ; $$.stateout = $2.stateout
         ; $$.code = $2.code 
@@ -1016,22 +1043,27 @@ ElseIf : 'elseif' RExp 'then' Block
         ; $4.envin = $$.envin
         ; $4.envloc = $$.envloc
         ; $$.parsetree = AbsAuL.ElseIfD $2.parsetree $4.parsetree
-        ; $$.errs = $2.errs ++ $4.errs
+        ; $$.envout = $4.envout
+        ; $$.errs = (if (op2CompType EqO (Base BasicType_Bool) $2.tipo) == ErrT
+                        then ["error at "++ ((showFromPosn . tokenPosn) $1) ++": 'elseif' condition need to be 'Bool' expression!"]
+                        else []) ++ $2.errs ++ $4.errs
         ; $$.code = $2.code ++ (labelRules $2.condTrue $4.code) ++ $4.code
     }
 
 ListElseIf : {- empty -} 
     { 
         $$.parsetree = []
+        ; $$.envout = $$.envloc
         ; $$.errs = [] 
         ; $$.code = []
     }
     | ListElseIf ElseIf 
     { 
         $1.envin = $$.envin
-        ; $1.envloc = $$.envloc
         ; $2.envin = $$.envin
-        ; $2.envloc = $$.envloc
+        ; $1.envloc = $$.envloc
+        ; $2.envloc = $1.envout
+        ; $$.envout = $2.envout
         ; $$.parsetree = flip (:) $1.parsetree $2.parsetree
         ; $$.errs = $1.errs ++ $2.errs
         ; $$.code = $2.code ++ $1.code
@@ -1041,13 +1073,16 @@ ListElseIf : {- empty -}
 --  =======  JUMP  =========
 --  ========================
 
--- TODO: nel return implementa il controllo di tipo! se non settato allora
---       sappiamo che può essere qualunque cosa perchè siamo nel globale (che 
---       schifo), altrimenti devo vedere la corrispondenza di tipo 
-
 Return : 'return' RValue 
     { 
         $$.parsetree = AbsAuL.JumpR $2.parsetree 
+        ; $2.envin = $$.envin
+        ; $2.envloc = $$.envloc
+        ; $2.posn = (tokenPosn $1)
+        ; $$.envout = if (isJust (lookupEnv "return" $$.envloc))
+                         then (reinsertRetEnv ((getTypeR . fromJust) (lookupEnv "return" $$.envloc)) True $$.envloc)
+                         else $$.envloc
+        ; $$.errs = $2.errs
         ; $2.statein = $$.statein
         ; $$.stateout = $2.stateout
         ; $$.code = $2.code
@@ -1055,11 +1090,31 @@ Return : 'return' RValue
 
 RValue : {- empty -} 
     { 
-        $$.parsetree = AbsAuL.JumpRE 
+        $$.parsetree = AbsAuL.JumpRE
+        ; $$.errs = if (isJust (lookupEnv "return" $$.envloc))
+                        then (if (((getTypeR . fromJust) (lookupEnv "return" $$.envloc)) == ErrT)
+                                then []
+                                else ["error at "++ (showFromPosn $$.posn) ++ ": empty return, but need '"++
+                                      (showCmpType ((getTypeR . fromJust) (lookupEnv "return" $$.envloc))) ++
+                                      "' expression type!"] )
+                        else ["error at " ++ (showFromPosn $$.posn) ++ ": return statement out of function!"]
     }
     | RExp 
     { 
-        $$.parsetree = AbsAuL.JumpRV $1.parsetree 
+        $$.parsetree = AbsAuL.JumpRV $1.parsetree
+        ; $1.envin = mergeEnv $$.envloc $$.envin
+        ; $$.errs = (if (isJust (lookupEnv "return" $$.envloc))
+                        then (if ((getTypeR . fromJust) (lookupEnv "return" $$.envloc) == ErrT)
+                                 then ["error at " ++ (showFromPosn $$.posn) ++ ": return is Void, but given expression's type is '" ++
+                                        (showCmpType $1.tipo) ++ "'"]
+                                 else (if ((==) 
+                                            (compCmpType ((getTypeR . fromJust) (lookupEnv "return" $$.envloc)) $1.tipo)
+                                            ((getTypeR . fromJust) (lookupEnv "return" $$.envloc)))
+                                          then []
+                                          else ["error at "++ (showFromPosn $$.posn) ++ ": return need '"++ 
+                                                (showCmpType ((getTypeR . fromJust) (lookupEnv "return" $$.envloc))) ++
+                                                "', but given '"++ (showCmpType $1.tipo) ++ "' expression type!"]))
+                        else ["error at " ++ (showFromPosn $$.posn) ++ ": return statement out of function!"]) ++ $1.errs
     }
 
 Break : 'break' 
@@ -1080,18 +1135,14 @@ Break : 'break'
 FuncD : CompoundType 'function' LIdent '(' ListParamF ')' BlockF 'end'
     { 
         $$.parsetree = AbsAuL.FnctDecl $1.parsetree $3.vlident $5.parsetree $7.parsetree
-        ; $7.envloc = emptyEnv
+        ; $7.envloc = insertRetEnv $1.parsetree False (bypassEnvLoc $5.listparf)
         ; $7.envin = if (isOk (insertFnctEnv $1.parsetree $3.vlident $5.listparf $3.posn $$.envloc))
-                         then (mergeEnv (mergeEnv 
-                                            (bypassEnvLoc $5.listparf) 
-                                            (fromOk (insertFnctEnv $1.parsetree $3.vlident $5.listparf $3.posn $$.envloc)))
+                         then (mergeEnv (fromOk (insertFnctEnv $1.parsetree $3.vlident $5.listparf $3.posn $$.envloc))
                                        $$.envin)
                          else (mergeEnv (mergeEnv 
-                                            (mergeEnv
-                                                (bypassEnvLoc $5.listparf)
-                                                (fromOk (insertFnctEnv $1.parsetree $3.vlident $5.listparf $3.posn emptyEnv)))
+                                            (fromOk (insertFnctEnv $1.parsetree $3.vlident $5.listparf $3.posn emptyEnv))
                                             $$.envloc) 
-                                       $$.envin)
+                                        $$.envin)
         ; $$.envout = if (isOk (insertFnctEnv $1.parsetree $3.vlident $5.listparf $3.posn $$.envloc))
                          then (fromOk (insertFnctEnv $1.parsetree $3.vlident $5.listparf $3.posn $$.envloc))
                          else $$.envloc
@@ -1160,6 +1211,7 @@ LExp : LIdent
     { 
         $$.parsetree = AbsAuL.LExpS $1.vlident
         ; $$.posn = $1.posn
+        ; $$.errs = []
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $$.addr = $1.addr
@@ -1587,7 +1639,7 @@ RExp9 : '-' RExp10
         ; $$.addr = $1.addr
         ; $$.code = $1.code
     }
-RExp10 : Func --TODO: controlla tipi ritorno func
+RExp10 : Func
     { 
         $1.envin = $$.envin
         ; $$.parsetree = AbsAuL.FCall $1.parsetree
