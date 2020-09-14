@@ -1,0 +1,13 @@
+AbsAuL.hs
+DocAuL.txt
+ErrM.hs
+LexAuL.hs
+LexAuL.x
+ParAuL.hs
+ParAuL.info
+SkelAuL.hs
+TestAuL*
+main
+*.hi
+*.o
+
