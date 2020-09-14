@@ -292,6 +292,7 @@ Block : ListStm
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code
+        ; $1.nextLabel = $$.nextLabel
         
     }
 -- N.d.R.: Per necessità di non switchare il envloc ed envin dichiaro una regola
@@ -527,10 +528,10 @@ Stm : Decl ';'
         ; $1.nextLabel = $$.nextLabel
     }
     | Break ';' 
-    { 
-        
+    {   
         $$.parsetree = AbsAuL.SBreak $1.parsetree
         ; $$.envout = $$.envloc
+        ; $$.errs = $1.errs
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code
@@ -548,6 +549,7 @@ EBlk : 'do' Block 'end'
         ; $$.errs = $2.errs
         ; $2.statein = $$.statein
         ; $$.stateout = $2.stateout
+        ; $2.nextLabel = $$.nextLabel
         ; $$.code = $2.code
     }
 
@@ -927,10 +929,11 @@ For : 'for' LIdent '=' RExp ',' RExp Increment EBlk --modded
         ; $6.condTrue = (genlabel $8.stateout 2)
         ; $6.condFalse = $$.nextLabel
         ; $8.nextLabel = $$.nextLabel
-        ; $$.code = [(Rules (Assgm (toTACType $4.tipo) $2.addr (gentemp $2.stateout 1)))] ++ [(Rules (Assgm (toTACType $4.tipo) (gentemp $2.stateout 1) $4.addr))] ++ 
+        ; $$.code = ([(Rules (Assgm (toTACType $4.tipo) $2.addr (gentemp $2.stateout 1)))] ++ [(Rules (Assgm (toTACType $4.tipo) (gentemp $2.stateout 1) $4.addr))] ++ 
                     $4.code ++ (labelRules (genlabel $8.stateout 1) $6.code) ++
-                    (labelRules $6.condTrue $8.code) ++ if (null $7.code) then [(Rules (AssgmBin (toTACType $4.tipo) $2.addr $2.addr (binop TAC.Add (toTACType $4.tipo)) (IntTac 1) ))] ++ [(Rules (Goto (genlabel $8.stateout 1)))]
-                                                                          else $7.code ++ [(Rules (Goto (genlabel $8.stateout 1)))]
+                    (labelRules $6.condTrue $8.code) ++ if (null $7.code) then [(Rules (AssgmBin (toTACType $4.tipo) $2.addr $2.addr (binop TAC.Add (toTACType $4.tipo)) (IntTac 1) ))]
+                                                                          else $7.code)
+                        ++ [(Rules (Goto (genlabel $8.stateout 1)))] ++ [(LRules ($8.nextLabel++"dove sono?") NoOperation)]
 
     }
     | 'for' LIdent 'in' LIdent EBlk --modded
@@ -1061,9 +1064,11 @@ RValue : {- empty -}
 
 Break : 'break' 
     { 
-        $$.parsetree = AbsAuL.JumpB 
+        $$.parsetree = AbsAuL.JumpB
+        ; $$.envout = $$.envloc
+        ; $$.errs = []
         ; $$.stateout = $$.statein
-        ;$$.code = [(Rules (Goto $$.nextLabel))]
+        ; $$.code = [(Rules (Goto ($$.nextLabel++"break")))]
     }
 
 --  ========================
