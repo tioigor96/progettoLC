@@ -531,7 +531,7 @@ Local : 'local' Decl
 --  =======  ASSG  =========
 --  ========================
 
-Ass : LExp '=' RExp -- TODO: finnisci errori : controlla perchè ERRT
+Ass : LExp '=' RExp
     { 
         $3.envin = $$.envin
         ; $$.parsetree = AbsAuL.AssD $1.parsetree $3.parsetree
@@ -542,7 +542,11 @@ Ass : LExp '=' RExp -- TODO: finnisci errori : controlla perchè ERRT
                                 else ErrT 
                         else ErrT)
         ; $$.errs = (if ($$.tipo == ErrT)
-                         then ["error at "++ ((showFromPosn . tokenPosn) $2) ++": refer to unexistent variable!"]
+                         then (if (isJust (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
+                                 then (if ((not . isFnctEnv . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
+                                          then ["error at "++ ((showFromPosn . tokenPosn) $2) ++": dereferencing level is inadequate!"]
+                                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++": cannot assign value to a function!"])
+                                 else ["error at "++ ((showFromPosn . tokenPosn) $2) ++": refer to unexistent variable!"])
                          else if (not ((compCmpType $$.tipo $3.tipo) == ErrT))
                                   then if((snd . getType . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin) == Modality_const)
                                          then ["error at " ++ ((showFromPosn . tokenPosn) $2) ++
@@ -1251,37 +1255,46 @@ RExp11 : Integer
         ; $$.envout = $$.envin
         ; $$.errs = []
     }
-    | LExp --possibile mismatch parentesi
+    | LExp
     { 
         $$.parsetree = AbsAuL.ValVariable $1.parsetree 
         ; $$.tipo = (if (isJust (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
-                        then (downCmpType (getPtrLev $1.parsetree) (getArrLev $1.parsetree)
-                                ((fst . getType . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin)))
+                        then (if (isFnctEnv (fromJust (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin)))
+                                then ErrT
+                                else (downCmpType (getPtrLev $1.parsetree) (getArrLev $1.parsetree)
+                                        ((fst . getType . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))))
                         else ErrT )
         ; $$.errs = (if (isNothing (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
                         then ["error: reference to " ++ ((fromLIdent . getLIdentlexp) $1.parsetree) ++ " at line " ++
                                 (showFromPosn $1.posn) ++ " is invalid (maybe a function or not declared variable?)"]
-                        else (if ((downCmpType (getPtrLev $1.parsetree) (getArrLev $1.parsetree)
-                                        ((fst . getType . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))) == ErrT)
-                                then ["error at "++ (showFromPosn $1.posn) ++" invalid dereferencing (maybe too much?) referring to '"++ 
-                                        ((fromLIdent . getLIdentlexp) $1.parsetree) ++"'"]
-                                else [] )) ++ $1.errs
+                        else ( if (not (isFnctEnv (fromJust (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))))
+                                   then (if ((downCmpType (getPtrLev $1.parsetree) (getArrLev $1.parsetree)
+                                              ((fst . getType . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))) == ErrT)
+                                            then ["error at "++ (showFromPosn $1.posn) ++": invalid dereferencing (maybe too much?) referring to '"++ 
+                                                    ((fromLIdent . getLIdentlexp) $1.parsetree) ++"'"]
+                                            else []) 
+                                   else ["error at "++ (showFromPosn $1.posn) ++": cannot use a function as a variable!"])
+                             ) ++ $1.errs
     }
     | '&' LExp 
     { 
         $$.parsetree = AbsAuL.ValRef $2.parsetree
         ; $$.tipo = (if (isJust (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))
-                        then (addPtrT ( downCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree)
-                                ((fst . getType . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))))
+                        then (if (not (isFnctEnv (fromJust (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))))
+                                 then (addPtrT ( downCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree)
+                                        ((fst . getType . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))))
+                                 else ErrT)
                         else ErrT )
         ; $$.errs = (if (isNothing (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))
                         then ["error: reference to " ++ ((fromLIdent . getLIdentlexp) $2.parsetree) ++ " at line " ++
                                 (showFromPosn $2.posn) ++ "is invalid (maybe a function or not declared variable?)"]
-                        else (if ((addPtrT ( downCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree)
-                                        ((fst . getType . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin)))) == ErrT)
-                                then ["error at "++ ((showFromPosn . tokenPosn) $1) ++": too many dereferencing refering to '"
-                                        ++ ((fromLIdent . getLIdentlexp) $2.parsetree) ++"'"]
-                                else [] )) ++ $2.errs
+                        else (if (not (isFnctEnv (fromJust (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))))
+                                then (if ((addPtrT ( downCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree)
+                                                ((fst . getType . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin)))) == ErrT)
+                                        then ["error at "++ ((showFromPosn . tokenPosn) $1) ++": too many dereferencing refering to '"
+                                                ++ ((fromLIdent . getLIdentlexp) $2.parsetree) ++"'"]
+                                        else [] )
+                                else ["error at "++ (showFromPosn $2.posn) ++": cannot use a function as a variable!"])) ++ $2.errs
     }
     | Double --modded
     { 
