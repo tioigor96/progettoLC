@@ -597,8 +597,8 @@ Decl : BasicType LExp VarInit
         ; $$.stateout = if $3.parsetree == AbsAuL.VarINil then $3.stateout
                         else skipState $2.stateout 1 0
 
-        ; $$.code = if (isArrayType $$.tipo && $3.parsetree == AbsAuL.VarINil)  then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr))] ++ listDimToTac $2.listDim
-                        else if (isArrayType $$.tipo ) then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr))] ++ listDimToTac $2.listDim ++ $3.code
+        ; $$.code = if (isArrayType $$.tipo && $3.parsetree == AbsAuL.VarINil)  then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr))] ++ listDimToTac $2.listDim ++ $2.code
+                        else if (isArrayType $$.tipo ) then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr))] ++ listDimToTac $2.listDim ++ $2.code ++ $3.code
 	                    else if $3.parsetree == AbsAuL.VarINil then [(Rules (VarDecl (toTACType $$.tipo) $2.addr))]
 		                        else   [(Rules (Assgm (toTACType $$.tipo) $2.addr (gentemp $2.stateout 0)))]  ++ $3.code
                                                         
@@ -1238,7 +1238,9 @@ LExp : LIdent
         ; $1.statein = $$.statein
         ; $2.statein = $1.stateout
         ; $$.stateout = $2.stateout
-        ; $$.listDim = $2.listDim       
+        ; $$.addr = $1.addr
+        ; $$.listDim = $2.listDim    
+        ; $$.code = $2.code   
         
     }
 
@@ -1260,10 +1262,10 @@ ListDim : Dim
         ; $$.parsetree = (:) $1.parsetree $2.parsetree
         ; $$.errs = $1.errs ++ $2.errs
         ; $1.statein = $$.statein
-        ; $2.stateout = $1.stateout
+        ; $2.statein = $1.stateout
         ; $$.stateout = $2.stateout
         ; $$.code = $1.code ++ $2.code
-        ; $$.addr = (:) $1.listDim $2.listDim
+        ; $$.listDim = (:) $1.addr $2.listDim 
         
     }
 
