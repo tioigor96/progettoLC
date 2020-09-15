@@ -600,7 +600,7 @@ Decl : BasicType LExp VarInit
         ; $$.code = if (isArrayType $$.tipo && $3.parsetree == AbsAuL.VarINil)  then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr))] ++ listDimToTac $2.listDim ++ $2.code
                         else if (isArrayType $$.tipo ) then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr))] ++ listDimToTac $2.listDim ++ $2.code ++ $3.code
 	                    else if $3.parsetree == AbsAuL.VarINil then [(Rules (VarDecl (toTACType $$.tipo) $2.addr))]
-		                        else   [(Rules (Assgm (toTACType $$.tipo) $2.addr (gentemp $2.stateout 0)))]  ++ $3.code
+		                        else [(Rules (Assgm (toTACType $$.tipo) $2.addr (gentemp $2.stateout 0)))] ++ $3.code
                                                         
         
     }
@@ -1227,6 +1227,7 @@ LExp : LIdent
         ; $$.errs = []
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
+        ; $$.listDim = []
         ; $$.addr = $1.addr
         ; $$.code = $1.code
     }
@@ -1234,6 +1235,7 @@ LExp : LIdent
     { 
         $2.envin = $$.envin
         ; $$.parsetree = AbsAuL.LExpDR $2.parsetree 
+        ; $$.listDim = []
         ; $$.posn = $2.posn
         ; $$.errs = $2.errs
     }
@@ -1691,6 +1693,7 @@ RExp10 : Func
         ; $$.code = $1.code 
     }
     | RExp10 '..' RExp11
+    --TODO: assegnamento funzione
     {
         $1.envin = $$.envin
         ; $3.envin = $$.envin
@@ -1699,9 +1702,10 @@ RExp10 : Func
         ; $$.errs = (if (op2CompType ConcatO $1.tipo $3.tipo) == ErrT
                         then ["error at "++ ((showFromPosn . tokenPosn) $2) ++": '..' need to have 'Char'(s) or 'String'(s) as arguments!"]
                         else []) ++ $1.errs ++ $3.errs 
-        
+        ; $$.code = $1.code ++ [(Rules(ProcCall (InternalFunc "concat") 1))] ++ $3.code  
     }
     | '#' RExp11
+    --TODO: assegnamento funzione
     { 
         $2.envin = $$.envin
         ; $$.parsetree = AbsAuL.FLen $2.parsetree
@@ -1709,6 +1713,7 @@ RExp10 : Func
         ; $$.errs = (if (op1CompType SizeO $2.tipo) == ErrT
                         then ["error at "++ ((showFromPosn . tokenPosn) $1) ++": '#' need to have Arrays or Pointer as argument!"]
                         else []) ++ $2.errs 
+        ; $$.code = [(Rules(ProcCall (InternalFunc "lenght") 1))] ++ $2.code  
     }
     | RExp11 
     { 
@@ -1751,7 +1756,9 @@ RExp11 : Integer --TODO: controlla tipi LEXP e &LEXP: controlla che arr non poss
                                         ((fromLIdent . getLIdentlexp) $1.parsetree) ++"'"]
                                 else [] ))
         ; $$.addr = $1.addr
-        ; $$.code = []
+        ; $$.code = if (not $ null $1.listDim) then [(Rules (ArrayEl (toTACType $$.tipo) (gentemp $$.stateout 0) $$.addr))] ++
+                                                    listDimToTac $1.listDim  
+                                               else []
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
     }

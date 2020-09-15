@@ -21,13 +21,16 @@ data RulesTac = AssgmBin TypeTac ArgOp ArgOp BinaryOp ArgOp             -- x = y
               | ProcCall FuncDef Int                                    -- call p, n
               | FuncCall ArgOp TypeTac FuncDef Int                        -- y =t call p, n
               | Load ArgOp                                                      
-              | Func Int                                                -- func n   
-              | ListDimension ArgOp
-              | ArrayEl ArgOp ArgOp ArgOp                               -- x =t y[i]
-              | AssgmArrayEl ArgOp ArgOp ArgOp                          -- x[i] =t y
-              | ArrayDef TypeTac ArgOp                                  -- Int pippo[3]
-              | ListElem ArgOp                                          -- int a [n] = {...}                                        
+              | Func Int                                                -- func n                               
               | ArgFun ArgOp 
+              | ListDimension ArgOp
+              | ArrayEl TypeTac ArgOp ArgOp                             -- x =t y[i]
+              | AssgmArrayEl TypeTac ArgOp ArgOp ArgOp                  -- x[i] =t y
+              | ArrayDef TypeTac ArgOp                                  -- Int pippo[3]
+              | ListElem ArgOp                                          -- int a [n] = {...}     
+              | AssignAddress ArgOp TypeTac ArgOp                       -- x =t &y
+              | AssignPointer ArgOp TypeTac ArgOp                       -- x =t *y
+              | DerefAssign ArgOp TypeTac ArgOp                         -- *x =t y       
               | NoOperation                                             -- operazione vuota
               | Return ArgOp                                            -- return y
               | Break LabelTac                                          -- break
@@ -159,10 +162,10 @@ printRules (CondRelation a op b lab) =
 --         "call " ++ (funcToString f) ++ " " ++ (argOpToString listArg)
 printRules (VarDecl t a) = 
         (printType t) ++ " " ++ (argOpToString a)
-printRules (ArrayEl a b1 b2) = 
-        (argOpToString a) ++ " = " ++ (argOpToString b1) ++ "[" ++ (argOpToString b2) ++ "]"
-printRules (AssgmArrayEl a index b) = 
-        (argOpToString a) ++ "[" ++ (argOpToString index) ++ "] = " ++ (argOpToString b) 
+printRules (ArrayEl t a b1) = 
+        (printType t) ++ " " ++(argOpToString a) ++ " = " ++ (argOpToString b1) ++ "[" ++ "]"
+printRules (AssgmArrayEl t a index b) = 
+        (printType t) ++ " " ++ (argOpToString a) ++ "[" ++ (argOpToString index) ++ "] = " ++ (argOpToString b) 
 printRules (NoOperation) = 
         " "
 printRules (Return a) = 
