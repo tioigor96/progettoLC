@@ -30,7 +30,7 @@ data RulesTac = AssgmBin TypeTac ArgOp ArgOp BinaryOp ArgOp             -- x = y
               | ListElem ArgOp                                          -- int a [n] = {...}     
               | AssignAddress ArgOp TypeTac ArgOp                       -- x =t &y
               | AssignPointer ArgOp TypeTac ArgOp                       -- x =t *y
-              | DerefAssign ArgOp TypeTac ArgOp                         -- *x =t y       
+              | DerefAssign ArgOp TypeTac ArgOp                         -- *x =t y      
               | NoOperation                                             -- operazione vuota
               | Return ArgOp                                            -- return y
               | Break LabelTac                                          -- break

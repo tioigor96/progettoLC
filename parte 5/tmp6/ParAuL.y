@@ -211,6 +211,7 @@ LIdent : L_LIdent
             ; $$.vlident = LIdent (getLIdentT $1)
             ; $$.addr = NameTac (getString $1) $$.posn
             ; $$.stateout = $$.statein
+            ; $$.code = []
     }
 
 Program : ListPGlobl
@@ -582,6 +583,7 @@ Decl : BasicType LExp VarInit
         $2.envin = (mergeEnv $$.envloc $$.envin)
         ; $3.envin = (mergeEnv $$.envloc $$.envin)
         ; $3.tipo = makeCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree) $1.parsetree
+        ; $2.tipo = makeCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree) $1.parsetree
         ; $$.parsetree = AbsAuL.DeclSP $1.parsetree $2.parsetree $3.parsetree
         ; $$.envout = ( if (isOk (insertEnv $1.parsetree Modality1 $2.parsetree $$.envloc $2.posn))
                          then (fromOk (insertEnv $1.parsetree Modality1 $2.parsetree $$.envloc $2.posn))
@@ -600,8 +602,8 @@ Decl : BasicType LExp VarInit
         ; $$.code = if (isArrayType $$.tipo && $3.parsetree == AbsAuL.VarINil)  then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr))] ++ listDimToTac $2.listDim ++ $2.code
                         else if (isArrayType $$.tipo ) then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr))] ++ listDimToTac $2.listDim ++ $2.code ++ $3.code
 	                    else if $3.parsetree == AbsAuL.VarINil then [(Rules (VarDecl (toTACType $$.tipo) $2.addr))]
-		                        else [(Rules (Assgm (toTACType $$.tipo) $2.addr (gentemp $2.stateout 0)))] ++ $3.code
-                                                        
+                        else if (isPointerType $$.tipo) then $2.code ++ $3.code
+                           else  [(Rules (Assgm (toTACType $$.tipo) $2.addr (gentemp $2.stateout 0)))] ++ $3.code                             
         
     }
 
@@ -626,7 +628,9 @@ VarInit : {- empty -}
         ; $$.tipo = $2.tipo
         ; $2.statein = $$.statein
         ; $$.stateout = $2.stateout
-        ; $$.code = if $2.code == [] then [Rules (Assgm (toTACType $$.tipo) (gentemp $2.statein 0) $2.addr)]
+        ; $$.code = if $2.code == [] then 
+                        if (isPointerType $$.tipo) then [Rules (Assgm (toTACType $$.tipo) (gentemp $2.statein 0) $2.addr)]
+                        else [Rules (Assgm (toTACType $$.tipo) (gentemp $2.statein 0) $2.addr)]
                                      else $2.code
     }
     | '=' Array 
@@ -1231,6 +1235,7 @@ LExp : LIdent
         ; $$.listDim = []
         ; $$.addr = $1.addr
         ; $$.code = $1.code
+        
     }
     | '*' LExp 
     { 
@@ -1239,6 +1244,11 @@ LExp : LIdent
         ; $$.listDim = []
         ; $$.posn = $2.posn
         ; $$.errs = $2.errs
+        ; $2.statein = $$.statein
+        ; $$.stateout = skipState $2.stateout 1 0
+        ; $$.addr = $2.addr 
+        ; $2.tipo = $$.tipo
+        ; $$.code = [(Rules (AssignPointer (gentemp $$.stateout 0) (toTACType $2.tipo) $2.addr ))] ++ $2.code 
     }
     | LIdent ListDim
     { 
@@ -1778,6 +1788,10 @@ RExp11 : Integer --TODO: controlla tipi LEXP e &LEXP: controlla che arr non poss
                                 then ["error at "++ ((showFromPosn . tokenPosn) $1) ++": too many dereferencing refering to '"
                                         ++ ((fromLIdent . getLIdentlexp) $2.parsetree) ++"'"]
                                 else [] )) ++ $2.errs
+        ; $2.statein = $$.statein
+        ; $$.stateout = $2.stateout 
+        ; $$.code =  [(Rules (AssignAddress (gentemp $$.stateout 0) (toTACType $$.tipo) $2.addr))]  
+        
     }
     | Double --modded
     { 

@@ -270,3 +270,7 @@ addrUnOp type1 addr1 state op =
 isArrayType :: CmpType ->Bool
 isArrayType (ArrT _) = True
 isArrayType _ = False
+
+isPointerType :: CmpType ->Bool
+isPointerType (PtrT _) = True
+isPointerType _ = False
