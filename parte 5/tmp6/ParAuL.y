@@ -176,7 +176,7 @@ L_LIdent { PT _ (T_LIdent _) }
 %attribute addr { ArgOp }
 %attribute nextLabel { LabelTac }
 %attribute listDim { [ArgOp] }
-
+%attribute listElem { [ArgOp] }
 
 %%
 
@@ -633,16 +633,20 @@ VarInit : {- empty -}
     { 
         $$.parsetree = AbsAuL.VarMat $2.parsetree
         ; $$.errs  = (controlArrTipo $$.tipo $2.parsetree $1)
+        ; $$.code = listElemToTac $2.listElem
     }
 
 
 Array : '{' ListArray '}'
     { 
         $$.parsetree = AbsAuL.ArrayV0 $2.parsetree 
+        ; $$.listElem = $2.listElem
+        ; $$.code = listElemToTac $2.listElem
     }
     | '{' ListVType '}' 
     { 
         $$.parsetree = AbsAuL.ArrayV1 $2.parsetree 
+        ; $$.listElem = $2.listElem
     }
 VType : Boolean 
     { 
@@ -683,18 +687,22 @@ VType : Boolean
 ListVType : VType 
     { 
         $$.parsetree = (:[]) $1.parsetree 
+        ; $$.listElem = [$1.addr]
     } 
     | VType ',' ListVType 
     { 
         $$.parsetree = (:) $1.parsetree $3.parsetree 
+        ; $$.listElem = (:) $1.addr $3.listElem 
     }
 ListArray : Array 
     { 
         $$.parsetree = (:[]) $1.parsetree 
+        ; $$.listElem = $1.listElem
     } 
     | Array ',' ListArray 
     { 
         $$.parsetree = (:) $1.parsetree $3.parsetree
+        ; $$.listElem = $1.listElem ++ $3.listElem 
     }
 
 --  ========================

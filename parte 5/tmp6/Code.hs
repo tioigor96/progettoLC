@@ -28,6 +28,10 @@ listDimToTac :: [(ArgOp)] -> [TAC]
 listDimToTac [] = []
 listDimToTac (x:xs) = (Rules (ListDimension x)): listDimToTac xs
 
+listElemToTac :: [(ArgOp)] -> [TAC]
+listElemToTac [] = []
+listElemToTac (x:xs) = (Rules (ListElem x)): listElemToTac xs
+
 getString :: Token -> String
 getString (PT _ (TS s _)) = s
 getString (PT _ (TL s)) = s

@@ -25,7 +25,8 @@ data RulesTac = AssgmBin TypeTac ArgOp ArgOp BinaryOp ArgOp             -- x = y
               | ListDimension ArgOp
               | ArrayEl ArgOp ArgOp ArgOp                               -- x =t y[i]
               | AssgmArrayEl ArgOp ArgOp ArgOp                          -- x[i] =t y
-              | ArrayDef TypeTac ArgOp                               -- Int pippo[3]
+              | ArrayDef TypeTac ArgOp                                  -- Int pippo[3]
+              | ListElem ArgOp                                          -- int a [n] = {...}                                        
               | ArgFun ArgOp 
               | NoOperation                                             -- operazione vuota
               | Return ArgOp                                            -- return y
