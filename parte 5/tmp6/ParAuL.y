@@ -750,6 +750,7 @@ Ass : LExp '=' RExp -- TODO: finisci errori
         ; $3.statein = $1.stateout
         ; $$.stateout = skipState $3.stateout 0 2
         ; $$.code = [(Rules (Assgm (toTACType $$.tipo) $1.addr (gentemp $3.statein 0)))] ++ 
+                    (if (null $1.listDim) then [] else listDimToTac $1.listDim) ++
                     [(Rules (Assgm (toTACType $$.tipo) (gentemp $3.statein 0) $3.addr))] ++ $3.code
     }
     
@@ -1250,7 +1251,7 @@ LExp : LIdent
         ; $$.stateout = $2.stateout
         ; $$.addr = $1.addr
         ; $$.listDim = $2.listDim    
-        ; $$.code = $2.code   
+        ; $$.code = $2.code 
         
     }
 
