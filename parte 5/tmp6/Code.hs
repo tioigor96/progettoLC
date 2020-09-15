@@ -24,6 +24,14 @@ paramToTac :: [(ParamF,Posn,String)] ->  [TAC]
 paramToTac [] = []
 paramToTac ((_ , psn, id ):xs)  = (Rules (ArgFun (NameTac id psn))) : paramToTac xs  
 
+listDimToTac :: [(ArgOp)] -> [TAC]
+listDimToTac [] = []
+listDimToTac (x:xs) = (Rules (ListDimension x)): listDimToTac xs
+
+listElemToTac :: [(ArgOp)] -> [TAC]
+listElemToTac [] = []
+listElemToTac (x:xs) = (Rules (ListElem x)): listElemToTac xs
+
 getString :: Token -> String
 getString (PT _ (TS s _)) = s
 getString (PT _ (TL s)) = s
@@ -258,3 +266,11 @@ addrUnOp type1 addr1 state op =
     if (type1 == toAritm type1)
       then (gentemp state 1)
       else (gentemp state 2)
+
+isArrayType :: CmpType ->Bool
+isArrayType (ArrT _) = True
+isArrayType _ = False
+
+isPointerType :: CmpType ->Bool
+isPointerType (PtrT _) = True
+isPointerType _ = False

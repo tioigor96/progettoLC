@@ -175,7 +175,8 @@ L_LIdent { PT _ (T_LIdent _) }
 %attribute stateout { State }
 %attribute addr { ArgOp }
 %attribute nextLabel { LabelTac }
-
+%attribute listDim { [ArgOp] }
+%attribute listElem { [ArgOp] }
 
 %%
 
@@ -210,6 +211,7 @@ LIdent : L_LIdent
             ; $$.vlident = LIdent (getLIdentT $1)
             ; $$.addr = NameTac (getString $1) $$.posn
             ; $$.stateout = $$.statein
+            ; $$.code = []
     }
 
 Program : ListPGlobl
@@ -581,6 +583,7 @@ Decl : BasicType LExp VarInit
         $2.envin = (mergeEnv $$.envloc $$.envin)
         ; $3.envin = (mergeEnv $$.envloc $$.envin)
         ; $3.tipo = makeCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree) $1.parsetree
+        ; $2.tipo = makeCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree) $1.parsetree
         ; $$.parsetree = AbsAuL.DeclSP $1.parsetree $2.parsetree $3.parsetree
         ; $$.envout = ( if (isOk (insertEnv $1.parsetree Modality1 $2.parsetree $$.envloc $2.posn))
                          then (fromOk (insertEnv $1.parsetree Modality1 $2.parsetree $$.envloc $2.posn))
@@ -595,8 +598,12 @@ Decl : BasicType LExp VarInit
         ; $3.statein = $2.stateout
         ; $$.stateout = if $3.parsetree == AbsAuL.VarINil then $3.stateout
                         else skipState $2.stateout 1 0
-        ; $$.code = if $3.parsetree == AbsAuL.VarINil then [(Rules (VarDecl (toTACType $$.tipo) $2.addr))]
-                                                      else [(Rules (Assgm (toTACType $$.tipo) $2.addr (gentemp $2.stateout 0)))]  ++ $3.code
+
+        ; $$.code = if (isArrayType $$.tipo && $3.parsetree == AbsAuL.VarINil)  then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr))] ++ listDimToTac $2.listDim ++ $2.code
+                        else if (isArrayType $$.tipo ) then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr))] ++ listDimToTac $2.listDim ++ $2.code ++ $3.code
+	                    else if $3.parsetree == AbsAuL.VarINil then [(Rules (VarDecl (toTACType $$.tipo) $2.addr))]
+                        else if (isPointerType $$.tipo) then $2.code ++ $3.code
+                           else  [(Rules (Assgm (toTACType $$.tipo) $2.addr (gentemp $2.stateout 0)))] ++ $3.code                             
         
     }
 
@@ -621,23 +628,29 @@ VarInit : {- empty -}
         ; $$.tipo = $2.tipo
         ; $2.statein = $$.statein
         ; $$.stateout = $2.stateout
-        ; $$.code = if $2.code == [] then [Rules (Assgm (toTACType $$.tipo) (gentemp $2.statein 0) $2.addr)]
+        ; $$.code = if $2.code == [] then 
+                        if (isPointerType $$.tipo) then [Rules (Assgm (toTACType $$.tipo) (gentemp $2.statein 0) $2.addr)]
+                        else [Rules (Assgm (toTACType $$.tipo) (gentemp $2.statein 0) $2.addr)]
                                      else $2.code
     }
     | '=' Array 
     { 
         $$.parsetree = AbsAuL.VarMat $2.parsetree
         ; $$.errs  = (controlArrTipo $$.tipo $2.parsetree $1)
+        ; $$.code = listElemToTac $2.listElem
     }
 
 
 Array : '{' ListArray '}'
     { 
         $$.parsetree = AbsAuL.ArrayV0 $2.parsetree 
+        ; $$.listElem = $2.listElem
+        ; $$.code = listElemToTac $2.listElem
     }
     | '{' ListVType '}' 
     { 
         $$.parsetree = AbsAuL.ArrayV1 $2.parsetree 
+        ; $$.listElem = $2.listElem
     }
 VType : Boolean 
     { 
@@ -678,18 +691,22 @@ VType : Boolean
 ListVType : VType 
     { 
         $$.parsetree = (:[]) $1.parsetree 
+        ; $$.listElem = [$1.addr]
     } 
     | VType ',' ListVType 
     { 
         $$.parsetree = (:) $1.parsetree $3.parsetree 
+        ; $$.listElem = (:) $1.addr $3.listElem 
     }
 ListArray : Array 
     { 
         $$.parsetree = (:[]) $1.parsetree 
+        ; $$.listElem = $1.listElem
     } 
     | Array ',' ListArray 
     { 
         $$.parsetree = (:) $1.parsetree $3.parsetree
+        ; $$.listElem = $1.listElem ++ $3.listElem 
     }
 
 --  ========================
@@ -737,6 +754,7 @@ Ass : LExp '=' RExp -- TODO: finisci errori
         ; $3.statein = $1.stateout
         ; $$.stateout = skipState $3.stateout 0 2
         ; $$.code = [(Rules (Assgm (toTACType $$.tipo) $1.addr (gentemp $3.statein 0)))] ++ 
+                    (if (null $1.listDim) then [] else listDimToTac $1.listDim) ++
                     [(Rules (Assgm (toTACType $$.tipo) (gentemp $3.statein 0) $3.addr))] ++ $3.code
     }
     
@@ -1214,15 +1232,23 @@ LExp : LIdent
         ; $$.errs = []
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
+        ; $$.listDim = []
         ; $$.addr = $1.addr
         ; $$.code = $1.code
+        
     }
     | '*' LExp 
     { 
         $2.envin = $$.envin
         ; $$.parsetree = AbsAuL.LExpDR $2.parsetree 
+        ; $$.listDim = []
         ; $$.posn = $2.posn
         ; $$.errs = $2.errs
+        ; $2.statein = $$.statein
+        ; $$.stateout = skipState $2.stateout 1 0
+        ; $$.addr = $2.addr 
+        ; $2.tipo = $$.tipo
+        ; $$.code = [(Rules (AssignPointer (gentemp $$.stateout 0) (toTACType $2.tipo) $2.addr ))] ++ $2.code 
     }
     | LIdent ListDim
     { 
@@ -1230,6 +1256,13 @@ LExp : LIdent
         ; $$.parsetree = AbsAuL.LExpA $1.vlident $2.parsetree
         ; $$.posn = $1.posn
         ; $$.errs = $2.errs
+        ; $1.statein = $$.statein
+        ; $2.statein = $1.stateout
+        ; $$.stateout = $2.stateout
+        ; $$.addr = $1.addr
+        ; $$.listDim = $2.listDim    
+        ; $$.code = $2.code 
+        
     }
 
 ListDim : Dim 
@@ -1237,6 +1270,11 @@ ListDim : Dim
         $1.envin = $$.envin
         ; $$.parsetree = (:[]) $1.parsetree 
         ; $$.errs = $1.errs
+        ; $1.statein = $$.statein
+        ; $$.stateout = $1.stateout
+        ; $$.code = $1.code
+        ; $$.listDim = $1.listDim
+        
     } 
     | Dim ListDim 
     { 
@@ -1244,6 +1282,12 @@ ListDim : Dim
         ; $2.envin = $$.envin
         ; $$.parsetree = (:) $1.parsetree $2.parsetree
         ; $$.errs = $1.errs ++ $2.errs
+        ; $1.statein = $$.statein
+        ; $2.statein = $1.stateout
+        ; $$.stateout = $2.stateout
+        ; $$.code = $1.code ++ $2.code
+        ; $$.listDim = (:) $1.addr $2.listDim 
+        
     }
 
 Dim : '[' RExp ']' --VARA CHE GNOCCA STA COMPARAZIONE!!
@@ -1253,6 +1297,11 @@ Dim : '[' RExp ']' --VARA CHE GNOCCA STA COMPARAZIONE!!
         ; $$.errs = if (op2CompType EqO $2.tipo (Base BasicType_Int)) == ErrT
                        then ["error at "++ ((showFromPosn . tokenPosn) $1) ++ ": type for arrays referencing need to be 'Int'!"]
                        else []
+        ; $2.statein = $$.statein
+        ; $$.stateout = $2.stateout
+        ; $$.code = $2.code
+        ; $$.addr = $2.addr
+        ; $$.listDim = [$2.addr]
     }
 
 --  ========================
@@ -1655,6 +1704,7 @@ RExp10 : Func
         ; $$.code = $1.code 
     }
     | RExp10 '..' RExp11
+    --TODO: assegnamento funzione
     {
         $1.envin = $$.envin
         ; $3.envin = $$.envin
@@ -1663,9 +1713,10 @@ RExp10 : Func
         ; $$.errs = (if (op2CompType ConcatO $1.tipo $3.tipo) == ErrT
                         then ["error at "++ ((showFromPosn . tokenPosn) $2) ++": '..' need to have 'Char'(s) or 'String'(s) as arguments!"]
                         else []) ++ $1.errs ++ $3.errs 
-        
+        ; $$.code = $1.code ++ [(Rules(ProcCall (InternalFunc "concat") 1))] ++ $3.code  
     }
     | '#' RExp11
+    --TODO: assegnamento funzione
     { 
         $2.envin = $$.envin
         ; $$.parsetree = AbsAuL.FLen $2.parsetree
@@ -1673,6 +1724,7 @@ RExp10 : Func
         ; $$.errs = (if (op1CompType SizeO $2.tipo) == ErrT
                         then ["error at "++ ((showFromPosn . tokenPosn) $1) ++": '#' need to have Arrays or Pointer as argument!"]
                         else []) ++ $2.errs 
+        ; $$.code = [(Rules(ProcCall (InternalFunc "lenght") 1))] ++ $2.code  
     }
     | RExp11 
     { 
@@ -1715,7 +1767,9 @@ RExp11 : Integer --TODO: controlla tipi LEXP e &LEXP: controlla che arr non poss
                                         ((fromLIdent . getLIdentlexp) $1.parsetree) ++"'"]
                                 else [] ))
         ; $$.addr = $1.addr
-        ; $$.code = []
+        ; $$.code = if (not $ null $1.listDim) then [(Rules (ArrayEl (toTACType $$.tipo) (gentemp $$.stateout 0) $$.addr))] ++
+                                                    listDimToTac $1.listDim  
+                                               else []
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
     }
@@ -1734,6 +1788,10 @@ RExp11 : Integer --TODO: controlla tipi LEXP e &LEXP: controlla che arr non poss
                                 then ["error at "++ ((showFromPosn . tokenPosn) $1) ++": too many dereferencing refering to '"
                                         ++ ((fromLIdent . getLIdentlexp) $2.parsetree) ++"'"]
                                 else [] )) ++ $2.errs
+        ; $2.statein = $$.statein
+        ; $$.stateout = $2.stateout 
+        ; $$.code =  [(Rules (AssignAddress (gentemp $$.stateout 0) (toTACType $$.tipo) $2.addr))]  
+        
     }
     | Double --modded
     { 
