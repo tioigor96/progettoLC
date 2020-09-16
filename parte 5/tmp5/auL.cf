@@ -105,7 +105,6 @@ LoopR.         Repeat ::= "repeat" Block "until" RExp;
 LoopF.         For ::= "for" LIdent "=" RExp "," RExp Increment EBlk ;
 FIncE.         Increment ::= {- empty, assumiamo 1 -};
 FInc.          Increment ::= "," RExp ;
-LoopFE.        For ::= "for" LIdent "in" LIdent EBlk;
 
 
 ------------
@@ -169,13 +168,13 @@ Or.            RExp ::= RExp "or" RExp1;
 And.           RExp ::= RExp1 "and" RExp2;
 Not.           RExp2 ::= "not" RExp3;
 
-Eq.            RExp3 ::= RExp3 "==" RExp5;
-Neq.           RExp3 ::= RExp3 "~=" RExp5;
-Lt.            RExp3 ::= RExp3 "<"  RExp5;
-LtE.           RExp3 ::= RExp3 "<=" RExp5;
-Gt.            RExp3 ::= RExp3 ">"  RExp5;
-GtE.           RExp3 ::= RExp3 ">=" RExp5;
+Eq.            RExp3 ::= RExp5 "==" RExp5;
+Neq.           RExp3 ::= RExp5 "~=" RExp5;
+Lt.            RExp3 ::= RExp5 "<"  RExp5;
+LtE.           RExp3 ::= RExp5 "<=" RExp5;
+Gt.            RExp3 ::= RExp5 ">"  RExp5;
 
+GtE.           RExp3 ::= RExp5 ">=" RExp5;
 Add.           RExp6 ::= RExp6 "+" RExp7;
 Sub.           RExp6 ::= RExp6 "-" RExp7;
 

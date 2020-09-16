@@ -108,7 +108,6 @@ import Env
   'for' { PT _ (TS _ 36) }
   'function' { PT _ (TS _ 37) }
   'if' { PT _ (TS _ 38) }
-  'in' { PT _ (TS _ 39) }
   'local' { PT _ (TS _ 40) }
   'name' { PT _ (TS _ 41) }
   'nil' { PT _ (TS _ 42) }
@@ -736,10 +735,6 @@ For : 'for' LIdent '=' RExp ',' RExp Increment EBlk --modded
                         else ["error at "++ (showFromPosn $2.posn) ++": incompatible types in 'for' loop conditions!"])
                                ++ $4.errs ++ $6.errs ++ $7.errs ++ $8.errs
     }
-    | 'for' LIdent 'in' LIdent EBlk --modded
-    { 
-        $$.parsetree = AbsAuL.LoopFE $2.vlident $4.vlident $5.parsetree 
-    }
 Increment : {- empty -} -- per l'appunto, assumiamo sia 1 l'incremento
     { 
         $$.parsetree = AbsAuL.FIncE
@@ -1038,7 +1033,7 @@ RExp2 : 'not' RExp3
         ; $$.errs = $1.errs
         ; $$.tipo = $1.tipo 
     }
-RExp3 : RExp3 '==' RExp5 
+RExp3 : RExp5 '==' RExp5 
     { 
         $1.envin = $$.envin
         ; $3.envin = $$.envin
@@ -1048,7 +1043,7 @@ RExp3 : RExp3 '==' RExp5
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '==' operations!"]) ++ $1.errs ++ $3.errs
         ; $$.tipo = Base BasicType_Bool 
     }
-    | RExp3 '~=' RExp5 
+    | RExp5 '~=' RExp5 
     { 
         $1.envin = $$.envin
         ; $3.envin = $$.envin
@@ -1058,7 +1053,7 @@ RExp3 : RExp3 '==' RExp5
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '~=' operations!"]) ++ $1.errs ++ $3.errs
         ; $$.tipo = Base BasicType_Bool 
     }
-    | RExp3 '<' RExp5 
+    | RExp5 '<' RExp5 
     { 
         $1.envin = $$.envin
         ; $3.envin = $$.envin
@@ -1068,7 +1063,7 @@ RExp3 : RExp3 '==' RExp5
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '<' operations!"]) ++ $1.errs ++ $3.errs
         ; $$.tipo = Base BasicType_Bool
     }
-    | RExp3 '<=' RExp5 
+    | RExp5 '<=' RExp5 
     { 
         $1.envin = $$.envin
         ; $3.envin = $$.envin
@@ -1078,7 +1073,7 @@ RExp3 : RExp3 '==' RExp5
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '<=' operations!"]) ++ $1.errs ++ $3.errs
         ; $$.tipo = Base BasicType_Bool
     }
-    | RExp3 '>' RExp5 
+    | RExp5 '>' RExp5 
     { 
         $1.envin = $$.envin
         ; $3.envin = $$.envin
@@ -1088,7 +1083,7 @@ RExp3 : RExp3 '==' RExp5
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '>' operations!"]) ++ $1.errs ++ $3.errs
         ; $$.tipo = Base BasicType_Bool
     }
-    | RExp3 '>=' RExp5 
+    | RExp5 '>=' RExp5 
     { 
         $1.envin = $$.envin
         ; $3.envin = $$.envin
