@@ -187,6 +187,12 @@ isArrT :: CmpType -> Bool
 isArrT (ArrT _) = True
 isArrT _ = False
 
+isErrT :: CmpType -> Bool
+isErrT (PtrT t) = isErrT t
+isErrT (ArrT t) = isErrT t
+isErrT ErrT = True
+isErrT (Base _) = False
+
 -- prende quante dimensioni ha un array!
 getArrTLev (ArrT x) = 1 + getArrTLev x
 getArrTLev _ = 0
@@ -246,31 +252,39 @@ showCmpType (ErrT) = "Undefined"
 -----TIPI-----
 --------------
 
--- controllo compatibilità tipi per assegnamenti
--- tipi canonici
+-- controllo compatibilità tipi per assegnamenti strict
+compStrictCmpType :: CmpType -> CmpType -> CmpType
+compStrictCmpType (Base BasicType_Int) (Base BasicType_Int) = Base BasicType_Int
+compStrictCmpType (Base BasicType_Float) (Base BasicType_Float) = Base BasicType_Float
+compStrictCmpType (Base BasicType_Bool) (Base BasicType_Bool) = Base BasicType_Bool
+compStrictCmpType (Base BasicType_Char) (Base BasicType_Char) = Base BasicType_Char
+compStrictCmpType (Base BasicType_String) (Base BasicType_String) = Base BasicType_String
+compStrictCmpType (ArrT (Base BasicType_Char)) (Base BasicType_String) = (ArrT (Base BasicType_Char))
+compStrictCmpType (PtrT (Base BasicType_Char)) (Base BasicType_String) = (PtrT (Base BasicType_Char))
+compStrictCmpType (PtrT t1) (PtrT t2) = PtrT (compStrictCmpType t1 t2)
+compStrictCmpType (ArrT t1) (ArrT t2) = ArrT (compStrictCmpType t1 t2)
+compStrictCmpType (PtrT t1) (ArrT t2) = PtrT (compStrictCmpType t1 t2)
+compStrictCmpType _ _ = ErrT
+
+-- tipi canonici aperto
 compCmpType :: CmpType -> CmpType -> CmpType
 compCmpType (Base BasicType_Int) (Base BasicType_Int) = Base BasicType_Int
 compCmpType (Base BasicType_Float) (Base BasicType_Float) = Base BasicType_Float
 compCmpType (Base BasicType_Bool) (Base BasicType_Bool) = Base BasicType_Bool
 compCmpType (Base BasicType_Char) (Base BasicType_Char) = Base BasicType_Char
 compCmpType (Base BasicType_String) (Base BasicType_String) = Base BasicType_String
-compCmpType (PtrT t1) (PtrT t2) = PtrT (compCmpType t1 t2)
-compCmpType (ArrT t1) (ArrT t2) = ArrT (compCmpType t1 t2)
 -- compatibilità tra tipi eterogenei
--- compCmpType (Base x) (Base BasicType_Void) = Base x
--- compCmpType (Base BasicType_Void) (Base x) = Base x
 compCmpType (Base BasicType_Float) (Base BasicType_Int) = Base BasicType_Float
-compCmpType (ArrT (Base BasicType_Char)) (Base BasicType_String) = (ArrT (Base BasicType_Char))
-compCmpType (PtrT (Base BasicType_Char)) (Base BasicType_String) = (PtrT (Base BasicType_Char)) 
--- compCmpType (Base BasicType_Int) (Base BasicType_Float) = Base BasicType_Float
--- compCmpType (Base BasicType_String) (Base BasicType_Char) = Base BasicType_String
--- compCmpType (Base BasicType_Char) (Base BasicType_String) = Base BasicType_String
---tipi ricorsivi PtrT e ArrT
--- compCmpType (ArrT t1) (PtrT t2) = compCmpType t1 t2                          -- da ptr a arr no!
-compCmpType (PtrT t1) (ArrT t2) = PtrT (compCmpType t1 t2)                      -- da arr a ptr si!
--- gestione errori
--- compCmpType x ErrT = x                                                          
--- compCmpType ErrT x = x
+--tipi ricorsivi PtrT e ArrT                         -- da ptr a arr no!
+compCmpType (PtrT t1) (PtrT t2) 
+        | isErrT (compStrictCmpType (PtrT t1) (PtrT t2)) = ErrT
+        | otherwise = (compStrictCmpType (PtrT t1) (PtrT t2))
+compCmpType (ArrT t1) (ArrT t2) 
+        | isErrT (compStrictCmpType (ArrT t1) (ArrT t2)) = ErrT
+        | otherwise = (compStrictCmpType (PtrT t1) (PtrT t2))
+compCmpType (PtrT t1) (ArrT t2)                                                 -- da arr a ptr si!
+        | isErrT (compStrictCmpType (PtrT t1) (ArrT t2))  = ErrT
+        | otherwise = (compStrictCmpType (PtrT t1) (ArrT t2))
 compCmpType t1 t2                                                               -- posso assegnare nil a *tipo
     | (isPtrT t1) && (not (isArrT t1)) && (t2 == (Base BasicType_Void)) = t1
 compCmpType _ _ = ErrT

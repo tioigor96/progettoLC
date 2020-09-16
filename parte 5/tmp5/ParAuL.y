@@ -436,7 +436,10 @@ Decl : BasicType LExp VarInit
                          then ["error at "++ (showFromPosn $2.posn) ++": variable " ++ 
                                 (fromBad (insertEnv $1.parsetree Modality1 $2.parsetree $$.envloc $2.posn))]
                          else []
-                        ) ++ $2.errs ++ $3.errs
+                        ) ++ $2.errs ++ $3.errs ++
+                    (if ($1.parsetree == BasicType_Void)
+                        then ["error at "++ (showFromPosn $2.posn) ++": variable type is 'Void', type not permitted!"]
+                        else [])
                             
     }
 
@@ -848,9 +851,7 @@ RValue : {- empty -}
                         then (if ((getTypeR . fromJust) (lookupEnv "return" $$.envloc) == ErrT)
                                  then ["error at " ++ (showFromPosn $$.posn) ++ ": return is Void, but given expression's type is '" ++
                                         (showCmpType $1.tipo) ++ "'"]
-                                 else (if ((==) 
-                                            (compCmpType ((getTypeR . fromJust) (lookupEnv "return" $$.envloc)) $1.tipo)
-                                            ((getTypeR . fromJust) (lookupEnv "return" $$.envloc)))
+                                 else (if (not (ErrT == (compCmpType ((getTypeR . fromJust) (lookupEnv "return" $$.envloc)) $1.tipo)))
                                           then []
                                           else ["error at "++ (showFromPosn $$.posn) ++ ": return need '"++ 
                                                 (showCmpType ((getTypeR . fromJust) (lookupEnv "return" $$.envloc))) ++
@@ -886,7 +887,11 @@ FuncD : CompoundType 'function' LIdent '(' ListParamF ')' BlockF 'end'
                          else $$.envloc
         ; $$.errs = (if (isBad (insertFnctEnv $1.parsetree $3.vlident $5.listparf $3.posn $$.envloc))
                          then [(fromBad (insertFnctEnv $1.parsetree $3.vlident $5.listparf $3.posn $$.envloc))]
-                         else []) ++ $7.errs
+                         else []) ++ $7.errs ++
+                    (if((getBaseComType $1.parsetree)== BasicType_Void && ( (getArrComType $1.parsetree) > 0 || (getPtrComType $1.parsetree) > 0))
+                        then ["error at " ++((showFromPosn . tokenPosn) $2) ++": erroneus definition of function type. Maybe you "++
+                              "would define it as Int, Float,...?"]
+                        else [])
          
     }
 ParamF : Modality BasicType LExp 
