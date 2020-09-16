@@ -8,10 +8,15 @@
 \usetikzlibrary{arrows.meta,positioning,matrix}
 
 \usepackage{listings}
+\usepackage{graphicx}
+\usepackage{pdfpages}
 
 \begin{document}
 
-\maketitle
+\pagenumbering{gobble}
+\includepdf[pages={1}]{testa.pdf}
+\pagenumbering{arabic}
+\setcounter{page}{1}
 
 \section{Scelte implementative}
 L'implementazione del auL, seppur semplice, denota alcune particolarità, dovuta, tra le altre cose, a voler utilizzare
@@ -49,13 +54,12 @@ Le parole riservate in auL sono:
   String     Void       and         break
   const      do         else        elseif
   end        false      for         function
-  if         in         local       name
-  nil        not        or          readChar
-  readFloat  readInt    readString  ref
-  repeat     res        return      then
-  true       until      val         valres
-  while      writeChar  writeFloat  writeInt
-  writeString
+  if         local      name        nil
+  not        or         readChar    readFloat
+  readInt    readString ref         repeat
+  res        return     then        true
+  until      val        valres      while
+  writeChar  writeFloat writeInt    writeString
 \end{verbatim}
 
 \subsection*{Simboli riservati}
@@ -77,9 +81,166 @@ Sono presenti sia commenti in-line che commenti multi-line. Sono definiti quindi
 "--[" ("=")* "[" ([$u # [\]]])* ("]") ("=")* "]" ;
 \end{verbatim}
 
+\section{Sintassi di auL}
+In auL un programma è definito come una lista non vuota di statement o funzioni.
+\begin{verbatim}
+  Program ::= [PGlobl] ;
+  PGlobl ::= Stm ;
+  PGlobl ::= FuncD ;
+\end{verbatim}
+
+Le dichiarazioni di entità dell'ambiente sono definite quindi come \texttt{Decl}, \texttt{Local}, ed in ambiente globale,
+come \texttt{FuncD}:
+\begin{verbatim}
+  Decl ::= BasicType LExp VarInit ;
+
+  BasicType ::= "Bool" | "Char" | "Float" 
+              | "Int" | "String" | "Void" ;
+  
+  LExp ::= LIdent | "*" LExp | LIdent [Dim] ;
+
+  Dim ::= "[" RExp "]" ;
+
+  VarInit ::= {- empty -} | "=" RExp | "=" Array ;
+
+  Array ::= "{" [Array] "}" | "{" [VType] "}" ;
+
+-- le regole interne a VType sono valori assumibili
+  VType ::= Boolean | Char | Double | Integer | String | PtrVoid;
+  
+  Local ::= "local" Decl;
+  
+  FuncD ::= CompoundType "function" LIdent "(" [ParamF] ")" Block "end";
+
+  ParamF ::= Modality BasicType LExp;
+
+  CompoundType ::= BasicType | "*"  CompoundType 
+                 |  BasicType [Bracks] ;
+  Bracks ::= "[" "]";
+\end{verbatim}
+Nella manipolazione della left expression, si dà priorità alla dereferenziazione come array, per essere
+seguita dalla dereferenziazione per ``\texttt{*}''. Se fosse possibile operare con i puntatori, sommando
+o moltiplicando, la dereferenziazione come array sarebbe zucchero sintattico per l'espressione \texttt{*(*(Ptr +i)+j)} .
+
+Gli statement sono definiti come:
+\begin{verbatim}
+  Stm ::= Decl ";";
+  Stm ::= Local ";";
+  Stm ::= LExp "=" RExp ";";
+  Stm ::= "while" RExp EBlk ;
+  Stm ::= "repeat" Block "until" RExp ";";
+  
+  Stm ::= "for" LIdent "=" RExp "," RExp Increment EBlk ;
+  Increment ::= {-empty-} | "," RExp ;
+  
+  Stm ::= "if" RExp "then" Block [ElseIf] Else "end" ;
+  ElseIf ::={-empty-} | "elseif" RExp "then" Block ;
+  Else ::={-empty-} | "else" Block;
+  
+  Stm ::= FuncWrite ";" | FuncRead ";" | Func ";";
+  FuncWrite ::= "writeInt" "(" RExp ")"
+              | "writeFloat" "(" RExp ")"
+              | "writeChar" "(" RExp ")"
+              | "writeString" "(" RExp ")";
+  FuncRead  ::= "readInt" "(" ")"
+              | "readFloat" "(" ")"
+              | "readChar" "(" ")"
+              | "readString" "(" ")";
+  Func      ::= LIdent "(" [RExp] ")";
+  
+  Stm ::= EBlk ;
+  EBlk ::= "do" Block "end";
+  
+  Stm ::= "return" RValue ";";
+  Stm ::= "break" ";";
+  
+  Block ::= [Stm];
+  
+  
+\end{verbatim}
+
+Per motivi di getsione dell'ambiente si è deciso di definire una regola fittizia (e quindi non presente in BNFC ma solo
+in Happy) di \texttt{Block}: questa permette quindi di controllare e gestire il return nelle funzioni. Il blocco definito
+all'interno di uno statement o dichiarazione di funzione è valido anche se vuoto, mentre la lista \texttt{PGlob} non sarà
+mai accettata se non è presente almeno uno statement o una funzione. Lo statement di \texttt{return} diventa, quindi, 
+disponibile solo all'interno di funzioni.
+
+Il \texttt{break} viene reso disponibile all'utilizzo solo all'interno di cicli.
+
+Si nota quindi come non sia possibile eseguire in qualunque ambiente la sola esecuzione di una right expression, ma si
+possa eseguire qualunque genere di funzione.
+
+Il \texttt{For} ha opzionale la parte di \texttt{Increment}: nel caso in cui non sia presente si assume che l'incremento
+sia di \texttt{1 : Int}.
+
+La condizione di iterazione per il \texttt{for}
+\begin{verbatim}
+  for a = 1,10,2 do
+    [Stm]
+  end
+\end{verbatim}
+diventa quindi equivalente alla scrittura
+\begin{verbatim}
+  Int a = 1;  
+  while (a < 10) do
+    [Stm]
+  end
+\end{verbatim}
+
+Il linguaggio prende autonomamente, nel caso del for, come tipo per l'etichetta \texttt{LIdent} il tipo definito nelle
+espressioni associate. Nulla vieta di utilizzare delle funzioni come condizioni, basta che queste rispettino il tipo
+tra loro.
+~\\
+
+Le right expression sono definite quindi come segue:
+\begin{verbatim}
+  Rexp ::= RExp Op2 RExp
+         | Op1 Rexp
+         | FuncRead
+         | Func         
+         | LExp
+         | ::Integer::
+         | ::Float::
+         | ::String::
+         | ::Char::
+         | nil
+         | true
+         | false
+         | ( RExp ) ;
+         
+  Op2 ::= or | and
+        | == | ~= | > | < | >= | <=
+        | + | - | * | / | % | ^
+        | .. ;
+  
+  Op1 ::= not
+        | -
+        | # ; 
+\end{verbatim}
+
+Mostriamo quindi le associatibità e le precedenze per ogni operatore.\\
+Partiamo dagli operatori unari:
+
+\begin{table}[h]
+\begin{tabular}{lcr}
+\hline
+Operatore                                                               & Precedenza & Associatività   \\ \hline\hline
+or                                                                      & 1          & sx              \\
+and                                                                     & 2          & sx              \\
+not                                                                     & 3          & sx              \\
+==, $\sim$=, \textgreater{}, \textgreater{}=, \textless{}, \textless{}= & 4          & non associativo \\
++, -                                                                    & 5          & sx              \\
+$*$, /, \%                                                                & 6          & sx              \\
+\textasciicircum{}                                                      & 7          & dx              \\
+- (unario)                                                              & 8          & sx              \\
+\#                                                                      & 9          & sx              \\
+\&                                                                      & 10         & sx              \\ \hline
+\end{tabular}
+\end{table}
+
 \section{Scoping e binding  di auL}
 Lo scoping di auL è prettamente statico, similmente a C. È possibile definire quindi sole funzioni ricorsive semplici
-e non mutuamente ricorsive. Lo scoping del linguaggio, essendo compilato, è statico.
+e non mutuamente ricorsive. Il binding del linguaggio, essendo compilato, è statico.
 
 La visibilità dei nomi, siano queste di funzioni o di variabili, è immediatamente successivo alla loro dichiarazione 
 ed a tutti i loro blocchi innestati (a meno di redifinizione nei suoi blocchi). È possibile bypassare la definizione 
