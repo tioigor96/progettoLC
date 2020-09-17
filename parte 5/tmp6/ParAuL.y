@@ -195,7 +195,7 @@ Double : L_doubl   {
       		  ; $$.stateout = $$.statein
             }
 String : L_quoted  {
-              $$.vstr = $1 
+              $$.vstr = $1
               ; $$.tipo = Base BasicType_String
       		  ; $$.addr = TempTac ((read $1) :: String)
       		  ; $$.stateout = $$.statein  
@@ -450,36 +450,39 @@ Stm : Decl ';' -- nextLabel da gestire per lazyness in varinit
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code
     }
-    | While -- nextLabel da gestire
+    | While 
     { 
         $1.envin = $$.envin
         ; $1.envloc = $$.envloc
         ; $$.parsetree = AbsAuL.SWhile $1.parsetree
         ; $$.envout = $1.envout
         ; $$.errs = $1.errs
-        ; $1.statein = $$.statein
+        ; $1.nextLabel = genlabel $$.statein 0
+        ; $1.statein = skipState $$.statein 0 1
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code
     }
-    | Repeat ';'  -- nextLabel da gestire
+    | Repeat ';'
     {
         $1.envin = $$.envin
         ; $1.envloc = $$.envloc 
         ; $$.parsetree = AbsAuL.SRepeat $1.parsetree
         ; $$.envout = $1.envout
-        ; $$.errs = $1.errs 
-        ; $1.statein = $$.statein
+        ; $$.errs = $1.errs  
+        ; $1.nextLabel = genlabel $$.statein 0
+        ; $1.statein = skipState $$.statein 0 1
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code
     }
-    | For  -- nextLabel da gestire
+    | For 
     {
         $1.envin = $$.envin
         ; $1.envloc = $$.envloc
         ; $$.parsetree = AbsAuL.SFor $1.parsetree
         ; $$.errs = $1.errs
         ; $$.envout = $1.envout
-        ; $1.statein = $$.statein
+        ; $1.nextLabel = genlabel $$.statein 0
+        ; $1.statein = skipState $$.statein 0 1
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code
     }
@@ -924,8 +927,11 @@ While : 'while' RExp EBlk
         ; $2.condFalse = $$.nextLabel
         ; $3.nextLabel = $$.nextLabel
         ; $$.code = (labelRules (genlabel $3.stateout 1) $2.code) ++ 
+                    [(Rules (CondTrue $2.addr $2.condTrue))] ++
+                    [(Rules (CondFalse $2.addr $2.condFalse))] ++
                     (labelRules $2.condTrue $3.code) ++ 
-                    [(Rules (Goto (genlabel $3.stateout 1)))]
+                    [(Rules (Goto (genlabel $3.stateout 1)))] ++
+                    (labelRules $$.nextLabel [])
     }
 
 --  ========================
@@ -948,9 +954,10 @@ Repeat : 'repeat' Block 'until' RExp
         ; $4.nextLabel = $$.nextLabel
         ; $4.condTrue = (genlabel $2.stateout 2)
         ; $4.condFalse = $$.nextLabel
-        ; $$.code = (labelRules (genlabel $4.stateout 1) $2.code) ++
-                    (labelRules $4.condTrue $2.code) ++ $4.code ++
-                    [(Rules (Goto (genlabel $4.stateout 1)))] 
+        ; $$.code = (labelRules $4.condTrue $2.code) ++ $4.code ++
+                    [(Rules (CondTrue $4.addr $4.condTrue))] ++ 
+                    [(Rules (CondFalse $4.addr $4.condFalse))] ++ 
+                    (labelRules $$.nextLabel [])                     
     }
 
 --  ========================
@@ -983,11 +990,12 @@ For : 'for' LIdent '=' RExp ',' RExp Increment EBlk --modded
         ; $6.condTrue = (genlabel $8.stateout 2)
         ; $6.condFalse = $$.nextLabel
         ; $8.nextLabel = $$.nextLabel
-        ; $$.code = [(Rules (Assgm (toTACType $4.tipo) $2.addr (gentemp $2.stateout 1)))] ++ [(Rules (Assgm (toTACType $4.tipo) (gentemp $2.stateout 1) $4.addr))] ++ 
-                    $4.code ++ (labelRules (genlabel $8.stateout 1) $6.code) ++
+        ; $$.code = [(Rules (Assgm (toTACType $4.tipo) $2.addr (gentemp $2.stateout 1)))] ++ [(Rules (Assgm (toTACType $4.tipo) (gentemp $2.stateout 1) $4.addr))] ++ $4.code 
+                    ++ (labelRules (genlabel $8.stateout 1) $6.code) ++
                     (labelRules $6.condTrue $8.code) ++ (if (null $7.code) then [(Rules (AssgmBin (toTACType $4.tipo) $2.addr $2.addr (binop TAC.Add (toTACType $4.tipo)) (IntTac 1) ))]
                                                                            else $7.code)
-                    ++ [(Rules (Goto (genlabel $8.stateout 1)))] ++ [(LRules ($8.nextLabel) NoOperation)]
+                    ++ [(Rules (CondTrue $6.addr $6.condTrue))] ++ [(Rules (CondFalse $6.addr $6.condFalse))] 
+                    ++ (labelRules $8.nextLabel [])
 
     }
     | 'for' LIdent 'in' LIdent EBlk --modded
