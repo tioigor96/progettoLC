@@ -493,8 +493,7 @@ Stm : Decl ';' -- nextLabel da gestire per lazyness in varinit
         ; $$.parsetree = AbsAuL.SIf $1.parsetree 
         ; $$.errs = $1.errs
         ; $$.envout = $1.envout
-        ; $1.nextLabel = genlabel $$.statein 0
-        ; $1.statein = skipState $$.statein 0 1
+        ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code
 
@@ -1038,28 +1037,24 @@ If : 'if' RExp 'then' Block ListElseIf Else 'end'
         ; $$.errs = (if (op2CompType EqO (Base BasicType_Bool) $2.tipo) == ErrT
                         then ["error at "++ ((showFromPosn . tokenPosn) $1) ++": 'if' condition need to be 'Bool' expression!"]
                         else []) ++ $2.errs ++ $4.errs ++ $5.errs ++ $6.errs
+        
         ; $2.statein = $$.statein 
-        ; $4.statein = skipState $2.stateout 0 1
-        
+        ; $4.statein = skipState $2.stateout 0 0
         ; $5.statein = $4.stateout
-        
         ; $6.statein = $5.stateout
         
-        ; $5.nextLabel = $$.nextLabel
+        ; $5.nextLabel = genlabel $6.stateout 0
         
-        ; $6.condFalse = $2.condFalse
-        ; $2.condTrue = (genlabel $2.stateout 0)
-        ; $2.condFalse = (genlabel $5.stateout 0)
+        ; $2.condFalse = (genlabel $4.stateout 0)
         
-        ; $$.stateout = $6.stateout
+        ; $$.stateout = skipState $6.stateout 0 1
         
-        ; $$.code = $2.code ++ [(Rules (CondTrue $2.addr $2.condTrue))] ++ 
-                               [(Rules (CondFalse $2.addr $2.condFalse))] ++ 
-                               (labelRules $2.condTrue $4.code) ++ 
-                               [(Rules (Goto $$.nextLabel))] ++
-                               $5.code ++ $6.code ++
-                               (if $6.parsetree == ElseE then (labelRules $2.condFalse []) else []) ++
-                               (labelRules $$.nextLabel [])
+        ; $$.code = $2.code ++ [(Rules (CondFalse $2.addr $2.condFalse))] ++ 
+                               $4.code ++ 
+                               [(Rules (Goto (genlabel $6.stateout 0)))] ++
+                               $5.code ++ 
+                               $6.code ++
+                               (labelRules (genlabel $6.stateout 0) [])
     }
 
 Else : 'else' Block 
@@ -1071,7 +1066,7 @@ Else : 'else' Block
         ; $$.envout = $2.envout
         ; $2.statein = skipState $$.statein 0 1
         ; $$.stateout = $2.stateout
-        ; $$.code = (labelRules $$.condFalse $2.code) 
+        ; $$.code = (labelRules (genlabel $$.statein 0) $2.code) 
     }
     | {- empty -} 
     { 
@@ -1079,7 +1074,7 @@ Else : 'else' Block
         ; $$.envout = $$.envloc
         ; $$.stateout = $$.statein 
         ; $$.errs = []
-        ; $$.code = []
+        ; $$.code = (labelRules (genlabel $$.statein 0) [])
     }
 
 ElseIf : 'elseif' RExp 'then' Block 
@@ -1092,17 +1087,16 @@ ElseIf : 'elseif' RExp 'then' Block
         ; $$.errs = (if (ErrT == $2.tipo)
                         then ["error at "++ ((showFromPosn . tokenPosn) $1) ++": 'elseif' condition need to be 'Bool' expression!"]
                         else []) ++ $2.errs ++ $4.errs
+        
         ; $2.statein = $$.statein
-        ; $4.statein = skipState $2.stateout 0 1
+        ; $4.statein = skipState $2.stateout 0 0
         
         ; $$.stateout = skipState $4.stateout 0 0
         
-        ; $2.condTrue = (genlabel $2.stateout 0)
-        ; $2.condFalse = (genlabel $4.stateout 0)
-        ; $$.code = $2.code ++ 
-                    [(Rules (CondTrue $2.addr $2.condTrue))] ++ 
-                    [(Rules (CondFalse $2.addr $2.condFalse))] ++ 
-                    (labelRules $2.condTrue $4.code) ++
+        ; $2.condFalse = (genlabel $2.stateout 0)
+        
+        ; $$.code = $2.code ++
+                    [(Rules (CondFalse $2.addr $2.condFalse))] ++
                     $4.code ++ [(Rules (Goto $$.nextLabel))] 
     }
 
@@ -1124,11 +1118,11 @@ ListElseIf : {- empty -}
         ; $$.parsetree = flip (:) $1.parsetree $2.parsetree
         ; $$.errs = $1.errs ++ $2.errs
         ; $1.statein = $$.statein
-        ; $2.statein = $1.stateout
+        ; $2.statein = skipState $1.stateout 0 1
         ; $$.stateout = $2.stateout 
         ; $1.nextLabel = $$.nextLabel
         ; $2.nextLabel = $$.nextLabel
-        ; $$.code = $1.code ++ (labelRules (genlabel $1.stateout 1) $2.code) 
+        ; $$.code = $1.code ++ (labelRules (genlabel $1.stateout 0) $2.code) 
     }
 
 --  ========================
