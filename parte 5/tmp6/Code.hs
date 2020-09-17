@@ -32,6 +32,11 @@ listElemToTac :: [(ArgOp)] -> [TAC]
 listElemToTac [] = []
 listElemToTac (x:xs) = (Rules (ListElem x)): listElemToTac xs
 
+listRexpToTac :: [(ArgOp)] -> [TAC]
+listRexpToTac [] = []
+listRexpToTac (x:xs) = (Rules (ListRexp x)): listRexpToTac xs
+
+
 getString :: Token -> String
 getString (PT _ (TS s _)) = s
 getString (PT _ (TL s)) = s

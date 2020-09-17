@@ -177,6 +177,7 @@ L_LIdent { PT _ (T_LIdent _) }
 %attribute nextLabel { LabelTac }
 %attribute listDim { [ArgOp] }
 %attribute listElem { [ArgOp] }
+%attribute listRexp { [ArgOp] }
 
 %%
 
@@ -249,9 +250,9 @@ ListPGlobl : PGlobl
         ; $1.statein = $$.statein
         ; $2.statein = skipState $1.stateout 1 0
         ; $2.nextLabel = $$.nextLabel
-        ; $1.nextLabel = genlabel $2.stateout 1
+        ; $1.nextLabel = genlabel $1.stateout 0
         ; $$.stateout = $2.stateout
-        ; $$.code = $1.code ++ $2.code
+        ; $$.code = $1.code ++ (labelRules $1.nextLabel $2.code)
         
     }
 
@@ -323,6 +324,7 @@ BlockF : ListStm
                                     else ["error: statement return not found in function definition!"]))
                     else ["Compiler Frontend General Error: listen to me, you must go to sleep..."]) ++ $1.errs
         ; $1.statein = $$.statein
+        ; $1.nextLabel = $$.nextLabel
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code        
     }
@@ -343,12 +345,12 @@ ListStm : {- empty -}
         ; $$.parsetree =  flip (:) $1.parsetree $2.parsetree
         ; $$.envout = $2.envout
         ; $$.errs = $1.errs ++ $2.errs
-        ; $2.statein = $$.statein
-        ; $1.statein = $2.stateout
+        ; $1.statein = $$.statein
+        ; $2.statein = $1.stateout
         ; $$.stateout = skipState $1.stateout 0 1
         ; $1.nextLabel = $$.nextLabel
         ; $2.nextLabel = genlabel $1.stateout 1
-        ; $$.code = $2.code ++ $1.code 
+        ; $$.code = $1.code ++  $2.code
     }
 
 --  ========================
@@ -583,7 +585,6 @@ Decl : BasicType LExp VarInit
         $2.envin = (mergeEnv $$.envloc $$.envin)
         ; $3.envin = (mergeEnv $$.envloc $$.envin)
         ; $3.tipo = makeCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree) $1.parsetree
-        ; $2.tipo = makeCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree) $1.parsetree
         ; $$.parsetree = AbsAuL.DeclSP $1.parsetree $2.parsetree $3.parsetree
         ; $$.envout = ( if (isOk (insertEnv $1.parsetree Modality1 $2.parsetree $$.envloc $2.posn))
                          then (fromOk (insertEnv $1.parsetree Modality1 $2.parsetree $$.envloc $2.posn))
@@ -598,7 +599,6 @@ Decl : BasicType LExp VarInit
         ; $3.statein = $2.stateout
         ; $$.stateout = if $3.parsetree == AbsAuL.VarINil then $3.stateout
                         else skipState $2.stateout 1 0
-
         ; $$.code = if (isArrayType $$.tipo && $3.parsetree == AbsAuL.VarINil)  then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr))] ++ listDimToTac $2.listDim ++ $2.code
                         else if (isArrayType $$.tipo ) then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr))] ++ listDimToTac $2.listDim ++ $2.code ++ $3.code
 	                    else if $3.parsetree == AbsAuL.VarINil then [(Rules (VarDecl (toTACType $$.tipo) $2.addr))]
@@ -785,19 +785,52 @@ Func : FuncWrite
     }
     | LIdent '(' ListRExp ')' --modded -> controllare tipo ritorno
     { 
-        $$.parsetree = AbsAuL.FnctCall $1.vlident $3.parsetree 
+        $$.parsetree = AbsAuL.FnctCall $1.vlident $3.parsetree
+        ; $3.envin = $$.envin
+        ; $$.tipo = if (isJust (lookupEnv (fromLIdent $1.vlident) $$.envin))
+                        then (if ((isFnctEnv . fromJust) (lookupEnv (fromLIdent $1.vlident) $$.envin))
+                              then ((getTypeF . fromJust) (lookupEnv (fromLIdent $1.vlident) $$.envin))
+                              else ErrT)
+                        else ErrT
+        ; $$.errs = (if (isJust (lookupEnv (fromLIdent $1.vlident) $$.envin))
+                        then (if ((isFnctEnv . fromJust) (lookupEnv (fromLIdent $1.vlident) $$.envin))
+                              then (controlFnctTipo
+                                        (map (\x -> (fst . getType) x) 
+                                            ((getParamF . fromJust) (lookupEnv (fromLIdent $1.vlident) $$.envin)))
+                                        $3.lrexptpe
+                                        $1.posn
+                                   )
+                              else ["error at "++(showFromPosn $1.posn)++": "++(fromLIdent $1.vlident)++"isn't defined as function!"])
+                        else ["error at "++(showFromPosn $1.posn)++": function "++(fromLIdent $1.vlident)++"is undefined!"]) ++ $3.errs
+        ; $1.statein = $$.statein
+        ; $$.stateout = $1.stateout
+        ; $1.nextLabel = $$.nextLabel
+        ; $$.addr = $1.addr
+        ; $$.code = [(Rules (FuncCall (gentemp $1.stateout 0) IntTypeTac (InternalFunc (argOpToString $1.addr)) (length $3.listRexp)))] ++ listRexpToTac $3.listRexp
     }
 ListRExp : {- empty -} 
     { 
         $$.parsetree = [] 
+        ; $$.lrexptpe = []
+        ; $$.listRexp = []
+        ; $$.errs = []
     }
     | RExp 
     { 
         $$.parsetree = (:[]) $1.parsetree 
+        ; $1.envin = $$.envin
+        ; $$.lrexptpe = (:[]) $1.tipo
+        ; $$.listRexp = (:[]) $1.addr
+        ; $$.errs = $1.errs
     }
     | RExp ',' ListRExp 
     { 
         $$.parsetree = (:) $1.parsetree $3.parsetree 
+        ; $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $$.lrexptpe = (:) $1.tipo $3.lrexptpe
+        ; $$.listRexp = (:) $1.addr $3.listRexp
+        ; $$.errs = $1.errs ++ $3.errs
     }
 
 FuncWrite : 'writeInt' '(' RExp ')' 
@@ -964,18 +997,19 @@ For : 'for' LIdent '=' RExp ',' RExp Increment EBlk --modded
                                ++ $4.errs ++ $6.errs ++ $7.errs ++ $8.errs
         ; $2.statein = $$.statein
         ; $4.statein = $2.stateout
-        ; $6.statein = $4.stateout
+        ; $6.statein = skipState $4.stateout 1 1
         ; $7.statein = $6.stateout
-        ; $8.statein = skipState $7.stateout 1 0
+        ; $8.statein = if ($7.code == []) then skipState $6.stateout 1 0
+                                          else skipState $7.stateout 1 0
         ; $$.stateout = skipState $8.stateout 0 2
         ; $6.condTrue = (genlabel $8.stateout 2)
         ; $6.condFalse = $$.nextLabel
         ; $8.nextLabel = $$.nextLabel
-        ; $$.code = ([(Rules (Assgm (toTACType $4.tipo) $2.addr (gentemp $2.stateout 1)))] ++ [(Rules (Assgm (toTACType $4.tipo) (gentemp $2.stateout 1) $4.addr))] ++ 
+        ; $$.code = [(Rules (Assgm (toTACType $4.tipo) $2.addr (gentemp $2.stateout 1)))] ++ [(Rules (Assgm (toTACType $4.tipo) (gentemp $2.stateout 1) $4.addr))] ++ 
                     $4.code ++ (labelRules (genlabel $8.stateout 1) $6.code) ++
-                    (labelRules $6.condTrue $8.code) ++ if (null $7.code) then [(Rules (AssgmBin (toTACType $4.tipo) $2.addr $2.addr (binop TAC.Add (toTACType $4.tipo)) (IntTac 1) ))]
-                                                                          else $7.code)
-                        ++ [(Rules (Goto (genlabel $8.stateout 1)))] ++ [(LRules ($8.nextLabel++"dove sono?") NoOperation)]
+                    (labelRules $6.condTrue $8.code) ++ (if (null $7.code) then [(Rules (AssgmBin (toTACType $4.tipo) $2.addr $2.addr (binop TAC.Add (toTACType $4.tipo)) (IntTac 1) ))]
+                                                                           else $7.code)
+                    ++ [(Rules (Goto (genlabel $8.stateout 1)))] ++ [(LRules ($8.nextLabel) NoOperation)]
 
     }
     | 'for' LIdent 'in' LIdent EBlk --modded
@@ -1018,22 +1052,18 @@ If : 'if' RExp 'then' Block ListElseIf Else 'end'
         ; $$.errs = (if (op2CompType EqO (Base BasicType_Bool) $2.tipo) == ErrT
                         then ["error at "++ ((showFromPosn . tokenPosn) $1) ++": 'if' condition need to be 'Bool' expression!"]
                         else []) ++ $2.errs ++ $4.errs ++ $5.errs ++ $6.errs
-        ; $2.statein = $$.statein
-        ; $4.statein = $2.stateout
-        ; $5.statein = $2.stateout
-        ; $6.statein = $2.stateout
+        ; $2.statein = $$.statein 
+        ; $4.statein = skipState $2.stateout 0 1
+        ; $5.statein = $4.stateout
+        ; $6.statein = $5.stateout
         ; $5.nextLabel = $$.nextLabel
         ; $6.nextLabel = $$.nextLabel
         ; $7.nextLabel = $$.nextLabel
         ; $2.condTrue = (genlabel $2.stateout 1)
         ; $2.condFalse = (genlabel $2.stateout 2)
-        ; $$.stateout = if (null $5.code) then if (null $6.code) then skipState $4.stateout 0 1
-                                                                 else skipState $6.stateout 0 2
-                                          else skipState $5.stateout 0 1
-        ; $$.code = $2.code ++ (labelRules $2.condTrue $4.code) ++ [(Rules (Goto $$.nextLabel))] ++
-                    if (null $5.code) then if (null $6.code) then []
-                                                             else (labelRules $2.condFalse $6.code)
-                                      else (labelRules $2.condFalse $5.code)
+        ; $$.stateout = $6.stateout
+        ; $$.code = $2.code ++ [(Rules (CondTrue $2.addr $2.condTrue))] ++ [(Rules (CondFalse $2.addr $2.condFalse))] ++ (labelRules $2.condTrue $4.code) ++ [(Rules (Goto $$.nextLabel))] 
+                    ++ $5.code ++ $6.code 
     }
 
 Else : 'else' Block 
@@ -1043,14 +1073,15 @@ Else : 'else' Block
         ; $$.parsetree = AbsAuL.ElseS $2.parsetree
         ; $$.errs = $2.errs
         ; $$.envout = $2.envout
-        ; $2.statein = $$.statein
+        ; $2.statein = skipState $$.statein 0 1
         ; $$.stateout = $2.stateout
-        ; $$.code = $2.code 
+        ; $$.code = (labelRules (genlabel $$.statein 0) $2.code)  
     }
     | {- empty -} 
     { 
         $$.parsetree = AbsAuL.ElseE
         ; $$.envout = $$.envloc
+        ; $$.stateout = $$.statein 
         ; $$.errs = []
         ; $$.code = []
     }
@@ -1062,16 +1093,23 @@ ElseIf : 'elseif' RExp 'then' Block
         ; $4.envloc = $$.envloc
         ; $$.parsetree = AbsAuL.ElseIfD $2.parsetree $4.parsetree
         ; $$.envout = $4.envout
-        ; $$.errs = (if (op2CompType EqO (Base BasicType_Bool) $2.tipo) == ErrT
+        ; $$.errs = (if (ErrT == $2.tipo)
                         then ["error at "++ ((showFromPosn . tokenPosn) $1) ++": 'elseif' condition need to be 'Bool' expression!"]
                         else []) ++ $2.errs ++ $4.errs
-        ; $$.code = $2.code ++ (labelRules $2.condTrue $4.code) ++ $4.code
+        ; $2.statein = $$.statein
+        ; $4.statein = skipState $2.stateout 0 1
+        ; $$.stateout = $4.stateout 
+        ; $2.condTrue = (genlabel $2.stateout 1)
+        ; $2.condFalse = (genlabel $2.stateout 2)
+        ; $$.code = $2.code ++ [(Rules (CondTrue $2.addr $2.condTrue))] ++ [(Rules (CondFalse $2.addr $2.condFalse))] ++ (labelRules $2.condTrue $4.code) 
+                    ++ $4.code ++ [(Rules (Goto $$.nextLabel))] 
     }
 
 ListElseIf : {- empty -} 
     { 
         $$.parsetree = []
         ; $$.envout = $$.envloc
+        ; $$.stateout = $$.statein
         ; $$.errs = [] 
         ; $$.code = []
     }
@@ -1084,7 +1122,12 @@ ListElseIf : {- empty -}
         ; $$.envout = $2.envout
         ; $$.parsetree = flip (:) $1.parsetree $2.parsetree
         ; $$.errs = $1.errs ++ $2.errs
-        ; $$.code = $2.code ++ $1.code
+        ; $1.statein = $$.statein
+        ; $2.statein = $1.stateout 
+        ; $$.stateout = $2.stateout 
+        ; $1.nextLabel = $$.nextLabel
+        ; $2.nextLabel = $$.nextLabel
+        ; $$.code = $1.code ++ (labelRules (genlabel $1.stateout 0) $2.code) 
     }
 
 --  ========================
@@ -1101,6 +1144,7 @@ Return : 'return' RValue
                          then (reinsertRetEnv ((getTypeR . fromJust) (lookupEnv "return" $$.envloc)) True $$.envloc)
                          else $$.envloc
         ; $$.errs = $2.errs
+        ; $2.nextLabel = $$.nextLabel
         ; $2.statein = $$.statein
         ; $$.stateout = $2.stateout
         ; $$.code = $2.code
@@ -1116,6 +1160,8 @@ RValue : {- empty -}
                                       (showCmpType ((getTypeR . fromJust) (lookupEnv "return" $$.envloc))) ++
                                       "' expression type!"] )
                         else ["error at " ++ (showFromPosn $$.posn) ++ ": return statement out of function!"]
+        ; $$.stateout = $$.statein
+        ; $$.code = [(Rules (Goto $$.nextLabel))]    
     }
     | RExp 
     { 
@@ -1133,6 +1179,9 @@ RValue : {- empty -}
                                                 (showCmpType ((getTypeR . fromJust) (lookupEnv "return" $$.envloc))) ++
                                                 "', but given '"++ (showCmpType $1.tipo) ++ "' expression type!"]))
                         else ["error at " ++ (showFromPosn $$.posn) ++ ": return statement out of function!"]) ++ $1.errs
+        ; $1.statein = $$.statein
+        ; $$.stateout = $1.stateout
+        ; $$.code = [(Rules (ReturnTac $1.addr))]
     }
 
 Break : 'break' 
@@ -1169,6 +1218,7 @@ FuncD : CompoundType 'function' LIdent '(' ListParamF ')' BlockF 'end'
                          else []) ++ $7.errs
         ; $3.statein = $$.statein
         ; $7.statein = $3.stateout
+        ; $7.nextLabel = $$.nextLabel
         ; $$.stateout = $7.stateout
         ; $$.code = [(LRules (argOpToString $3.addr) (Func (length $5.listparf))) ] ++ (paramToTac $5.listparf)  ++ $7.code
          
@@ -1405,7 +1455,7 @@ RExp3 : RExp3 '==' RExp5
     	; $3.condTrue  = genlabel $3.stateout 4
     	; $3.condFalse = genlabel $3.stateout 5
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (CondRelation $1.addr (relop IsEq (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 0)))] ++ $1.code ++ $3.code
+        ; $$.code = [(Rules (CondRelation $1.addr (relop IsEq (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
     }
     | RExp3 '~=' RExp5 
     { 
@@ -1424,7 +1474,7 @@ RExp3 : RExp3 '==' RExp5
     	; $3.condTrue  = genlabel $3.stateout 4
     	; $3.condFalse = genlabel $3.stateout 5
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (CondRelation $1.addr (relop IsDiff (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 0)))] ++ $1.code ++ $3.code
+        ; $$.code = [(Rules (CondRelation $1.addr (relop IsDiff (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
     }
     | RExp3 '<' RExp5 
     { 
@@ -1443,7 +1493,7 @@ RExp3 : RExp3 '==' RExp5
     	; $3.condTrue  = genlabel $3.stateout 4
     	; $3.condFalse = genlabel $3.stateout 5
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (CondRelation $1.addr (relop IsL (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 0)))] ++ $1.code ++ $3.code
+        ; $$.code = [(Rules (CondRelation $1.addr (relop IsL (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
     }
     | RExp3 '<=' RExp5 
     { 
@@ -1462,7 +1512,7 @@ RExp3 : RExp3 '==' RExp5
     	; $3.condTrue  = genlabel $3.stateout 4
     	; $3.condFalse = genlabel $3.stateout 5
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (CondRelation $1.addr (relop IsLEQ (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 0)))] ++ $1.code ++ $3.code
+        ; $$.code = [(Rules (CondRelation $1.addr (relop IsLEQ (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
     }
     | RExp3 '>' RExp5 
     { 
@@ -1481,7 +1531,7 @@ RExp3 : RExp3 '==' RExp5
     	; $3.condTrue  = genlabel $3.stateout 4
     	; $3.condFalse = genlabel $3.stateout 5
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (CondRelation $1.addr (relop IsG (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 0)))] ++ $1.code ++ $3.code
+        ; $$.code = [(Rules (CondRelation $1.addr (relop IsG (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
     }
     | RExp3 '>=' RExp5 
     { 
@@ -1500,7 +1550,7 @@ RExp3 : RExp3 '==' RExp5
     	; $3.condTrue  = genlabel $3.stateout 4
     	; $3.condFalse = genlabel $3.stateout 5
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (CondRelation $1.addr (relop IsGEQ (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 0)))] ++ $1.code ++ $3.code
+        ; $$.code = [(Rules (CondRelation $1.addr (relop IsGEQ (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
     }                        
     | RExp4 
     { 
@@ -1701,7 +1751,7 @@ RExp10 : Func
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $$.addr = $1.addr 
-        ; $$.code = $1.code 
+        ; $$.code = $1.code
     }
     | RExp10 '..' RExp11
     --TODO: assegnamento funzione
@@ -1914,7 +1964,6 @@ RExp12 : '(' RExp ')'
 
 data Result = Result Program [TAC] EnvT [String]  deriving (Eq, Show)
 
-
 controlArrTipo :: CmpType -> Array -> Token -> [String]
 controlArrTipo ts arr tok
     | (isArrT ts) && (not (isPtrT ts)) = if (checkTypeInit (getBaseType ts) arr)
@@ -1948,6 +1997,22 @@ controlArrTipo ts arr tok
                                                 else ["error at "++ ((showFromPosn . tokenPosn) tok) ++ 
                                                       ": array initialization isn't of the same type of " ++
                                                       "variable type ('"++ (showCmpType (Base (getBaseType ts))) ++"')!"]
+
+controlFnctTipo' :: [CmpType] -> [CmpType] -> [String]
+controlFnctTipo' ps rexps = foldr (\(te,tr,pn) xs -> (cmpType te tr pn) ++ xs) [] (zip3 ps rexps [1..])
+    where cmpType te tr pn = if (compCmpType te tr) == ErrT
+                                then ["    param "++ (show pn)++": expected type was '" ++ 
+                                     (showCmpType te) ++ "' but recieved type '" ++ 
+                                     (showCmpType tr) ++ "'"]
+                                else []
+
+controlFnctTipo ps rexps posn = let errs = controlFnctTipo' ps rexps
+                                 in if ((length ps) /= (length rexps))
+                                     then ["error at "++(showFromPosn posn)++
+                                           ": the parameters passed to function are insufficient!"]
+                                     else if ((length errs) == 0)
+                                            then []
+                                            else ["error at "++(showFromPosn posn)++":"]++errs
 
 returnM :: a -> Err a
 returnM = return

@@ -24,15 +24,15 @@ data RulesTac = AssgmBin TypeTac ArgOp ArgOp BinaryOp ArgOp             -- x = y
               | Func Int                                                -- func n                               
               | ArgFun ArgOp 
               | ListDimension ArgOp
-              | ArrayEl TypeTac ArgOp ArgOp                             -- x =t y[i]
-              | AssgmArrayEl TypeTac ArgOp ArgOp ArgOp                  -- x[i] =t y
+              | ArrayEl TypeTac ArgOp ArgOp                             -- x =t y[i] o y[i] =t x
               | ArrayDef TypeTac ArgOp                                  -- Int pippo[3]
-              | ListElem ArgOp                                          -- int a [n] = {...}     
+              | ListElem ArgOp                                          -- int a [n] = {...} 
+              | ListRexp ArgOp    
               | AssignAddress ArgOp TypeTac ArgOp                       -- x =t &y
               | AssignPointer ArgOp TypeTac ArgOp                       -- x =t *y
               | DerefAssign ArgOp TypeTac ArgOp                         -- *x =t y      
               | NoOperation                                             -- operazione vuota
-              | Return ArgOp                                            -- return y
+              | ReturnTac ArgOp                                            -- return y
               | Break LabelTac                                          -- break
               | Error String                                            -- error s
               | GetArg ArgOp                                            -- param x
@@ -149,26 +149,47 @@ printRules (AssgmUn t a op b) =
         (printType t) ++ " " ++ (argOpToString a) ++ " = " ++ (unOpToString op) ++ " " ++ (argOpToString b) 
 printRules (Assgm t a1 a2) = 
         (printType t) ++ " " ++ (argOpToString a1) ++ " = " ++ (argOpToString a2) 
+printRules (Cast a1 t1 t2 a2) =
+        (argOpToString a1) ++ " = cast_" ++ (printType t1) ++ "_" ++ (printType t2) ++" " ++ (argOpToString a2)
+printRules (VarDecl t a) = 
+        (printType t) ++ " " ++ (argOpToString a)
+printRules (Goto l) =
+        "Goto " ++ l
 printRules (CondTrue a lab) = 
         "if(True) " ++ (argOpToString a) ++ " goto " ++ lab
 printRules (CondFalse a lab) = 
         "if(False) " ++ (argOpToString a) ++ " goto " ++ lab
 printRules (CondRelation a op b lab) = 
-        "if(RelOp) " ++ (argOpToString a) ++ " " ++ (relOpToString op) ++ " " ++(argOpToString b) ++ " " ++ lab
---printRules (FuncCall t f listPar n) =
---        "#function definition" ++
---         (printType t) ++ " function " ++ (funcToString f) ++ " " ++ (argOpToString listPar)
---printRules (ProcCall f listArg) =
---         "call " ++ (funcToString f) ++ " " ++ (argOpToString listArg)
-printRules (VarDecl t a) = 
-        (printType t) ++ " " ++ (argOpToString a)
+        "if(RelOp) " ++ (argOpToString a) ++ " " ++ (relOpToString op) ++ " " ++(argOpToString b) 
+printRules (ProcCall f1 n) =
+        (funcToString f1) ++ "[#arg: " ++ show n ++ "]"
+printRules (FuncCall a1 t f1 n) =
+        (printType t) ++ " " ++ (argOpToString a1) ++ " = " ++ (funcToString f1) ++ "[#arg: " ++ show n ++ "]"
+printRules (Load a) =                                         
+        "param " ++ (argOpToString a)
+printRules (Func n) =
+        "#arg func : " ++ show n
+printRules (ArgFun a) =
+        "arg func " ++ argOpToString a 
+printRules (ListDimension a) =
+        "dimension/index " ++ argOpToString a
 printRules (ArrayEl t a b1) = 
         (printType t) ++ " " ++(argOpToString a) ++ " = " ++ (argOpToString b1) ++ "[" ++ "]"
-printRules (AssgmArrayEl t a index b) = 
-        (printType t) ++ " " ++ (argOpToString a) ++ "[" ++ (argOpToString index) ++ "] = " ++ (argOpToString b) 
+printRules ( ArrayDef t a) =
+        (printType t ) ++ " " ++ argOpToString a
+printRules (ListElem a) =
+        "Element " ++ argOpToString a                                          
+printRules (ListRexp a) =
+        "Argument " ++  argOpToString a    
+printRules (AssignAddress a1 t a2) =
+        (printType t) ++ " " ++ (argOpToString a1) ++ " = &" ++ (argOpToString a2)
+printRules (AssignPointer a1 t a2) =
+        (printType t) ++ " " ++ (argOpToString a1) ++ " = *" ++ (argOpToString a2)
+printRules (DerefAssign a1 t a2) =
+        (printType t) ++ " *"++ (argOpToString a1) ++ " = " ++ (argOpToString a2)
 printRules (NoOperation) = 
         " "
-printRules (Return a) = 
+printRules (ReturnTac a) = 
         "return " ++ (argOpToString a)
 printRules (Break lab) = 
         "break goto " ++ lab
@@ -278,12 +299,5 @@ printType PointerTypeTac = "pointer"
 --  where y = Instr (IndexedAssign addr (TACInt i) TACCharT (TACChar x))
 
 
-testiamo = putStr (prettyprintTAC test)
-
-test =  [ (Rules (Comment "Questo è un test")),
-          (Rules (VarDecl IntTypeTac (NameTac "x" (Pn 0 1 5)) )),
-          (Rules (Assgm IntTypeTac (NameTac "x" (Pn 0 1 5)) (IntTac 0))),
-          (LRules "L1" (AssgmBin IntTypeTac (NameTac "x" (Pn 0 1 5)) (NameTac "x" (Pn 0 1 5)) AddInt (IntTac 2))),
-          (Rules (AssgmBin IntTypeTac (NameTac "x" (Pn 12 5 6)) (NameTac "x" (Pn 12 5 6)) SubInt (IntTac 1))),
-          (Rules (CondRelation (TempTac "tmp1") (relop IsEq IntTypeTac) (TempTac "tmp2") "L1")),
-          (Rules (Error "errore!"))]
+testiamo tac= putStr (prettyprintTAC tac)
+-- test =   [Rules (Assgm IntTypeTac (NameTac "j" (Pn 4 1 5)) (TempTac "t1")),Rules (Assgm IntTypeTac (TempTac "t1") (IntTac 0)),LRules "L1" (CondRelation (NameTac "j" (Pn 12 1 13)) IsLEQInt (IntTac 0) "L2"),Rules (CondTrue (TempTac "t3") "L2"),Rules (CondFalse (TempTac "t3") "L3"),LRules "L2" (Assgm IntTypeTac (NameTac "j" (Pn 22 1 23)) (TempTac "t3")),Rules (Assgm IntTypeTac (TempTac "t3") (TempTac "t3")),Rules (AssgmBin IntTypeTac (TempTac "t3") (IntTac 24) AddInt (IntTac 11)),Rules (Goto "L4"),LRules "L3" (Assgm IntTypeTac (NameTac "h" (Pn 40 1 41)) (TempTac "t3")),Rules (Assgm IntTypeTac (TempTac "t3") (IntTac 12)),Rules (Goto "L4"),LRules "L4" (Assgm IntTypeTac (NameTac "y" (Pn 54 1 55)) (TempTac "t4")),Rules (Assgm IntTypeTac (TempTac "t4") (IntTac 1))]
