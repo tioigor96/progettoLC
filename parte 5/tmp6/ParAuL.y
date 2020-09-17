@@ -576,10 +576,10 @@ Decl : BasicType LExp VarInit
         ; $$.stateout = if $3.parsetree == AbsAuL.VarINil then $3.stateout
                         else skipState $2.stateout 1 0
         ; $$.code = if (isArrayType $$.tipo && $3.parsetree == AbsAuL.VarINil)  then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr))] ++ listDimToTac $2.listDim ++ $2.code
-                        else if (isArrayType $$.tipo ) then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr))] ++ listDimToTac $2.listDim ++ $2.code ++ $3.code
+                        else if (isArrayType $$.tipo) then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr))] ++ listDimToTac $2.listDim ++ $2.code ++ $3.code 
 	                    else if $3.parsetree == AbsAuL.VarINil then [(Rules (VarDecl (toTACType $$.tipo) $2.addr))]
-                        else if (isPointerType $$.tipo) then $2.code ++ $3.code
-                           else  [(Rules (Assgm (toTACType $$.tipo) $2.addr (gentemp $2.stateout 0)))] ++ $3.code                             
+                        else if (isPointerType $$.tipo) then $2.code ++ $3.code 
+                           else  [(Rules (Assgm (toTACType $$.tipo) $2.addr (gentemp $2.stateout 0)))] ++ $3.code 
         
     }
 
@@ -601,13 +601,14 @@ VarInit : {- empty -}
                                         "' to a variable with type '"++(showCmpType $$.tipo)++"'"]
                                 else []
                         else [])++ $2.errs
-        ; $$.tipo = $2.tipo
         ; $2.statein = $$.statein
-        ; $$.stateout = $2.stateout
+        ; $$.stateout = if $$.tipo == $2.tipo then $2.stateout
+                                              else skipState $2.stateout 1 0
         ; $$.code = if $2.code == [] then 
                         if (isPointerType $$.tipo) then [Rules (Assgm (toTACType $$.tipo) (gentemp $2.statein 0) $2.addr)]
-                        else [Rules (Assgm (toTACType $$.tipo) (gentemp $2.statein 0) $2.addr)]
-                                     else $2.code
+                        else if (not $ ($$.tipo == $2.tipo)) then [Rules (Cast (gentemp $$.statein 0) (toTACType $$.tipo) (toTACType $2.tipo) $2.addr)] 
+                                                             else [Rules (Assgm (toTACType $$.tipo) (gentemp $2.statein 0) $2.addr)]
+                    else $2.code
     }
     | '=' Array 
     { 
@@ -729,9 +730,11 @@ Ass : LExp '=' RExp -- TODO: finisci errori
         ; $1.statein = $$.statein
         ; $3.statein = $1.stateout
         ; $$.stateout = skipState $3.stateout 0 2
-        ; $$.code = [(Rules (Assgm (toTACType $$.tipo) $1.addr (gentemp $3.statein 0)))] ++ 
-                    (if (null $1.listDim) then [] else listDimToTac $1.listDim) ++
-                    [(Rules (Assgm (toTACType $$.tipo) (gentemp $3.statein 0) $3.addr))] ++ $3.code
+        ; $$.code = if (not ($3.tipo == $$.tipo)) then [Rules (Cast (gentemp $$.statein 0) (toTACType $$.tipo) (toTACType $3.tipo) $3.addr)] 
+                                                        ++ [(Rules (Assgm (toTACType $$.tipo) $1.addr (gentemp $$.statein 0) ))]
+                                                   else [(Rules (Assgm (toTACType $$.tipo) $1.addr (gentemp $3.statein 0)))] ++ 
+                                                        (if (null $1.listDim) then [] else listDimToTac $1.listDim) ++
+                                                        [(Rules (Assgm (toTACType $$.tipo) (gentemp $3.statein 0) $3.addr))] ++ $3.code
     }
     
 --  ========================
@@ -1038,7 +1041,7 @@ If : 'if' RExp 'then' Block ListElseIf Else 'end'
         
         ; $6.condFalse = $2.condFalse
         ; $2.condTrue = (genlabel $2.stateout 0)
-        ; $2.condFalse = (genlabel $4.stateout 0)
+        ; $2.condFalse = (genlabel $5.stateout 0)
         
         ; $$.stateout = $6.stateout
         
@@ -1117,7 +1120,7 @@ ListElseIf : {- empty -}
         ; $$.stateout = $2.stateout 
         ; $1.nextLabel = $$.nextLabel
         ; $2.nextLabel = $$.nextLabel
-        ; $$.code = $1.code ++ (labelRules (genlabel $1.stateout 0) $2.code) 
+        ; $$.code = $1.code ++ (labelRules (genlabel $1.stateout 1) $2.code) 
     }
 
 --  ========================
