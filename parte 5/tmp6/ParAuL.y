@@ -219,11 +219,8 @@ Program : ListPGlobl
     { 
         $1.envin = emptyEnv
         ; $1.envloc = emptyEnv
-        ; $$.res = Result (AbsAuL.Prog $1.parsetree ) $$.code $1.envout $1.errs
         ; $1.statein = (1,1)
-        ; $1.nextLabel = genlabel $1.stateout 1 
-        ; $$.stateout = $1.stateout
-        ; $$.code = $1.code
+        ; $$.res = Result (AbsAuL.Prog $1.parsetree ) $1.code $1.envout $1.errs
     }
 
 ListPGlobl : PGlobl 
@@ -234,7 +231,6 @@ ListPGlobl : PGlobl
         ; $$.envout = $1.envout
         ; $$.errs = $1.errs
         ; $1.statein = $$.statein
-        ; $1.nextLabel = $$.nextLabel
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code
     } 
@@ -248,11 +244,9 @@ ListPGlobl : PGlobl
         ; $$.envout = $2.envout
         ; $$.errs = $1.errs ++ $2.errs
         ; $1.statein = $$.statein
-        ; $2.statein = skipState $1.stateout 1 0
-        ; $2.nextLabel = $$.nextLabel
-        ; $1.nextLabel = genlabel $1.stateout 0
+        ; $2.statein = $1.stateout
         ; $$.stateout = $2.stateout
-        ; $$.code = $1.code ++ (labelRules $1.nextLabel $2.code)
+        ; $$.code = $1.code ++ $2.code
         
     }
 
@@ -265,7 +259,6 @@ PGlobl : Stm
         ; $$.errs = $1.errs
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
-        ; $1.nextLabel = $$.nextLabel
         ; $$.code = $1.code
     }
        | FuncD 
@@ -276,7 +269,6 @@ PGlobl : Stm
         ; $$.envout = $1.envout 
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
-        ; $1.nextLabel = $$.nextLabel
         ; $$.errs = $1.errs
         ; $$.code = $1.code
     }
@@ -305,8 +297,6 @@ Block : ListStm
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code
-        ; $1.nextLabel = $$.nextLabel
-        
     }
 -- N.d.R.: Per necessità di non switchare il envloc ed envin dichiaro una regola
 -- fittizia al fine di ottenere il medesimo tipo e non stravolgere l'AST
@@ -324,7 +314,6 @@ BlockF : ListStm
                                     else ["error: statement return not found in function definition!"]))
                     else ["Compiler Frontend General Error: listen to me, you must go to sleep..."]) ++ $1.errs
         ; $1.statein = $$.statein
-        ; $1.nextLabel = $$.nextLabel
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code        
     }
@@ -347,9 +336,7 @@ ListStm : {- empty -}
         ; $$.errs = $1.errs ++ $2.errs
         ; $1.statein = $$.statein
         ; $2.statein = $1.stateout
-        ; $$.stateout = skipState $1.stateout 0 1
-        ; $1.nextLabel = $$.nextLabel
-        ; $2.nextLabel = genlabel $1.stateout 1
+        ; $$.stateout = $2.stateout
         ; $$.code = $1.code ++  $2.code
     }
 
@@ -431,7 +418,7 @@ ListBracks : Bracks { $$.parsetree =  (:[]) $1.parsetree }
 --  =======  STM   =========
 --  ========================
 
-Stm : Decl ';' 
+Stm : Decl ';' -- nextLabel da gestire per lazyness in varinit
     { 
         $1.envin = $$.envin
         ; $1.envloc = $$.envloc
@@ -440,7 +427,6 @@ Stm : Decl ';'
         ; $$.errs = $1.errs
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
-        ; $1.nextLabel = $$.nextLabel
         ; $$.code = $1.code
     }
     | Local ';' 
@@ -452,10 +438,9 @@ Stm : Decl ';'
         ; $$.errs = $1.errs
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
-        ; $1.nextLabel = $$.nextLabel
         ; $$.code = $1.code
     }
-    | Ass ';' 
+    | Ass ';' -- nextLabel da gestire pper lazyness in rexp
     { 
         $1.envin = mergeEnv $$.envloc $$.envin
         ; $$.parsetree = AbsAuL.SAss $1.parsetree 
@@ -463,10 +448,9 @@ Stm : Decl ';'
         ; $$.errs = $1.errs
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
-        ; $1.nextLabel = $$.nextLabel
         ; $$.code = $1.code
     }
-    | While 
+    | While -- nextLabel da gestire
     { 
         $1.envin = $$.envin
         ; $1.envloc = $$.envloc
@@ -475,10 +459,9 @@ Stm : Decl ';'
         ; $$.errs = $1.errs
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
-        ; $1.nextLabel = $$.nextLabel
         ; $$.code = $1.code
     }
-    | Repeat ';' 
+    | Repeat ';'  -- nextLabel da gestire
     {
         $1.envin = $$.envin
         ; $1.envloc = $$.envloc 
@@ -487,10 +470,9 @@ Stm : Decl ';'
         ; $$.errs = $1.errs 
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
-        ; $1.nextLabel = $$.nextLabel
         ; $$.code = $1.code
     }
-    | For 
+    | For  -- nextLabel da gestire
     {
         $1.envin = $$.envin
         ; $1.envloc = $$.envloc
@@ -500,7 +482,6 @@ Stm : Decl ';'
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code
-        ; $1.nextLabel = $$.nextLabel
     }
     | If 
     { 
@@ -509,8 +490,8 @@ Stm : Decl ';'
         ; $$.parsetree = AbsAuL.SIf $1.parsetree 
         ; $$.errs = $1.errs
         ; $$.envout = $1.envout
-        ; $1.nextLabel = $$.nextLabel
-        ; $1.statein = $$.statein
+        ; $1.nextLabel = genlabel $$.statein 0
+        ; $1.statein = skipState $$.statein 0 1
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code
 
@@ -524,7 +505,6 @@ Stm : Decl ';'
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code
-        ; $1.nextLabel = $$.nextLabel
     }
     | EBlk 
     {
@@ -536,7 +516,6 @@ Stm : Decl ';'
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code
-        ; $1.nextLabel = $$.nextLabel
     }
     | Return ';'
     { 
@@ -548,7 +527,6 @@ Stm : Decl ';'
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code
-        ; $1.nextLabel = $$.nextLabel
     }
     | Break ';' 
     {   
@@ -558,7 +536,6 @@ Stm : Decl ';'
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code
-        ; $1.nextLabel = $$.nextLabel
     }
 
 --  ========================
@@ -573,7 +550,6 @@ EBlk : 'do' Block 'end'
         ; $$.envout = $2.envout
         ; $2.statein = $$.statein
         ; $$.stateout = $2.stateout
-        ; $2.nextLabel = $$.nextLabel
         ; $$.code = $2.code
     }
 
@@ -804,7 +780,6 @@ Func : FuncWrite
                         else ["error at "++(showFromPosn $1.posn)++": function "++(fromLIdent $1.vlident)++"is undefined!"]) ++ $3.errs
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
-        ; $1.nextLabel = $$.nextLabel
         ; $$.addr = $1.addr
         ; $$.code = [(Rules (FuncCall (gentemp $1.stateout 0) IntTypeTac (InternalFunc (argOpToString $1.addr)) (length $3.listRexp)))] ++ listRexpToTac $3.listRexp
     }
@@ -1054,16 +1029,26 @@ If : 'if' RExp 'then' Block ListElseIf Else 'end'
                         else []) ++ $2.errs ++ $4.errs ++ $5.errs ++ $6.errs
         ; $2.statein = $$.statein 
         ; $4.statein = skipState $2.stateout 0 1
+        
         ; $5.statein = $4.stateout
+        
         ; $6.statein = $5.stateout
+        
         ; $5.nextLabel = $$.nextLabel
-        ; $6.nextLabel = $$.nextLabel
-        ; $7.nextLabel = $$.nextLabel
-        ; $2.condTrue = (genlabel $2.stateout 1)
-        ; $2.condFalse = (genlabel $2.stateout 2)
+        
+        ; $6.condFalse = $2.condFalse
+        ; $2.condTrue = (genlabel $2.stateout 0)
+        ; $2.condFalse = (genlabel $4.stateout 0)
+        
         ; $$.stateout = $6.stateout
-        ; $$.code = $2.code ++ [(Rules (CondTrue $2.addr $2.condTrue))] ++ [(Rules (CondFalse $2.addr $2.condFalse))] ++ (labelRules $2.condTrue $4.code) ++ [(Rules (Goto $$.nextLabel))] 
-                    ++ $5.code ++ $6.code 
+        
+        ; $$.code = $2.code ++ [(Rules (CondTrue $2.addr $2.condTrue))] ++ 
+                               [(Rules (CondFalse $2.addr $2.condFalse))] ++ 
+                               (labelRules $2.condTrue $4.code) ++ 
+                               [(Rules (Goto $$.nextLabel))] ++
+                               $5.code ++ $6.code ++
+                               (if $6.parsetree == ElseE then (labelRules $2.condFalse []) else []) ++
+                               (labelRules $$.nextLabel [])
     }
 
 Else : 'else' Block 
@@ -1075,7 +1060,7 @@ Else : 'else' Block
         ; $$.envout = $2.envout
         ; $2.statein = skipState $$.statein 0 1
         ; $$.stateout = $2.stateout
-        ; $$.code = (labelRules (genlabel $$.statein 0) $2.code)  
+        ; $$.code = (labelRules $$.condFalse $2.code) 
     }
     | {- empty -} 
     { 
@@ -1098,11 +1083,16 @@ ElseIf : 'elseif' RExp 'then' Block
                         else []) ++ $2.errs ++ $4.errs
         ; $2.statein = $$.statein
         ; $4.statein = skipState $2.stateout 0 1
-        ; $$.stateout = $4.stateout 
-        ; $2.condTrue = (genlabel $2.stateout 1)
-        ; $2.condFalse = (genlabel $2.stateout 2)
-        ; $$.code = $2.code ++ [(Rules (CondTrue $2.addr $2.condTrue))] ++ [(Rules (CondFalse $2.addr $2.condFalse))] ++ (labelRules $2.condTrue $4.code) 
-                    ++ $4.code ++ [(Rules (Goto $$.nextLabel))] 
+        
+        ; $$.stateout = skipState $4.stateout 0 0
+        
+        ; $2.condTrue = (genlabel $2.stateout 0)
+        ; $2.condFalse = (genlabel $4.stateout 0)
+        ; $$.code = $2.code ++ 
+                    [(Rules (CondTrue $2.addr $2.condTrue))] ++ 
+                    [(Rules (CondFalse $2.addr $2.condFalse))] ++ 
+                    (labelRules $2.condTrue $4.code) ++
+                    $4.code ++ [(Rules (Goto $$.nextLabel))] 
     }
 
 ListElseIf : {- empty -} 
@@ -1123,7 +1113,7 @@ ListElseIf : {- empty -}
         ; $$.parsetree = flip (:) $1.parsetree $2.parsetree
         ; $$.errs = $1.errs ++ $2.errs
         ; $1.statein = $$.statein
-        ; $2.statein = $1.stateout 
+        ; $2.statein = $1.stateout
         ; $$.stateout = $2.stateout 
         ; $1.nextLabel = $$.nextLabel
         ; $2.nextLabel = $$.nextLabel
@@ -1876,7 +1866,7 @@ RExp11 : Integer --TODO: controlla tipi LEXP e &LEXP: controlla che arr non poss
     | Boolean 
     { 
         $$.parsetree = AbsAuL.ValBoolean $1.parsetree
-        ; $$.tipo = Base BasicType_Int
+        ; $$.tipo = Base BasicType_Bool
         ; $$.errs = []
         ; $$.addr = $1.addr
         ; $1.statein = $$.statein
