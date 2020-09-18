@@ -561,9 +561,36 @@ Esemplifichiamo il type system per la definizione di funzioni.
 \end{itemize}
 
 
-\section{TAC}
-Blablablablablablablablablabla...
 
+\section{TAC}
+Per la gestione del TAC si è definito un tipo di dato \textsc{TAC} come segue:\\
+\texttt{
+data TAC = Rules RulesTac | LRules LabelTac RulesTac\\
+\indent deriving (Eq, Show)
+}\\ Ovvero \texttt{TAC} può essere o una regola oppure una regola etichettata da una label (\texttt{LabelTac} è infatti una stringa): quello che restituiremo all'interno del parser sarà una lista di \texttt{TAC} perchè appunto prevediamo la presenza di più regole. Le \texttt{RulesTac} sono le possibili istruzioni del linguaggio tradotte in TAC:
+\begin{itemize}
+    \item \texttt{AssgmBin} e \texttt{AssgmUn} sono rispettivamente l'assegnamento di un'operazione binaria, di un'operazione unaria mentre  e \texttt{Assgm} è l'assegnamento generico del tipo x = y.
+    \item \texttt{Cast a1 t1 t2 a2} indica che sto facendo un cast a \texttt{a2} da \texttt{t2} a \texttt{t1} il cui risultato viene assegnato a \texttt{a1}
+    \item \texttt{VarDecl} è la dichiarazione di variabile, come \texttt{Local} è la dichiarazione di variabile locale
+    \item \texttt{Goto} è l'istruzione che mi indica su quale label spostarmi, mentre \texttt{CondTrue} e\texttt{CondFalse} mi servono rispettivamente ad indicare su quale label spostarmi se la condizione è vera o falsa
+    \item \texttt{ProcCall} e \texttt{FuncCall} sono rispettivamente chiamata a procedura (a cui passo il numero di argomenti ma che non assegno a nessun altro temporaneo) e la chiamata a funzione (che quindi assegna il risultato ad un temporaneo)
+    \item \texttt{Func} serve a indicare la dichiarazione di funzione e il numero di parametri che vengono poi caricati da \texttt{Load}
+    \item \texttt{ArrayDef} indica la dichiarazione di un array
+    \item \texttt{ListDimension} indica la lista delle dimensioni degli array
+    \item \texttt{ArrayEl} viene usato per gli assegnamenti del tipo  x = y[i] o y[i] = x
+    \item \texttt{ListElem} e \texttt{ListRexp} servono per la gestione delle liste di elementi degli array e delle liste degli argomenti per le chiamate a funzioni
+    \item \texttt{AssignAddress} e \texttt{AssignPointer} vengono usati rispettivamente per istruzioni del tipo  x = &y e x = *y, mentre \texttt{DerefAssign} per quelle del tipo *x = y
+    \item \texttt{NoOperation} è la semplice operazione vuota
+    \item \texttt{ReturnTac}, \texttt{Break}, \texttt{Comment} e \texttt{Error} sono rispettivamente l'istruzione di return, di break, di commento e di errore
+    \item \texttt{GetArg} viene utilizzato per il caricamento degli argomenti nelle operazioni
+\end{itemize}
+Il tipo di dato \texttt{TAC} ha poi bisogno di altri tipi di dato tra cui ricordiamo i più rilevanti:
+\begin{itemize}
+    \item \texttt{ArgOp} che può essere un nome di variabile (con relativa posizione), un temporaneo, un intero, un float, un booleano, un carattere o una stringa
+    \item \texttt{BinaryOp} e \texttt{UnaryOp} sono operazioni binarie e unarie con relativo tipo, mentre \texttt{RelationOp} sono le operazioni di relazione anch'esse con relativo tipo
+\end{itemize}
+Il tipo \texttt{State} serve per tenere traccia dello stato corrente di temporanei e label. Può essere modificato tramite \texttt{skipState} nel momento in cui viene utilizzato un temporaneo o una label così da non riutilizzarle.\\
+Per la generazione del TAC è stato necessario, come vedremo nella prossima sezione, definire degli attributi per la grammatica.
 \section{Implementazione di auL}
 Dapprima si è iniziato a definire una grammatica completa di tutte le feature desiderate da auL attraverso l'ausilio di
 BNFC. Successivamente, dopo aver migrato la grammatica di base di Happy generata da BNFC ad una attributata,
@@ -579,7 +606,16 @@ La grammatica attributata si compone di:
 		controllo del tipo e della presenza del return in una funzione viene effettuato attraverso la manipolazione
 		dell'env. loc del blocco-funzione, dove si controlla se effettivamente viene trovato o meno, e se è del tipo 
 		desiderato.
-	\item gli attributi per il TAC **blablablabla**
+	\item gli attributi per il TAC, in particolare 
+	\begin{itemize}
+	    \item \textit{code} che restituisce il TAC 
+	    \item \textit{condTrue} e \textit{condFalse} che restituiscono le label su cui spostarsi in caso che la condizione sia vera o falsa
+	    \item \textit{statein} e \textit{stateout} che indicano lo stato in entrata e quello in uscita 
+	    \item \textit{addr} che indica l'\texttt{ArgOp} dell'elemento
+	    \item \textit{nextLabel} che indica la label al blocco di istruzioni successivo (es. se mi trovo in un ciclo while, la \textit{nextLabel} indica la label per uscire dal ciclo)
+	    \item \textit{listDim}, \textit{listElem} e \textit{listRexp} che sono liste di \texttt{ArgOp} per la dimensione degli array, per gli elementi degli array e per gli argomenti delle funzioni.
+	\end{itemize}
+	
 \end{itemize}
 
 Parallelamente, dopo aver sviluppato l'environment, si è iniziato a scrivere il file per il TAC e la sua 
