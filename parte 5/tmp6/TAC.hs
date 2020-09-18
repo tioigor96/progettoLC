@@ -198,6 +198,8 @@ printRules (Error err) =
         "error: " ++ err
 printRules (Comment comm) = 
         "# " ++ comm
+printRules (Local a) =
+        "local " ++ (argOpToString a)
 
 labelRules :: LabelTac -> [TAC] -> [TAC]
 labelRules "" tac = tac
@@ -289,6 +291,7 @@ printType FloatTypeTac = "float"
 printType CharTypeTac = "char"
 printType BoolTypeTac = "bool"
 printType PointerTypeTac = "pointer"
+printType StringTypeTac = "string"
 
 
 --stringTAC :: TACAddr -> String -> [TAC]
