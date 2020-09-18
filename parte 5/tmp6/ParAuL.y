@@ -206,8 +206,7 @@ Char : L_charac {
             }
 LIdent : L_LIdent 
     {         
-            $$.posn =  (tokenPosn $1)
-            ; $$.envin = emptyEnv                          
+            $$.posn =  (tokenPosn $1)                          
             ; $$.vlident = LIdent (getLIdentT $1)
             ; $$.addr = NameTac (getLIdentT $1) (if isNothing(lookupEnv (getLIdentT $1) $$.envin)
                                                     then $$.posn
@@ -1217,6 +1216,7 @@ Break : 'break'
 FuncD : CompoundType 'function' LIdent '(' ListParamF ')' BlockF 'end'
     { 
         $$.parsetree = AbsAuL.FnctDecl $1.parsetree $3.vlident $5.parsetree $7.parsetree
+        ; $3.envin = mergeEnv $$.envloc $$.envin
         ; $7.envloc = insertRetEnv $1.parsetree False (bypassEnvLoc $5.listparf)
         ; $7.envin = if (isOk (insertFnctEnv $1.parsetree $3.vlident $5.listparf $3.posn $$.envloc))
                          then (mergeEnv (fromOk (insertFnctEnv $1.parsetree $3.vlident $5.listparf $3.posn $$.envloc))
@@ -1735,14 +1735,14 @@ RExp9 : '-' RExp10
         ; $$.parsetree = AbsAuL.Neg $2.parsetree
         ; $2.statein = $$.statein
         ; $$.stateout = stateoutUnOp $2.tipo $2.addr $2.stateout Negation
-        ; $$.errs = (if (not ((op1CompType NeqO $2.tipo) == ErrT))
+        ; $$.errs = (if (not ((op1CompType NegO $2.tipo) == ErrT))
                          then []
                          else ["error at " ++ ((showFromPosn . tokenPosn) $1) ++ ": in negation operator type need to be 'Int' or 'Float'!"]   ) ++ $2.errs
         ; $$.tipo = if (op1CompType NegO $2.tipo) == ErrT
                          then (Base BasicType_Float)
                          else (op1CompType NeqO $2.tipo)
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (AssgmUn (toTACType $2.tipo) $$.addr TAC.NotBool $2.addr))] ++ $2.code
+        ; $$.code = [(Rules (AssgmUn (toTACType $2.tipo) $$.addr (unop Negation (toTACType $2.tipo)) $2.addr))] ++ $2.code
     } 
     | RExp10 
     { 
