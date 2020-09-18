@@ -284,7 +284,9 @@ Block : ListStm
                          then (reinsertRetEnv 
                                 ((getTypeR . fromJust) (lookupEnv "return" $$.envloc))
                                 ((foundIstr . fromJust) (lookupEnv "return" $$.envloc))
-                                emptyEnv)
+                                (if (isJust ((lookupEnv "break" $$.envloc)))
+                                    then (insertBreakEnv ((label . fromJust) (lookupEnv "break" $$.envloc)) emptyEnv)
+                                    else emptyEnv))
                          else emptyEnv
         ; $$.parsetree = AbsAuL.Blk $1.parsetree
         ; $$.envout = if (isJust (lookupEnv "return" $$.envloc))
@@ -453,9 +455,11 @@ Stm : Decl ';' -- nextLabel da gestire per lazyness in varinit
     | While 
     { 
         $1.envin = $$.envin
-        ; $1.envloc = $$.envloc
+        ; $1.envloc = insertBreakEnv $1.nextLabel $$.envloc
         ; $$.parsetree = AbsAuL.SWhile $1.parsetree
-        ; $$.envout = $1.envout
+        ; $$.envout = if (isJust (lookupEnv "break" $$.envin)) 
+                         then (insertBreakEnv ((label . fromJust) (lookupEnv "break" $$.envin)) (deleteEnv "break" $1.envout))
+                         else (deleteEnv "break" $1.envout)
         ; $$.errs = $1.errs
         ; $1.nextLabel = genlabel $$.statein 0
         ; $1.statein = skipState $$.statein 0 1
@@ -465,9 +469,11 @@ Stm : Decl ';' -- nextLabel da gestire per lazyness in varinit
     | Repeat ';'
     {
         $1.envin = $$.envin
-        ; $1.envloc = $$.envloc 
+        ; $1.envloc = insertBreakEnv $1.nextLabel $$.envloc
         ; $$.parsetree = AbsAuL.SRepeat $1.parsetree
-        ; $$.envout = $1.envout
+        ; $$.envout = if (isJust (lookupEnv "break" $$.envin)) 
+                         then (insertBreakEnv ((label . fromJust) (lookupEnv "break" $$.envin)) (deleteEnv "break" $1.envout))
+                         else (deleteEnv "break" $1.envout)
         ; $$.errs = $1.errs  
         ; $1.nextLabel = genlabel $$.statein 0
         ; $1.statein = skipState $$.statein 0 1
@@ -477,10 +483,12 @@ Stm : Decl ';' -- nextLabel da gestire per lazyness in varinit
     | For 
     {
         $1.envin = $$.envin
-        ; $1.envloc = $$.envloc
+        ; $1.envloc = insertBreakEnv $1.nextLabel $$.envloc
         ; $$.parsetree = AbsAuL.SFor $1.parsetree
         ; $$.errs = $1.errs
-        ; $$.envout = $1.envout
+        ; $$.envout = if (isJust (lookupEnv "break" $$.envin)) 
+                         then (insertBreakEnv ((label . fromJust) (lookupEnv "break" $$.envin)) (deleteEnv "break" $1.envout))
+                         else (deleteEnv "break" $1.envout)
         ; $1.nextLabel = genlabel $$.statein 0
         ; $1.statein = skipState $$.statein 0 1
         ; $$.stateout = $1.stateout
@@ -534,7 +542,8 @@ Stm : Decl ';' -- nextLabel da gestire per lazyness in varinit
     {   
         $$.parsetree = AbsAuL.SBreak $1.parsetree
         ; $$.envout = $$.envloc
-        ; $$.errs = []
+        ; $1.envloc = mergeEnv $$.envloc $$.envin
+        ; $$.errs = $1.errs
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code
@@ -558,7 +567,6 @@ EBlk : 'do' Block 'end'
 --  ========================
 --  =======  DECL  =========
 --  ========================
--- $2.envin = (mergeEnv $$.envloc $$.envin)
 Decl : BasicType LExp VarInit 
     { 
         $2.envin = emptyEnv
@@ -989,6 +997,7 @@ For : 'for' LIdent '=' RExp ',' RExp Increment EBlk --modded
                         else ["error at "++ (showFromPosn $2.posn) ++": incompatible types in 'for' loop conditions!"])
                                ++ $4.errs ++ $6.errs ++ $7.errs ++ $8.errs
                                ++ $4.errs ++ $6.errs ++ $7.errs ++ $8.errs
+        
         ; $2.statein = $$.statein
         ; $4.statein = $2.stateout
         ; $6.statein = skipState $4.stateout 1 1
@@ -1005,7 +1014,6 @@ For : 'for' LIdent '=' RExp ',' RExp Increment EBlk --modded
                                                                            else $7.code)
                     ++ [(Rules (CondTrue $6.addr $6.condTrue))] ++ [(Rules (CondFalse $6.addr $6.condFalse))] 
                     ++ (labelRules $8.nextLabel [])
-
     }
 
 Increment : {- empty -} -- per l'appunto, assumiamo sia 1 l'incremento
@@ -1188,9 +1196,13 @@ Break : 'break'
     { 
         $$.parsetree = AbsAuL.JumpB
         ; $$.envout = $$.envloc
-        ; $$.errs = []
+        ; $$.errs = if (isNothing (lookupEnv "break" $$.envloc))
+                    then ["error at "++ ((showFromPosn . tokenPosn) $1) ++ ":cannot use 'break' out of loops!"]
+                    else []
         ; $$.stateout = $$.statein
-        ; $$.code = [(Rules (Goto ($$.nextLabel++"break")))]
+        ; $$.code = if (isJust (lookupEnv "break" $$.envloc))
+                    then [(Rules (Goto ((((label . fromJust) (lookupEnv "break" $$.envloc))))))]
+                    else []
     }
 
 --  ========================

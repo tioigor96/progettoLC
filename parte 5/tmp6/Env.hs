@@ -40,6 +40,8 @@ data Entity = Var { getTypeV :: (CmpType, AbsAuL.Modality),
             | Return { getTypeR :: CmpType,
                        foundIstr :: Bool
                     }
+            | Break { label :: String
+                    }
             deriving (Show, Eq)
 
 -- creo func check Var,... Env
@@ -157,6 +159,10 @@ insertRetEnv tip bool env = let tpe = (makeCmpType (getPtrComType tip) (getArrCo
 
 reinsertRetEnv :: CmpType -> Bool -> EnvT -> EnvT
 reinsertRetEnv tip bool env = Map.insert "return" (Return tip bool) env
+
+--inserisce break nell'env
+insertBreakEnv :: String -> EnvT -> EnvT
+insertBreakEnv label env = Map.insert "break" (Break label) env
 ---------------------------------
 ---- Bse per creare funzioni ----
 ---------------------------------
