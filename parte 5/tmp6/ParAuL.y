@@ -110,31 +110,31 @@ import TAC
   'for' { PT _ (TS _ 36) }
   'function' { PT _ (TS _ 37) }
   'if' { PT _ (TS _ 38) }
-  'local' { PT _ (TS _ 40) }
-  'name' { PT _ (TS _ 41) }
-  'nil' { PT _ (TS _ 42) }
-  'not' { PT _ (TS _ 43) }
-  'or' { PT _ (TS _ 44) }
-  'readChar' { PT _ (TS _ 45) }
-  'readFloat' { PT _ (TS _ 46) }
-  'readInt' { PT _ (TS _ 47) }
-  'readString' { PT _ (TS _ 48) }
-  'repeat' { PT _ (TS _ 50) }
-  'res' { PT _ (TS _ 51) }
-  'return' { PT _ (TS _ 52) }
-  'then' { PT _ (TS _ 53) }
-  'true' { PT _ (TS _ 54) }
-  'until' { PT _ (TS _ 55) }
-  'val' { PT _ (TS _ 56) }
-  'valres' { PT _ (TS _ 57) }
-  'while' { PT _ (TS _ 58) }
-  'writeChar' { PT _ (TS _ 59) }
-  'writeFloat' { PT _ (TS _ 60) }
-  'writeInt' { PT _ (TS _ 61) }
-  'writeString' { PT _ (TS _ 62) }
-  '{' { PT _ (TS _ 63) }
-  '}' { PT _ (TS _ 64) }
-  '~=' { PT _ (TS _ 65) }
+  'local' { PT _ (TS _ 39) }
+  'name' { PT _ (TS _ 40) }
+  'nil' { PT _ (TS _ 41) }
+  'not' { PT _ (TS _ 42) }
+  'or' { PT _ (TS _ 43) }
+  'readChar' { PT _ (TS _ 44) }
+  'readFloat' { PT _ (TS _ 45) }
+  'readInt' { PT _ (TS _ 46) }
+  'readString' { PT _ (TS _ 47) }
+  'repeat' { PT _ (TS _ 48) }
+  'res' { PT _ (TS _ 49) }
+  'return' { PT _ (TS _ 50) }
+  'then' { PT _ (TS _ 51) }
+  'true' { PT _ (TS _ 52) }
+  'until' { PT _ (TS _ 53) }
+  'val' { PT _ (TS _ 54) }
+  'valres' { PT _ (TS _ 55) }
+  'while' { PT _ (TS _ 56) }
+  'writeChar' { PT _ (TS _ 57) }
+  'writeFloat' { PT _ (TS _ 58) }
+  'writeInt' { PT _ (TS _ 59) }
+  'writeString' { PT _ (TS _ 60) }
+  '{' { PT _ (TS _ 61) }
+  '}' { PT _ (TS _ 62) }
+  '~=' { PT _ (TS _ 63) }
 
 L_integ  { PT _ (TI $$) }
 L_doubl  { PT _ (TD $$) }
