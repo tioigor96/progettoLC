@@ -981,7 +981,7 @@ Repeat : 'repeat' Block 'until' RExp
 --  =======  FORS  =========
 --  ========================
 
-For : 'for' LIdent '=' RExp ',' RExp Increment EBlk --modded
+For : 'for' LIdent '=' RExp ',' RExp Increment EBlk -- ; $$.envout = deleteEnv (fromLIdent $2.parsetree) $8.envout
     { 
         $4.envin = mergeEnv $$.envloc $$.envin
         ; $2.envin = emptyEnv
@@ -992,7 +992,7 @@ For : 'for' LIdent '=' RExp ',' RExp Increment EBlk --modded
                         then (mergeEnv (fromOk (insertEnv (getBaseType $7.tipo) Modality1 (LExpS $2.vlident) emptyEnv $2.posn)) $$.envloc)
                         else (mergeEnv (fromOk (insertEnv (getBaseType $4.tipo) Modality1 (LExpS $2.vlident) emptyEnv $2.posn)) $$.envloc)
         ; $$.parsetree = AbsAuL.LoopF $2.vlident $4.parsetree $6.parsetree $7.parsetree $8.parsetree
-        ; $$.envout = $8.envout
+        ; $$.envout = $$.envloc
         ; $$.errs = (if ( all (\(x,y) -> x == y ) [($4.tipo,$6.tipo),($6.tipo,$7.tipo),($7.tipo,$4.tipo)])
                         then []
                         else ["error at "++ (showFromPosn $2.posn) ++": incompatible types in 'for' loop conditions!"])
@@ -1836,7 +1836,12 @@ RExp11 : Integer --TODO: controlla tipi LEXP e &LEXP: controlla che arr non poss
                                                     ((fromLIdent . getLIdentlexp) $1.parsetree) ++"'"]
                                             else []) 
                                    else ["error at "++ (showFromPosn $1.posn) ++": cannot use a function as a variable!"])
-                             ) ++ $1.errs
+                    ) ++ $1.errs ++
+                     (if (isJust (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
+                            then if ((snd . getType . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin) == Modality_res)
+                                    then ["error at "++ (showFromPosn $1.posn) ++": cannot refer this variable in modality 'res'!"]
+                                    else []
+                            else [])
         ; $$.addr = $1.addr
         ; $$.code = if (not $ null $1.listDim) then [(Rules (ArrayEl (toTACType $$.tipo) (gentemp $$.stateout 0) $$.addr))] ++
                                                     listDimToTac $1.listDim  
@@ -1862,7 +1867,12 @@ RExp11 : Integer --TODO: controlla tipi LEXP e &LEXP: controlla che arr non poss
                                         then ["error at "++ ((showFromPosn . tokenPosn) $1) ++": too many dereferencing refering to '"
                                                 ++ ((fromLIdent . getLIdentlexp) $2.parsetree) ++"'"]
                                         else [] )
-                                else ["error at "++ (showFromPosn $2.posn) ++": cannot use a function as a variable!"])) ++ $2.errs
+                                else ["error at "++ (showFromPosn $2.posn) ++": cannot use a function as a variable!"])) ++ $2.errs ++
+                     (if (isJust (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))
+                            then if ((snd . getType . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin) == Modality_res)
+                                    then ["error at "++ (showFromPosn $2.posn) ++": cannot refer this variable in modality 'res'!"]
+                                    else []
+                            else [])
         ; $2.statein = $$.statein
         ; $$.stateout = $2.stateout 
         ; $$.code =  [(Rules (AssignAddress (gentemp $$.stateout 0) (toTACType $$.tipo) $2.addr))]  
