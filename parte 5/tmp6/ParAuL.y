@@ -1068,13 +1068,13 @@ Else : 'else' Block
         ; $$.stateout = $2.stateout
         ; $$.code = (labelRules (genlabel $$.statein 0) $2.code) 
     }
-    | {- empty -} 
+    | {- empty -} --; $$.code = (labelRules (genlabel $$.statein 0) [])
     { 
         $$.parsetree = AbsAuL.ElseE
         ; $$.envout = $$.envloc
         ; $$.stateout = $$.statein 
         ; $$.errs = []
-        ; $$.code = (labelRules (genlabel $$.statein 0) [])
+        ; $$.code = []
     }
 
 ElseIf : 'elseif' RExp 'then' Block 
@@ -1093,7 +1093,7 @@ ElseIf : 'elseif' RExp 'then' Block
         
         ; $$.stateout = skipState $4.stateout 0 0
         
-        ; $2.condFalse = (genlabel $2.stateout 0)
+        ; $2.condFalse = (genlabel $4.stateout 0)
         
         ; $$.code = $2.code ++
                     [(Rules (CondFalse $2.addr $2.condFalse))] ++
