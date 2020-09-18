@@ -289,7 +289,7 @@ Block : ListStm
                                     then (insertBreakEnv ((label . fromJust) (lookupEnv "break" $$.envloc)) emptyEnv)
                                     else emptyEnv))
                          else emptyEnv
-        ; $$.parsetree = AbsAuL.Blk $1.parsetree
+        ; $$.parsetree = AbsAuL.Blk (reverse $1.parsetree)
         ; $$.envout = if (isJust (lookupEnv "return" $$.envloc))
                          then (reinsertRetEnv 
                                     ((getTypeR . fromJust) (lookupEnv "return" $1.envout))
@@ -307,7 +307,7 @@ BlockF : ListStm
     { 
         $1.envin = $$.envin
         ; $1.envloc = $$.envloc
-        ; $$.parsetree = AbsAuL.Blk $1.parsetree
+        ; $$.parsetree = AbsAuL.Blk (reverse $1.parsetree)
         ; $$.envout = $$.envloc
         ; $$.errs = (if (isJust (lookupEnv "return" $1.envout))
                     then (if (((getTypeR . fromJust) (lookupEnv "return" $1.envout)) == ErrT)
