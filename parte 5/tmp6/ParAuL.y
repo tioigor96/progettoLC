@@ -210,7 +210,9 @@ LIdent : L_LIdent
     {         
             $$.posn =  (tokenPosn $1)                           
             ; $$.vlident = LIdent (getLIdentT $1)
-            ; $$.addr = NameTac (getLIdentT $1) $$.posn
+            ; $$.addr = NameTac (getLIdentT $1) (if isNothing(lookupEnv (getLIdentT $1) $$.envin)
+                                                    then $$.posn
+                                                    else ((getPos . fromJust) (lookupEnv (getLIdentT $1) $$.envin)))
             ; $$.stateout = $$.statein
             ; $$.code = []
     }
@@ -558,9 +560,10 @@ EBlk : 'do' Block 'end'
 --  ========================
 --  =======  DECL  =========
 --  ========================
+-- $2.envin = (mergeEnv $$.envloc $$.envin)
 Decl : BasicType LExp VarInit 
     { 
-        $2.envin = (mergeEnv $$.envloc $$.envin)
+        $2.envin = emptyEnv
         ; $3.envin = (mergeEnv $$.envloc $$.envin)
         ; $3.tipo = makeCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree) $1.parsetree
         ; $$.parsetree = AbsAuL.DeclSP $1.parsetree $2.parsetree $3.parsetree
@@ -712,6 +715,7 @@ Local : 'local' Decl
 Ass : LExp '=' RExp -- TODO: finisci errori
     { 
          $3.envin = $$.envin
+        ; $1.envin = $$.envin
         ; $$.parsetree = AbsAuL.AssD $1.parsetree $3.parsetree
         ; $$.tipo = (if (isJust (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
                         then if ((not . isFnctEnv . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
@@ -1274,6 +1278,7 @@ Modality : {- empty -}
 LExp : LIdent 
     { 
         $$.parsetree = AbsAuL.LExpS $1.vlident
+        ; $1.envin = $$.envin
         ; $$.posn = $1.posn
         ; $$.errs = []
         ; $1.statein = $$.statein
@@ -1299,6 +1304,7 @@ LExp : LIdent
     | LIdent ListDim
     { 
         $2.envin = $$.envin
+        ; $1.envin = $$.envin
         ; $$.parsetree = AbsAuL.LExpA $1.vlident $2.parsetree
         ; $$.posn = $1.posn
         ; $$.errs = $2.errs
@@ -1799,7 +1805,8 @@ RExp11 : Integer --TODO: controlla tipi LEXP e &LEXP: controlla che arr non poss
     }
     | LExp --possibile mismatch parentesi
     { 
-        $$.parsetree = AbsAuL.ValVariable $1.parsetree 
+        $$.parsetree = AbsAuL.ValVariable $1.parsetree
+        ; $1.envin = $$.envin 
         ; $$.tipo = (if (isJust (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
                         then (downCmpType (getPtrLev $1.parsetree) (getArrLev $1.parsetree)
                                 ((fst . getType . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin)))
