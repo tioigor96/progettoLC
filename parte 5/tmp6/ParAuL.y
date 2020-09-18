@@ -206,7 +206,8 @@ Char : L_charac {
             }
 LIdent : L_LIdent 
     {         
-            $$.posn =  (tokenPosn $1)                           
+            $$.posn =  (tokenPosn $1)
+            ; $$.envin = emptyEnv                          
             ; $$.vlident = LIdent (getLIdentT $1)
             ; $$.addr = NameTac (getLIdentT $1) (if isNothing(lookupEnv (getLIdentT $1) $$.envin)
                                                     then $$.posn
@@ -587,14 +588,15 @@ Decl : BasicType LExp VarInit
         ; $$.tipo = makeCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree) $1.parsetree
         ; $2.statein = $$.statein
         ; $3.statein = $2.stateout
+        ; $2.tipo = $$.tipo
         ; $$.addr = $2.addr
         ; $$.stateout = if $3.parsetree == AbsAuL.VarINil then $3.stateout
                         else skipState $2.stateout 1 0
         ; $$.code = if (isArrayType $$.tipo && $3.parsetree == AbsAuL.VarINil)  then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr))] ++ listDimToTac $2.listDim ++ $2.code
                         else if (isArrayType $$.tipo) then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr))] ++ listDimToTac $2.listDim ++ $2.code ++ $3.code 
 	                    else if $3.parsetree == AbsAuL.VarINil then [(Rules (VarDecl (toTACType $$.tipo) $2.addr))]
-                        else if (isPointerType $$.tipo) then $2.code ++ $3.code 
-                           else  [(Rules (Assgm (toTACType $$.tipo) $2.addr (gentemp $2.stateout 0)))] ++ $3.code 
+                        else if (isPointerType $$.tipo) then $3.code ++ $2.code  
+                           else $3.code ++ [(Rules (Assgm (toTACType $$.tipo) $2.addr (gentemp $2.stateout 0)))] 
         
     }
 
@@ -714,7 +716,7 @@ Local : 'local' Decl
         ; $$.errs = $2.errs
         ; $2.statein = $$.statein 
         ; $$.stateout = $2.stateout 
-        ; $$.code = [(Rules (Local $2.addr))] ++ $2.code
+        ; $$.code = $2.code ++ [(Rules (Local $2.addr))] 
     }
 
 --  ========================
@@ -752,9 +754,9 @@ Ass : LExp '=' RExp -- TODO: finisci errori
         ; $$.stateout = skipState $3.stateout 0 2
         ; $$.code = if (not ($3.tipo == $$.tipo)) then [Rules (Cast (gentemp $$.statein 0) (toTACType $$.tipo) (toTACType $3.tipo) $3.addr)] 
                                                         ++ [(Rules (Assgm (toTACType $$.tipo) $1.addr (gentemp $$.statein 0) ))]
-                                                   else [(Rules (Assgm (toTACType $$.tipo) $1.addr (gentemp $3.statein 0)))] ++ 
-                                                        (if (null $1.listDim) then [] else listDimToTac $1.listDim) ++
-                                                        [(Rules (Assgm (toTACType $$.tipo) (gentemp $3.statein 0) $3.addr))] ++ $3.code
+                                                   else (if (null $1.listDim) then [] else listDimToTac $1.listDim) ++ $3.code ++
+                                                        [(Rules (Assgm (toTACType $$.tipo) (gentemp $3.statein 0) $3.addr))] ++
+                                                        [(Rules (Assgm (toTACType $$.tipo) $1.addr (gentemp $3.statein 0)))] 
     }
     
 --  ========================
@@ -1312,7 +1314,7 @@ LExp : LIdent
         ; $$.stateout = skipState $2.stateout 1 0
         ; $$.addr = $2.addr 
         ; $2.tipo = $$.tipo
-        ; $$.code = [(Rules (AssignPointer (gentemp $$.stateout 0) (toTACType $2.tipo) $2.addr ))] ++ $2.code 
+        ; $$.code = [(Rules (AssignPointer $2.addr (toTACType $2.tipo) (gentemp $$.stateout 0)))] ++ $2.code 
     }
     | LIdent ListDim
     { 
@@ -1391,7 +1393,8 @@ RExp : RExp 'or' RExp1
         ; $3.condTrue = $$.condTrue
         ; $3.condFalse = $$.condFalse
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (CondRelation $1.addr (relop IsEq (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 0)))] ++ $1.code ++ $3.code
+        ; $$.code = [(Rules (CondRelation $$.addr $1.addr (relop TAC.OrOp (toTACType (op2CompType OrO $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 0)))] ++ 
+                    $1.code ++ $3.code
     }
     | RExp1 'and' RExp2 
     { 
@@ -1410,7 +1413,8 @@ RExp : RExp 'or' RExp1
         ; $3.condTrue = $$.condTrue
         ; $3.condFalse = $$.condFalse
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (CondRelation $1.addr (relop IsEq (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 0)))] ++ $1.code ++ $3.code
+        ; $$.code = [(Rules (CondRelation $$.addr $1.addr (relop TAC.AndOp (toTACType (op2CompType AndO $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 0)))] ++
+                     $1.code ++ $3.code
     }
     | RExp1 
     { 
@@ -1470,7 +1474,7 @@ RExp3 : RExp5 '==' RExp5
     	; $3.condTrue  = genlabel $3.stateout 4
     	; $3.condFalse = genlabel $3.stateout 5
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (CondRelation $1.addr (relop IsEq (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
+        ; $$.code = [(Rules (CondRelation $$.addr $1.addr (relop IsEq (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
     }
     | RExp5 '~=' RExp5 
     { 
@@ -1489,7 +1493,7 @@ RExp3 : RExp5 '==' RExp5
     	; $3.condTrue  = genlabel $3.stateout 4
     	; $3.condFalse = genlabel $3.stateout 5
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (CondRelation $1.addr (relop IsDiff (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
+        ; $$.code = [(Rules (CondRelation $$.addr $1.addr (relop IsDiff (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
     }
     | RExp5 '<' RExp5 
     { 
@@ -1508,7 +1512,7 @@ RExp3 : RExp5 '==' RExp5
     	; $3.condTrue  = genlabel $3.stateout 4
     	; $3.condFalse = genlabel $3.stateout 5
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (CondRelation $1.addr (relop IsL (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
+        ; $$.code = [(Rules (CondRelation $$.addr $1.addr (relop IsL (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
     }
     | RExp5 '<=' RExp5 
     { 
@@ -1527,7 +1531,7 @@ RExp3 : RExp5 '==' RExp5
     	; $3.condTrue  = genlabel $3.stateout 4
     	; $3.condFalse = genlabel $3.stateout 5
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (CondRelation $1.addr (relop IsLEQ (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
+        ; $$.code = [(Rules (CondRelation $$.addr $1.addr (relop IsLEQ (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
     }
     | RExp5 '>' RExp5 
     { 
@@ -1546,7 +1550,7 @@ RExp3 : RExp5 '==' RExp5
     	; $3.condTrue  = genlabel $3.stateout 4
     	; $3.condFalse = genlabel $3.stateout 5
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (CondRelation $1.addr (relop IsG (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
+        ; $$.code = [(Rules (CondRelation $$.addr $1.addr (relop IsG (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
     }
     | RExp5 '>=' RExp5 
     { 
@@ -1565,7 +1569,7 @@ RExp3 : RExp5 '==' RExp5
     	; $3.condTrue  = genlabel $3.stateout 4
     	; $3.condFalse = genlabel $3.stateout 5
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (CondRelation $1.addr (relop IsGEQ (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
+        ; $$.code = [(Rules (CondRelation $$.addr $1.addr (relop IsGEQ (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
     }                        
     | RExp4 
     { 
@@ -1779,7 +1783,7 @@ RExp10 : Func
                         then ["error at "++ ((showFromPosn . tokenPosn) $2) ++": '..' need to have 'Char'(s) or 'String'(s) as arguments!"]
                         else []) ++ $1.errs ++ $3.errs 
         ; $1.statein = $$.statein
-        ; $3.statein = $1.stateoutBinOp
+        ; $3.statein = $1.stateout
         ; $$.stateout = $3.stateout
         ; $$.code = $1.code ++ [(Rules(ProcCall (InternalFunc "concat") 1))] ++ $3.code  
     }
@@ -1849,11 +1853,12 @@ RExp11 : Integer --TODO: controlla tipi LEXP e &LEXP: controlla che arr non poss
                                     else []
                             else [])
         ; $$.addr = $1.addr
-        ; $$.code = if (not $ null $1.listDim) then [(Rules (ArrayEl (toTACType $$.tipo) (gentemp $$.stateout 0) $$.addr))] ++
+        ; $$.code = if (not $ null $1.listDim) then [(Rules (ArrayEl (toTACType $$.tipo) $$.addr $$.addr))] ++
                                                     listDimToTac $1.listDim  
                                                else []
         ; $1.statein = $$.statein
-        ; $$.stateout = $1.stateout
+        ; $$.stateout =  if (not $ null $1.listDim) then skipState $1.stateout 1 0
+                                                    else $1.stateout
     }
     | '&' LExp 
     { 

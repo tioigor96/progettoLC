@@ -18,7 +18,7 @@ data RulesTac = AssgmBin TypeTac ArgOp ArgOp BinaryOp ArgOp             -- x = y
               | Goto LabelTac
               | CondTrue ArgOp LabelTac                                 -- if x goto y
               | CondFalse ArgOp LabelTac                                -- ifFalse x goto y
-              | CondRelation ArgOp RelationOp ArgOp LabelTac            -- if (x rel y) goto z 
+              | CondRelation ArgOp ArgOp RelationOp ArgOp LabelTac      -- t = if  (x rel y) goto z 
               | ProcCall FuncDef Int                                    -- call p, n
               | FuncCall ArgOp TypeTac FuncDef Int                        -- y =t call p, n
               | Load ArgOp                                                      
@@ -54,11 +54,10 @@ data ArgOp = NameTac String Posn | TempTac String | IntTac Int | FloatTac Double
 
 data BinaryOp = AddInt | SubInt | MulInt | ExpInt | DivInt | Module
               | AddFloat | SubFloat | MulFloat | ExpFloat | DivFloat
-              | Or | And
               | PointerAdd | PointerSub
   deriving (Eq, Show)
 
-data BinOp = Add | Sub | Mul | Exp | Div | Mod
+data BinOp = Add | Sub | Mul | Exp | Div | Mod 
   deriving (Eq, Show)
 
 data UnaryOp = NegInt | NegFloat | NotBool
@@ -72,9 +71,10 @@ data RelationOp = IsEqInt    | IsDiffInt   | IsLInt   | IsLEQInt   | IsGInt   | 
                 | IsEqFloat  | IsDiffFloat | IsLFloat | IsLEQFloat | IsGFloat | IsGEQFloat
                 | IsEqBool   | IsDiffBool
                 | IsEqPntr   | IsDiffPntr
+                | Or | And
   deriving (Eq, Show)
 
-data RelOp = IsEq | IsDiff | IsL | IsLEQ | IsG | IsGEQ -- per trovare la TACRelOP giusta
+data RelOp = IsEq | IsDiff | IsL | IsLEQ | IsG | IsGEQ | OrOp | AndOp-- per trovare la TACRelOP giusta
   deriving (Eq, Show)
 
 
@@ -125,6 +125,8 @@ relop IsG t = case t of IntTypeTac   -> IsGInt
 relop IsGEQ t = case t of IntTypeTac   -> IsGEQInt
                           FloatTypeTac -> IsGEQFloat
                           CharTypeTac  -> IsGEQChar
+relop TAC.OrOp t = TAC.Or
+relop TAC.AndOp t = TAC.And
 
 data FuncDef = SourceFunc String Posn
              | WriteChar 
@@ -160,8 +162,8 @@ printRules (CondTrue a lab) =
         "if(True) " ++ (argOpToString a) ++ " goto " ++ lab
 printRules (CondFalse a lab) = 
         "if(False) " ++ (argOpToString a) ++ " goto " ++ lab
-printRules (CondRelation a op b lab) = 
-        "if(RelOp) " ++ (argOpToString a) ++ " " ++ (relOpToString op) ++ " " ++(argOpToString b) 
+printRules (CondRelation t a op b lab) = 
+        (argOpToString t) ++" = if(RelOp) " ++ (argOpToString a) ++ " " ++ (relOpToString op) ++ " " ++(argOpToString b) 
 printRules (ProcCall f1 n) =
         (funcToString f1) ++ "[#arg: " ++ show n ++ "]"
 printRules (FuncCall a1 t f1 n) =
@@ -238,8 +240,6 @@ binOpToString SubFloat = "-float"
 binOpToString MulFloat = "*float"
 binOpToString ExpFloat = "^float"
 binOpToString DivFloat = "/float"
-binOpToString TAC.Or = "||"
-binOpToString TAC.And = "&&"
 binOpToString PointerAdd = "+pointer"
 binOpToString PointerSub = "-pointer"
 
@@ -271,6 +271,8 @@ relOpToString IsEqBool = "==bool"
 relOpToString IsDiffBool = "==bool"
 relOpToString IsEqPntr = "==pointer"
 relOpToString IsDiffPntr = "!=pointer"
+relOpToString TAC.Or = "||"
+relOpToString TAC.And = "&&"
 
 
 funcToString :: FuncDef -> String

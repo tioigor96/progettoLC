@@ -124,14 +124,17 @@ codeRelOpEqDif type1 type3 code1 code3 condTrue condFalse addr1 addr3 state op =
                bool3 = [(LRules (genlabel state 4) (Assgm BoolTypeTac (gentemp state 2) trueVal)),
                         (Rules (Goto (genlabel state 6))),
                         (LRules (genlabel state 5) (Assgm BoolTypeTac (gentemp state 2) falseVal))]
-               comparejump = [(LRules (genlabel state 6) (CondRelation (gentemp state  1)
+               comparejump = [(LRules (genlabel state 6) (CondRelation (gentemp state  0)
+                                                                        (gentemp state  1)
                                                                          (relop op BoolTypeTac)
                                                                          (gentemp state  2)
                                                                          condTrue)),
                               (Rules (Goto condFalse))]
            in code1 ++ bool1 ++ (labelRules (genlabel state 3) code3) ++ bool3 ++ comparejump
       else let castcomparejump = if (type1 == type3) -- caso 3) ne' $1 ne' $3 sono booleani
-                                   then [(Rules (CondRelation addr1
+                                   then [(Rules (CondRelation
+                                                            (gentemp state  0) 
+                                                             addr1
                                                              (relop op (toTACType type1))
                                                              addr3
                                                              condTrue)),
@@ -141,7 +144,9 @@ codeRelOpEqDif type1 type3 code1 code3 condTrue condFalse addr1 addr3 state op =
                                                       (toTACType type1)
                                                       (toTACType type3)
                                                       addr3)),
-                                         (Rules (CondRelation addr1
+                                         (Rules (CondRelation
+                                                            (gentemp state  0) 
+                                                              addr1
                                                              (relop op (toTACType type1))
                                                              (gentemp state  1)
                                                              condTrue)),
@@ -150,7 +155,9 @@ codeRelOpEqDif type1 type3 code1 code3 condTrue condFalse addr1 addr3 state op =
                                                       (toTACType type3)
                                                       (toTACType type1)
                                                       addr1)),
-                                         (Rules (CondRelation (gentemp state  1)
+                                         (Rules (CondRelation 
+                                                            (gentemp state  0) 
+                                                             (gentemp state  1)
                                                              (relop op (toTACType type3))
                                                              addr3
                                                              condTrue)),
@@ -174,7 +181,9 @@ codeRelOpDisEq type1 type3 code1 code3 condTrue condFalse addr1 addr3 state op =
            in code1 ++ code3 ++ comparegoto
       else let castcomparejump = if (type1 == type3) -- 2a) contronto tra RExpr dello stesso tipo
                                                 -- CondRelation ArgOp RelationOp ArgOp LabelTac
-                                   then [(Rules (CondRelation addr1
+                                   then [(Rules (CondRelation 
+                                                            (gentemp state  0) 
+                                                             addr1
                                                              (relop op (toTACType type1))
                                                              addr3
                                                              condTrue)),
@@ -184,7 +193,9 @@ codeRelOpDisEq type1 type3 code1 code3 condTrue condFalse addr1 addr3 state op =
                                                                               (toTACType type1)
                                                                               (toTACType type3)
                                                                               addr3)),
-                                         (Rules (CondRelation addr1
+                                         (Rules (CondRelation
+                                                            (gentemp state  0) 
+                                                              addr1
                                                              (relop op (toTACType type1))
                                                              (gentemp state  1)
                                                              condTrue)),
@@ -193,7 +204,9 @@ codeRelOpDisEq type1 type3 code1 code3 condTrue condFalse addr1 addr3 state op =
                                                       (toTACType type3)
                                                       (toTACType type1)
                                                       addr1)),
-                                         (Rules (CondRelation (gentemp state  1)
+                                         (Rules (CondRelation 
+                                                            (gentemp state  0) 
+                                                             (gentemp state  1)
                                                               (relop op (toTACType type1))
                                                               addr3
                                                               condTrue)),
