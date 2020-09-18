@@ -267,7 +267,7 @@ instance Print AbsAuL.Repeat where
 instance Print AbsAuL.For where
   prt i e = case e of
     AbsAuL.LoopF lident rexp1 rexp2 increment eblk -> prPrec i 0 (concatD [doc (showString "for"), prt 0 lident, doc (showString "="), prt 0 rexp1, doc (showString ","), prt 0 rexp2, prt 0 increment, prt 0 eblk])
-    AbsAuL.LoopFE lident1 lident2 eblk -> prPrec i 0 (concatD [doc (showString "for"), prt 0 lident1, doc (showString "in"), prt 0 lident2, prt 0 eblk])
+--    AbsAuL.LoopFE lident1 lident2 eblk -> prPrec i 0 (concatD [doc (showString "for"), prt 0 lident1, doc (showString "in"), prt 0 lident2, prt 0 eblk])
 
 instance Print AbsAuL.Increment where
   prt i e = case e of
@@ -326,7 +326,7 @@ instance Print AbsAuL.Modality where
   prt i e = case e of
     AbsAuL.Modality1 -> prPrec i 0 (concatD [])
     AbsAuL.Modality_val -> prPrec i 0 (concatD [doc (showString "val")])
-    AbsAuL.Modality_ref -> prPrec i 0 (concatD [doc (showString "ref")])
+--    AbsAuL.Modality_ref -> prPrec i 0 (concatD [doc (showString "ref")])
     AbsAuL.Modality_const -> prPrec i 0 (concatD [doc (showString "const")])
     AbsAuL.Modality_res -> prPrec i 0 (concatD [doc (showString "res")])
     AbsAuL.Modality_valres -> prPrec i 0 (concatD [doc (showString "valres")])
