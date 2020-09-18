@@ -110,7 +110,6 @@ import TAC
   'for' { PT _ (TS _ 36) }
   'function' { PT _ (TS _ 37) }
   'if' { PT _ (TS _ 38) }
-  'in' { PT _ (TS _ 39) }
   'local' { PT _ (TS _ 40) }
   'name' { PT _ (TS _ 41) }
   'nil' { PT _ (TS _ 42) }
@@ -120,7 +119,6 @@ import TAC
   'readFloat' { PT _ (TS _ 46) }
   'readInt' { PT _ (TS _ 47) }
   'readString' { PT _ (TS _ 48) }
-  'ref' { PT _ (TS _ 49) }
   'repeat' { PT _ (TS _ 50) }
   'res' { PT _ (TS _ 51) }
   'return' { PT _ (TS _ 52) }
@@ -574,7 +572,10 @@ Decl : BasicType LExp VarInit
                          then ["error at "++ (showFromPosn $2.posn) ++": variable " ++ 
                                 (fromBad (insertEnv $1.parsetree Modality1 $2.parsetree $$.envloc $2.posn))]
                          else []
-                        ) ++ $2.errs ++ $3.errs
+                        ) ++ $2.errs ++ $3.errs ++
+                    (if ($1.parsetree == BasicType_Void)
+                        then ["error at "++ (showFromPosn $2.posn) ++": variable type is 'Void', type not permitted!"]
+                        else [])
         ; $$.tipo = makeCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree) $1.parsetree
         ; $2.statein = $$.statein
         ; $3.statein = $2.stateout
@@ -724,7 +725,11 @@ Ass : LExp '=' RExp -- TODO: finisci errori
                                 else ErrT 
                         else ErrT)
         ; $$.errs = (if ($$.tipo == ErrT)
-                         then ["error at "++ ((showFromPosn . tokenPosn) $2) ++": refer to unexistent variable!"]
+                         then (if (isJust (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
+                                 then (if ((not . isFnctEnv . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
+                                          then ["error at "++ ((showFromPosn . tokenPosn) $2) ++": dereferencing level is inadequate!"]
+                                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++": cannot assign value to a function!"])
+                                 else ["error at "++ ((showFromPosn . tokenPosn) $2) ++": refer to unexistent variable!"])
                          else if (not ((compCmpType $$.tipo $3.tipo) == ErrT))
                                   then if((snd . getType . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin) == Modality_const)
                                          then ["error at " ++ ((showFromPosn . tokenPosn) $2) ++
@@ -805,8 +810,8 @@ ListRExp : {- empty -}
         $$.parsetree = (:[]) $1.parsetree 
         ; $1.envin = $$.envin
         ; $$.lrexptpe = (:[]) $1.tipo
-        ; $$.listRexp = (:[]) $1.addr
         ; $$.errs = $1.errs
+        ; $$.listRexp = (:[]) $1.addr
     }
     | RExp ',' ListRExp 
     { 
@@ -1002,10 +1007,7 @@ For : 'for' LIdent '=' RExp ',' RExp Increment EBlk --modded
                     ++ (labelRules $8.nextLabel [])
 
     }
-    | 'for' LIdent 'in' LIdent EBlk --modded
-    { 
-        $$.parsetree = AbsAuL.LoopFE $2.vlident $4.vlident $5.parsetree 
-    }
+
 Increment : {- empty -} -- per l'appunto, assumiamo sia 1 l'incremento
     { 
         $$.parsetree = AbsAuL.FIncE
@@ -1171,9 +1173,7 @@ RValue : {- empty -}
                         then (if ((getTypeR . fromJust) (lookupEnv "return" $$.envloc) == ErrT)
                                  then ["error at " ++ (showFromPosn $$.posn) ++ ": return is Void, but given expression's type is '" ++
                                         (showCmpType $1.tipo) ++ "'"]
-                                 else (if ((==) 
-                                            (compCmpType ((getTypeR . fromJust) (lookupEnv "return" $$.envloc)) $1.tipo)
-                                            ((getTypeR . fromJust) (lookupEnv "return" $$.envloc)))
+                                 else (if (not (ErrT == (compCmpType ((getTypeR . fromJust) (lookupEnv "return" $$.envloc)) $1.tipo)))
                                           then []
                                           else ["error at "++ (showFromPosn $$.posn) ++ ": return need '"++ 
                                                 (showCmpType ((getTypeR . fromJust) (lookupEnv "return" $$.envloc))) ++
@@ -1215,7 +1215,11 @@ FuncD : CompoundType 'function' LIdent '(' ListParamF ')' BlockF 'end'
                          else $$.envloc
         ; $$.errs = (if (isBad (insertFnctEnv $1.parsetree $3.vlident $5.listparf $3.posn $$.envloc))
                          then [(fromBad (insertFnctEnv $1.parsetree $3.vlident $5.listparf $3.posn $$.envloc))]
-                         else []) ++ $7.errs
+                         else []) ++ $7.errs ++
+                    (if((getBaseComType $1.parsetree)== BasicType_Void && ( (getArrComType $1.parsetree) > 0 || (getPtrComType $1.parsetree) > 0))
+                        then ["error at " ++((showFromPosn . tokenPosn) $2) ++": erroneus definition of function type. Maybe you "++
+                              "would define it as Int, Float,...?"]
+                        else [])
         ; $3.statein = $$.statein
         ; $7.statein = $3.stateout
         ; $7.nextLabel = $$.nextLabel
@@ -1251,10 +1255,6 @@ Modality : {- empty -}
     | 'val' 
     { 
         $$.parsetree = AbsAuL.Modality_val
-    }
-    | 'ref' -- $$.parsetree = AbsAuL.Modality_ref
-    { 
-        $$.parsetree = AbsAuL.Modality1
     }
     | 'const' 
     { 
@@ -1440,7 +1440,7 @@ RExp2 : 'not' RExp3
         ; $$.addr = $1.addr
         ; $$.code = $1.code
     }
-RExp3 : RExp3 '==' RExp5 
+RExp3 : RExp5 '==' RExp5 
     { 
         $1.envin = $$.envin
         ; $3.envin = $$.envin
@@ -1459,7 +1459,7 @@ RExp3 : RExp3 '==' RExp5
         ; $$.addr = (gentemp $$.statein 0)
         ; $$.code = [(Rules (CondRelation $1.addr (relop IsEq (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
     }
-    | RExp3 '~=' RExp5 
+    | RExp5 '~=' RExp5 
     { 
         $1.envin = $$.envin
         ; $3.envin = $$.envin
@@ -1478,7 +1478,7 @@ RExp3 : RExp3 '==' RExp5
         ; $$.addr = (gentemp $$.statein 0)
         ; $$.code = [(Rules (CondRelation $1.addr (relop IsDiff (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
     }
-    | RExp3 '<' RExp5 
+    | RExp5 '<' RExp5 
     { 
         $1.envin = $$.envin
         ; $3.envin = $$.envin
@@ -1497,7 +1497,7 @@ RExp3 : RExp3 '==' RExp5
         ; $$.addr = (gentemp $$.statein 0)
         ; $$.code = [(Rules (CondRelation $1.addr (relop IsL (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
     }
-    | RExp3 '<=' RExp5 
+    | RExp5 '<=' RExp5 
     { 
         $1.envin = $$.envin
         ; $3.envin = $$.envin
@@ -1516,7 +1516,7 @@ RExp3 : RExp3 '==' RExp5
         ; $$.addr = (gentemp $$.statein 0)
         ; $$.code = [(Rules (CondRelation $1.addr (relop IsLEQ (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
     }
-    | RExp3 '>' RExp5 
+    | RExp5 '>' RExp5 
     { 
         $1.envin = $$.envin
         ; $3.envin = $$.envin
@@ -1535,7 +1535,7 @@ RExp3 : RExp3 '==' RExp5
         ; $$.addr = (gentemp $$.statein 0)
         ; $$.code = [(Rules (CondRelation $1.addr (relop IsG (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
     }
-    | RExp3 '>=' RExp5 
+    | RExp5 '>=' RExp5 
     { 
         $1.envin = $$.envin
         ; $3.envin = $$.envin
@@ -1808,17 +1808,22 @@ RExp11 : Integer --TODO: controlla tipi LEXP e &LEXP: controlla che arr non poss
         $$.parsetree = AbsAuL.ValVariable $1.parsetree
         ; $1.envin = $$.envin 
         ; $$.tipo = (if (isJust (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
-                        then (downCmpType (getPtrLev $1.parsetree) (getArrLev $1.parsetree)
-                                ((fst . getType . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin)))
+                        then (if (isFnctEnv (fromJust (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin)))
+                                then ErrT
+                                else (downCmpType (getPtrLev $1.parsetree) (getArrLev $1.parsetree)
+                                        ((fst . getType . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))))
                         else ErrT )
         ; $$.errs = (if (isNothing (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))
                         then ["error: reference to " ++ ((fromLIdent . getLIdentlexp) $1.parsetree) ++ " at line " ++
-                                (showFromPosn $1.posn) ++ "is invalid (maybe a function or not declared variable?)"]
-                        else (if ((downCmpType (getPtrLev $1.parsetree) (getArrLev $1.parsetree)
-                                        ((fst . getType . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))) == ErrT)
-                                then ["error at "++ (showFromPosn $1.posn) ++"too many dereferencing refering to '"++ 
-                                        ((fromLIdent . getLIdentlexp) $1.parsetree) ++"'"]
-                                else [] ))
+                                (showFromPosn $1.posn) ++ " is invalid (maybe not declared variable?)"]
+                        else ( if (not (isFnctEnv (fromJust (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))))
+                                   then (if ((downCmpType (getPtrLev $1.parsetree) (getArrLev $1.parsetree)
+                                              ((fst . getType . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $1.parsetree) $$.envin))) == ErrT)
+                                            then ["error at "++ (showFromPosn $1.posn) ++": invalid dereferencing (maybe too much?) referring to '"++ 
+                                                    ((fromLIdent . getLIdentlexp) $1.parsetree) ++"'"]
+                                            else []) 
+                                   else ["error at "++ (showFromPosn $1.posn) ++": cannot use a function as a variable!"])
+                             ) ++ $1.errs
         ; $$.addr = $1.addr
         ; $$.code = if (not $ null $1.listDim) then [(Rules (ArrayEl (toTACType $$.tipo) (gentemp $$.stateout 0) $$.addr))] ++
                                                     listDimToTac $1.listDim  
@@ -1830,17 +1835,21 @@ RExp11 : Integer --TODO: controlla tipi LEXP e &LEXP: controlla che arr non poss
     { 
         $$.parsetree = AbsAuL.ValRef $2.parsetree
         ; $$.tipo = (if (isJust (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))
-                        then (addPtrT ( downCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree)
-                                ((fst . getType . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))))
+                        then (if (not (isFnctEnv (fromJust (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))))
+                                 then (addPtrT ( downCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree)
+                                        ((fst . getType . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))))
+                                 else ErrT)
                         else ErrT )
         ; $$.errs = (if (isNothing (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))
                         then ["error: reference to " ++ ((fromLIdent . getLIdentlexp) $2.parsetree) ++ " at line " ++
-                                (showFromPosn $2.posn) ++ "is invalid (maybe a function or not declared variable?)"]
-                        else (if ((addPtrT ( downCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree)
-                                        ((fst . getType . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin)))) == ErrT)
-                                then ["error at "++ ((showFromPosn . tokenPosn) $1) ++": too many dereferencing refering to '"
-                                        ++ ((fromLIdent . getLIdentlexp) $2.parsetree) ++"'"]
-                                else [] )) ++ $2.errs
+                                (showFromPosn $2.posn) ++ "is invalid (maybe not declared variable?)"]
+                        else (if (not (isFnctEnv (fromJust (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin))))
+                                then (if ((addPtrT ( downCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree)
+                                                ((fst . getType . fromJust) (lookupEnv ((fromLIdent . getLIdentlexp) $2.parsetree) $$.envin)))) == ErrT)
+                                        then ["error at "++ ((showFromPosn . tokenPosn) $1) ++": too many dereferencing refering to '"
+                                                ++ ((fromLIdent . getLIdentlexp) $2.parsetree) ++"'"]
+                                        else [] )
+                                else ["error at "++ (showFromPosn $2.posn) ++": cannot use a function as a variable!"])) ++ $2.errs
         ; $2.statein = $$.statein
         ; $$.stateout = $2.stateout 
         ; $$.code =  [(Rules (AssignAddress (gentemp $$.stateout 0) (toTACType $$.tipo) $2.addr))]  
