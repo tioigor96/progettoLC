@@ -12,6 +12,7 @@ import SkelAuL
 import PrintAuL
 import AbsAuL
 import Env
+import TAC
 
 
 
@@ -37,12 +38,15 @@ run v p s = let ts = myLLexer s in case p ts of
                           putStrV v $ show ts
                           putStrLn s
                           exitFailure
-           (Ok  (Result prog _ env errs)) -> do (if (length errs) /= 0
+           (Ok  (Result prog t env errs)) -> do (if (length errs) /= 0
                                                  then (showErr errs)
                                                  else (do { putStrLn "\nParse Successful!"
                                                            ; showTree v prog
                                                            ; putStrLn "\n[Environment]"
-                                                           ; putStrLn $ show env }))
+                                                           ; putStrLn $ show env 
+                                                           ; putStrLn "\n[TAC]"
+                                                           ; putStr (prettyprintTAC t)
+                                                           }))
                                                  ; exitSuccess
 
 showTree :: (Show a, Print a) => Int -> a -> IO ()
