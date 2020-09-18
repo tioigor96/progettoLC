@@ -29,8 +29,8 @@ puntatori.
 Viene creato e manipolato passo-passo un SDT: questo mi permette di creare quindi sia un AST che un TAC contemporaneamente.
 
 In auL sono presenti le modalità di passaggio dei parametri by value (val), by constant (const), by 
-result (res) and by value/result (valres). Se la modalità non è definita, verrà usata la modalità di default che è by 
-reference per array e stringhe e by value per tutti gli altri tipi.
+result (res) and by value/result (valres) e riferimento. Se la modalità non è definita, verrà usata 
+la modalità di default che è by reference per array e stringhe e by value per tutti gli altri tipi.
 
 Un programma auL è composto da una lista di Statement e/o delle funzioni: il file per essere accettato deve contenere
 almeno una delle due. All'interno del blocco delle funzioni, invece, similmente ai blocchi degli statement, non è richiesto
@@ -56,21 +56,21 @@ Le parole riservate in auL sono:
   end        false      for         function
   if         local      name        nil
   not        or         readChar    readFloat
-  readInt    readString          repeat
-  res        return     then        true
-  until      val        valres      while
-  writeChar  writeFloat writeInt    writeString
+  readInt    readString repeat      res
+  return     then        true       until
+  val        valres      while      writeChar
+  writeFloat writeInt    writeString
 \end{verbatim}
 
 \subsection*{Simboli riservati}
 I simboli riservati sono:
 \begin{verbatim}
-  | * | [ | ] | ;
-  | = | { | } | ,
-  | ( | ) | == | ~=
-  | < | <= | > | >=
-  | + | - | / | %
-  | ^ | .. | # | &
+   *  [   ]  ;
+   =  {   }  ,
+   (  )  ==  ~=
+   <  <=  >  >=
+   +  -   /  %
+   ^  ..  #  &
 \end{verbatim}
 \subsection*{Commenti}
 Sono presenti sia commenti in-line che commenti multi-line. Sono definiti quindi dalle seguenti espressioni regolari
@@ -184,6 +184,7 @@ diventa quindi equivalente alla scrittura
   Int a = 1;  
   while (a < 10) do
     [Stm]
+    a = a + 2;
   end
 \end{verbatim}
 
@@ -557,7 +558,11 @@ Esemplifichiamo il type system per la definizione di funzioni.
 	\item non è possibile sovrascrivere una costante, perciò negli assegnamenti
 		si controlla che la lhs non sia una costante;
 	
-	\item **da mettere la roba del name/const/...**.
+	\item sono implementati i passaggi per riverimento, valore, risultato, costante, valore/risultato.
+		Il passaggio per valore è definibile attraverso alla dichiarazione dei parametri di funzione
+		del valore in ingresso come puntatore (e quindi ``*''). I vincoli sulle ``modalità'' del parametro
+		sono che se la variabile è definita come \texttt{costante} non sarà possibile modificare il suo
+		valore, mentre se la variabile è in modalità ``risultato'' non sarà possibile accedere al suo valore.
 \end{itemize}
 
 
@@ -579,7 +584,7 @@ data TAC = Rules RulesTac | LRules LabelTac RulesTac\\
     \item \texttt{ListDimension} indica la lista delle dimensioni degli array
     \item \texttt{ArrayEl} viene usato per gli assegnamenti del tipo  x = y[i] o y[i] = x
     \item \texttt{ListElem} e \texttt{ListRexp} servono per la gestione delle liste di elementi degli array e delle liste degli argomenti per le chiamate a funzioni
-    \item \texttt{AssignAddress} e \texttt{AssignPointer} vengono usati rispettivamente per istruzioni del tipo  x = &y e x = *y, mentre \texttt{DerefAssign} per quelle del tipo *x = y
+    \item \texttt{AssignAddress} e \texttt{AssignPointer} vengono usati rispettivamente per istruzioni del tipo  x = \&y e x = *y, mentre \texttt{DerefAssign} per quelle del tipo *x = y
     \item \texttt{NoOperation} è la semplice operazione vuota
     \item \texttt{ReturnTac}, \texttt{Break}, \texttt{Comment} e \texttt{Error} sono rispettivamente l'istruzione di return, di break, di commento e di errore
     \item \texttt{GetArg} viene utilizzato per il caricamento degli argomenti nelle operazioni
