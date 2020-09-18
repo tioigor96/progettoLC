@@ -984,6 +984,7 @@ Repeat : 'repeat' Block 'until' RExp
 For : 'for' LIdent '=' RExp ',' RExp Increment EBlk --modded
     { 
         $4.envin = mergeEnv $$.envloc $$.envin
+        ; $2.envin = emptyEnv
         ; $6.envin = mergeEnv $$.envloc $$.envin
         ; $7.envin = mergeEnv $$.envloc $$.envin
         ; $8.envin = $$.envin
