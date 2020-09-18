@@ -1784,8 +1784,8 @@ RExp10 : Func
                         else []) ++ $1.errs ++ $3.errs 
         ; $1.statein = $$.statein
         ; $3.statein = $1.stateout
-        ; $$.stateout = $3.stateout
-        ; $$.code = $1.code ++ [(Rules(ProcCall (InternalFunc "concat") 1))] ++ $3.code  
+        ; $$.stateout = skipState $3.stateout 1 0
+        ; $$.code = $1.code ++ [(Rules(FuncCall (gentemp $3.stateout 0) StringTypeTac (InternalFunc "concat") 2))] ++ $3.code  
     }
     | '#' RExp11
     --TODO: assegnamento funzione
@@ -1799,7 +1799,7 @@ RExp10 : Func
         ; $2.statein = $$.statein
         ; $$.stateout = $2.stateout
         ; $$.addr = $2.addr
-        ; $$.code = [(Rules(ProcCall (InternalFunc "lenght") 1))] ++ $2.code  
+        ; $$.code = [(Rules(FuncCall (gentemp $2.stateout 0) IntTypeTac (InternalFunc "lenght") 1))] ++ $2.code  
     }
     | RExp11 
     { 
