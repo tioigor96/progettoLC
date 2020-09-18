@@ -48,7 +48,7 @@ data TypeTac = IntTypeTac | FloatTypeTac | CharTypeTac | StringTypeTac | BoolTyp
 trueVal  = BoolTac True  -- alias
 falseVal = BoolTac False -- alias
 
-data ArgOp = NameTac String Posn | TempTac String | IntTac Int | FloatTac Double | CharTac Char | BoolTac Bool 
+data ArgOp = NameTac String Posn | TempTac String | IntTac Int | FloatTac Double | CharTac Char | BoolTac Bool | StringTac String
   deriving (Eq, Show)
 
 
@@ -149,7 +149,7 @@ printRules (AssgmBin t a b1 op b2) =
 printRules (AssgmUn t a op b) = 
         (printType t) ++ " " ++ (argOpToString a) ++ " = " ++ (unOpToString op) ++ " " ++ (argOpToString b) 
 printRules (Assgm t a1 a2) = 
-        (printType t) ++ " " ++ (argOpToString a1) ++ " = " ++ (argOpToString a2) 
+        (printType t) ++ " " ++  (argOpToString a1) ++ " = " ++ (argOpToString a2) 
 printRules (Cast a1 t1 t2 a2) =
         (argOpToString a1) ++ " = cast_" ++ (printType t1) ++ "_" ++ (printType t2) ++" " ++ (argOpToString a2)
 printRules (VarDecl t a) = 
@@ -224,6 +224,7 @@ argOpToString (IntTac i) = show i
 argOpToString (FloatTac f) = show f
 argOpToString (CharTac c) = "'" ++ showLitChar c "" ++ "'"
 argOpToString (BoolTac b) = show b
+argOpToString (StringTac s) = "\"" ++ s ++ "\""
 
 binOpToString :: BinaryOp -> String
 binOpToString AddInt = "+int"
