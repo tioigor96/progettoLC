@@ -13,7 +13,8 @@ data RulesTac = AssgmBin TypeTac ArgOp ArgOp BinaryOp ArgOp             -- x = y
               | AssgmUn TypeTac ArgOp UnaryOp ArgOp                     -- x = op y
               | Assgm TypeTac ArgOp ArgOp                               -- x = y
               | Cast ArgOp TypeTac TypeTac ArgOp                        -- x =t1 cast_t1_t2 y
-              | VarDecl TypeTac ArgOp                                   -- Int a ;
+              | VarDecl TypeTac ArgOp                                   -- type x ;
+              | Local ArgOp                                             -- local x;
               | Goto LabelTac
               | CondTrue ArgOp LabelTac                                 -- if x goto y
               | CondFalse ArgOp LabelTac                                -- ifFalse x goto y

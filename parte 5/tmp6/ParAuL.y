@@ -197,7 +197,7 @@ Double : L_doubl   {
 String : L_quoted  {
               $$.vstr = $1
               ; $$.tipo = Base BasicType_String
-      		  ; $$.addr = TempTac ((read $1) :: String)
+      		  ; $$.addr = TempTac $1
       		  ; $$.stateout = $$.statein  
             }
 Char : L_charac {
@@ -210,7 +210,7 @@ LIdent : L_LIdent
     {         
             $$.posn =  (tokenPosn $1)                           
             ; $$.vlident = LIdent (getLIdentT $1)
-            ; $$.addr = NameTac (getString $1) $$.posn
+            ; $$.addr = NameTac (getLIdentT $1) $$.posn
             ; $$.stateout = $$.statein
             ; $$.code = []
     }
@@ -575,6 +575,7 @@ Decl : BasicType LExp VarInit
         ; $$.tipo = makeCmpType (getPtrLev $2.parsetree) (getArrLev $2.parsetree) $1.parsetree
         ; $2.statein = $$.statein
         ; $3.statein = $2.stateout
+        ; $$.addr = $2.addr
         ; $$.stateout = if $3.parsetree == AbsAuL.VarINil then $3.stateout
                         else skipState $2.stateout 1 0
         ; $$.code = if (isArrayType $$.tipo && $3.parsetree == AbsAuL.VarINil)  then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr))] ++ listDimToTac $2.listDim ++ $2.code
@@ -701,7 +702,7 @@ Local : 'local' Decl
         ; $$.errs = $2.errs
         ; $2.statein = $$.statein 
         ; $$.stateout = $2.stateout 
-        ; $$.code = $2.code
+        ; $$.code = [(Rules (Local $2.addr))] ++ $2.code
     }
 
 --  ========================
