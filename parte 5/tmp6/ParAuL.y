@@ -197,7 +197,7 @@ Double : L_doubl   {
 String : L_quoted  {
               $$.vstr = $1
               ; $$.tipo = Base BasicType_String
-      		  ; $$.addr = TempTac $1
+      		  ; $$.addr = StringTac $1
       		  ; $$.stateout = $$.statein  
             }
 Char : L_charac {
