@@ -1,0 +1,44 @@
+--[[
+    esempio di programma auL "complesso"
+]]
+
+Void function selectsort(Int *a)
+    for i=0,#a-1,1 do
+        Int j=i+1;
+        Int min = i;
+        while (j<#a) do
+            if(a[j]<a[min]) then
+                min = j;
+            end
+        end
+        
+        if (min ~= i) then
+            Int tmp= a[min];
+            a[min]=a[i];
+            a[i]=tmp;
+        end
+    end
+end
+
+Int function stampa(Int *a)
+    Int count = 0;
+    for i=0,#a do
+        writeInt(a[i]);
+        count = count + 1;
+    end
+    return count;
+end
+
+Void function main()
+    Int a[10] = {9,8,7,6,5,4,3,2,1,0};
+    
+    selectsort(a);
+    
+    Int count = stampa(a);
+    
+    writeString("abbiamo stampato ");
+    writeInt(count);
+    return;
+end
+
+
