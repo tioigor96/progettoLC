@@ -24,10 +24,9 @@ data RulesTac = AssgmBin TypeTac ArgOp ArgOp BinaryOp ArgOp             -- x = y
               | Load ArgOp                                                      
               | Func Int                                                -- func n                               
               | ArgFun ArgOp 
-              | ListDimension ArgOp
-              | ArrayEl TypeTac ArgOp ArgOp                             -- x =t y[i] o y[i] =t x
-              | ArrayDef TypeTac ArgOp                                  -- Int pippo[3]
-              | ListElem ArgOp                                          -- int a [n] = {...} 
+              | ArrayEl TypeTac ArgOp ArgOp String                            -- x =t y[i] o y[i] =t x
+              | ArrayDef TypeTac ArgOp String                                 -- Int pippo[3]
+              | ListElem ArgOp Int ArgOp                                -- int a [n] = {...} 
               | ListRexp ArgOp    
               | AssignAddress ArgOp TypeTac ArgOp                       -- x =t &y
               | AssignPointer ArgOp TypeTac ArgOp                       -- x =t *y
@@ -173,14 +172,12 @@ printRules (Func n) =
         "#arg func : " ++ show n
 printRules (ArgFun a) =
         "arg func " ++ argOpToString a 
-printRules (ListDimension a) =
-        "dimension/index " ++ argOpToString a
-printRules (ArrayEl t a b1) = 
-        (printType t) ++ " " ++(argOpToString a) ++ " = " ++ (argOpToString b1) ++ "[" ++ "]"
-printRules ( ArrayDef t a) =
-        (printType t ) ++ " " ++ argOpToString a
-printRules (ListElem a) =
-        "Element " ++ argOpToString a                                          
+printRules (ArrayEl t a b1 ldim) = 
+        (printType t) ++ " " ++(argOpToString a) ++ " = " ++ (argOpToString b1) ++ ldim
+printRules (ArrayDef t a ldim) =
+        (printType t ) ++ " " ++ argOpToString a ++ ldim
+printRules (ListElem arr i val) =
+        argOpToString arr ++ "[" ++ show i ++ "] = " ++ argOpToString val                                          
 printRules (ListRexp a) =
         "Argument " ++  argOpToString a    
 printRules (AssignAddress a1 t a2) =

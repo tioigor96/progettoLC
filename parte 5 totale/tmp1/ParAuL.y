@@ -591,12 +591,13 @@ Decl : BasicType LExp VarInit
         ; $2.statein = $$.statein
         ; $3.statein = $2.stateout
         ; $2.tipo = $$.tipo
+        ; $3.addr = $2.addr
         ; $$.addr = $2.addr
         ; $3.nextLabel = $$.nextLabel
         ; $$.stateout = if $3.parsetree == AbsAuL.VarINil then $3.stateout
                         else skipState $2.stateout 1 0
-        ; $$.code = if (isArrayType $$.tipo && $3.parsetree == AbsAuL.VarINil)  then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr))] ++ listDimToTac $2.listDim ++ $2.code
-                        else if (isArrayType $$.tipo) then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr))] ++ listDimToTac $2.listDim ++ $2.code ++ $3.code 
+        ; $$.code = if (isArrayType $$.tipo && $3.parsetree == AbsAuL.VarINil) then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr (listDimToString $2.listDim)))] ++ $2.code
+                        else if (isArrayType $$.tipo) then [(Rules (ArrayDef (toTACType $$.tipo) $2.addr (listDimToString $2.listDim)))] ++  $2.code ++ $3.code 
 	                    else if $3.parsetree == AbsAuL.VarINil then [(Rules (VarDecl (toTACType $$.tipo) $2.addr))]
                         else if (isPointerType $$.tipo) then $3.code ++ $2.code  
                            else $3.code ++ [(Rules (Assgm (toTACType $$.tipo) $2.addr (gentemp $2.stateout 0)))] 
@@ -634,7 +635,8 @@ VarInit : {- empty -}
     { 
         $$.parsetree = AbsAuL.VarMat $2.parsetree
         ; $$.errs  = (controlArrTipo $$.tipo $2.parsetree $1)
-        ; $$.code = listElemToTac $2.listElem
+        ; $2.addr = $$.addr
+        ; $$.code = listElemToTac $$.addr $2.listElem 
     }
     | '=' RExp '?' RExp ':' RExp 
     { 
@@ -662,7 +664,7 @@ Array : '{' ListArray '}'
     { 
         $$.parsetree = AbsAuL.ArrayV0 $2.parsetree 
         ; $$.listElem = $2.listElem
-        ; $$.code = listElemToTac $2.listElem
+        ; $$.code = listElemToTac $$.addr $2.listElem
     }
     | '{' ListVType '}' 
     { 
@@ -777,7 +779,9 @@ Ass : LExp '=' RExp
         ; $$.stateout = skipState $3.stateout 0 2
         ; $$.code = if (not ($3.tipo == $$.tipo)) then [Rules (Cast (gentemp $$.statein 0) (toTACType $$.tipo) (toTACType $3.tipo) $3.addr)] 
                                                         ++ [(Rules (Assgm (toTACType $$.tipo) $1.addr (gentemp $$.statein 0) ))]
-                                                   else (if (null $1.listDim) then [] else listDimToTac $1.listDim) ++ $3.code ++
+                                                   else (if (null $1.listDim) then [] 
+                                                                              else [(Rules (ArrayEl (toTACType $$.tipo) (gentemp $3.statein 0) $3.addr (listDimToString $1.listDim)))] )
+                                                        ++ $3.code ++
                                                         [(Rules (Assgm (toTACType $$.tipo) (gentemp $3.statein 0) $3.addr))] ++
                                                         [(Rules (Assgm (toTACType $$.tipo) $1.addr (gentemp $3.statein 0)))] 
     }
@@ -1880,8 +1884,7 @@ RExp11 : Integer
                                     else []
                             else [])
         ; $$.addr = $1.addr
-        ; $$.code = if (not $ null $1.listDim) then [(Rules (ArrayEl (toTACType $$.tipo) $$.addr $$.addr))] ++
-                                                    listDimToTac $1.listDim  
+        ; $$.code = if (not $ null $1.listDim) then [(Rules (ArrayEl (toTACType $$.tipo) (gentemp $1.stateout 0) $$.addr (listDimToString $1.listDim)))]   
                                                else []
         ; $1.statein = $$.statein
         ; $$.stateout =  if (not $ null $1.listDim) then skipState $1.stateout 1 0
