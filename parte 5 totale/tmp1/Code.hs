@@ -24,11 +24,13 @@ paramToTac :: [(ParamF,Posn,String)] ->  [TAC]
 paramToTac [] = []
 paramToTac ((_ , psn, id ):xs)  = (Rules (ArgFun (NameTac id psn))) : paramToTac xs  
 
+argOpToInt :: ArgOp -> Int
+argOpToInt (IntTac a) = a
 
 
 listDimToString :: [(ArgOp)] -> String
 listDimToString [] = ""
-listDimToString (x:xs) = "[" ++ argOpToString x ++ "]" ++ listDimToString xs
+listDimToString (x:xs) = "[" ++ show ((argOpToInt x)*4) ++ "]" ++ listDimToString xs
 
 listElemToTac :: ArgOp -> [(ArgOp)] -> [TAC]
 listElemToTac arr l = aidListElem arr l 0 

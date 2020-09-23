@@ -763,11 +763,11 @@ Ass : LExp '=' RExp
         ; $$.stateout = skipState $3.stateout 0 2
         ; $$.code = if (not ($3.tipo == $$.tipo)) then [Rules (Cast (gentemp $$.statein 0) (toTACType $$.tipo) (toTACType $3.tipo) $3.addr)] 
                                                         ++ [(Rules (Assgm (toTACType $$.tipo) $1.addr (gentemp $$.statein 0) ))]
-                                                   else (if (null $1.listDim) then [] 
-                                                                              else [(Rules (ArrayEl (toTACType $$.tipo) (gentemp $3.statein 0) $3.addr (listDimToString $1.listDim)))] )
-                                                        ++ $3.code ++
-                                                        [(Rules (Assgm (toTACType $$.tipo) (gentemp $3.statein 0) $3.addr))] ++
-                                                        [(Rules (Assgm (toTACType $$.tipo) $1.addr (gentemp $3.statein 0)))] 
+                                                   else (if (null $1.listDim) then $3.code ++
+                                                                                   [(Rules (Assgm (toTACType $$.tipo) (gentemp $3.statein 0) $3.addr))] ++
+                                                                                   [(Rules (Assgm (toTACType $$.tipo) $1.addr (gentemp $3.statein 0)))] 
+                                                                              else [(Rules (ArrayEl (toTACType $$.tipo) $1.addr $3.addr (listDimToString $1.listDim)))] )
+                                                        
     }
     
 --  ========================
@@ -1340,7 +1340,7 @@ LExp : LIdent
         ; $$.stateout = $2.stateout
         ; $$.addr = $1.addr
         ; $$.listDim = $2.listDim    
-        ; $$.code = $2.code 
+        ; $$.code = $1.code ++ $2.code 
         
     }
 

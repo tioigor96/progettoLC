@@ -173,7 +173,7 @@ printRules (Func n) =
 printRules (ArgFun a) =
         "arg func " ++ argOpToString a 
 printRules (ArrayEl t a b1 ldim) = 
-        (printType t) ++ " " ++(argOpToString a) ++ " = " ++ (argOpToString b1) ++ ldim
+        (printType t) ++ " " ++(argOpToString a) ++ ldim ++" = " ++ (argOpToString b1) 
 printRules (ArrayDef t a ldim) =
         (printType t ) ++ " " ++ argOpToString a ++ ldim
 printRules (ListElem arr i val) =
