@@ -113,30 +113,29 @@ import TAC
   'function' { PT _ (TS _ 39) }
   'if' { PT _ (TS _ 40) }
   'local' { PT _ (TS _ 41) }
-  'name' { PT _ (TS _ 42) }
-  'nil' { PT _ (TS _ 43) }
-  'not' { PT _ (TS _ 44) }
-  'or' { PT _ (TS _ 45) }
-  'readChar' { PT _ (TS _ 46) }
-  'readFloat' { PT _ (TS _ 47) }
-  'readInt' { PT _ (TS _ 48) }
-  'readString' { PT _ (TS _ 49) }
-  'repeat' { PT _ (TS _ 50) }
-  'res' { PT _ (TS _ 51) }
-  'return' { PT _ (TS _ 52) }
-  'then' { PT _ (TS _ 53) }
-  'true' { PT _ (TS _ 54) }
-  'until' { PT _ (TS _ 55) }
-  'val' { PT _ (TS _ 56) }
-  'valres' { PT _ (TS _ 57) }
-  'while' { PT _ (TS _ 58) }
-  'writeChar' { PT _ (TS _ 59) }
-  'writeFloat' { PT _ (TS _ 60) }
-  'writeInt' { PT _ (TS _ 61) }
-  'writeString' { PT _ (TS _ 62) }
-  '{' { PT _ (TS _ 63) }
-  '}' { PT _ (TS _ 64) }
-  '~=' { PT _ (TS _ 65) }
+  'nil' { PT _ (TS _ 42) }
+  'not' { PT _ (TS _ 43) }
+  'or' { PT _ (TS _ 44) }
+  'readChar' { PT _ (TS _ 45) }
+  'readFloat' { PT _ (TS _ 46) }
+  'readInt' { PT _ (TS _ 47) }
+  'readString' { PT _ (TS _ 48) }
+  'repeat' { PT _ (TS _ 49) }
+  'res' { PT _ (TS _ 50) }
+  'return' { PT _ (TS _ 51) }
+  'then' { PT _ (TS _ 52) }
+  'true' { PT _ (TS _ 53) }
+  'until' { PT _ (TS _ 54) }
+  'val' { PT _ (TS _ 55) }
+  'valres' { PT _ (TS _ 56) }
+  'while' { PT _ (TS _ 57) }
+  'writeChar' { PT _ (TS _ 58) }
+  'writeFloat' { PT _ (TS _ 59) }
+  'writeInt' { PT _ (TS _ 60) }
+  'writeString' { PT _ (TS _ 61) }
+  '{' { PT _ (TS _ 62) }
+  '}' { PT _ (TS _ 63) }
+  '~=' { PT _ (TS _ 64) }
 
 L_integ  { PT _ (TI $$) }
 L_doubl  { PT _ (TD $$) }
@@ -1302,10 +1301,6 @@ Modality : {- empty -}
     { 
         $$.parsetree = AbsAuL.Modality_valres 
     }
-    | 'name' 
-    { 
-        $$.parsetree = AbsAuL.Modality_name 
-    }
 --  ========================
 --  =======  LEXP  =========
 --  ========================
@@ -2142,10 +2137,10 @@ controlArrTipo ts arr tok
 controlFnctMdP :: (CmpType,Modality) -> (CmpType,RExp) -> Int -> [String]
 controlFnctMdP pe@(_, Modality_res) pr@(_, rexp) pn
     | isValVariable rexp = []
-    | otherwise = ["    param "++ (show pn)++": expected a l-expr for 'res' modality!"]
+    | otherwise = ["    param "++ (show pn)++": expected variable for 'res' modality!"]
 controlFnctMdP pe@(_, Modality_valres) pr@(_, rexp) pn
     | isValVariable rexp = []
-    | otherwise = ["    param "++ (show pn)++": expected a l-expr for 'valres' modality!"]
+    | otherwise = ["    param "++ (show pn)++": expected variable for 'valres' modality!"]
 controlFnctMdP _ _ _ = []
 
 controlFnctTipo' :: [(CmpType,Modality)] -> [(CmpType,RExp)] -> [String]
