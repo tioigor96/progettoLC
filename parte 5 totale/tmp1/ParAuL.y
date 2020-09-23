@@ -638,16 +638,17 @@ VarInit : {- empty -}
         ; $2.addr = $$.addr
         ; $$.code = listElemToTac $$.addr $2.listElem 
     }
-    | '=' RExp '?' RExp ':' RExp 
+    | '=' RExp '?' RExp ':' RExp -- TODO: errs, controllo $2 bool, $4 e $6 medesimo tipo superiore
     { 
         $$.parsetree = AbsAuL.VarIfT $2.parsetree $4.parsetree $6.parsetree 
         ; $2.envin = $$.envin
         ; $4.envin = $$.envin
         ; $6.envin = $$.envin
+        ; $$.errs = []++ $2.errs ++ $4.errs ++ $6.errs
+        
         ; $2.statein = $$.statein
         ; $4.statein = $2.stateout
         ; $6.statein = $4.stateout
-        ; $$.errs = []++ $2.errs ++ $4.errs ++ $6.errs
         ; $2.condTrue = (genlabel $2.stateout 1)
         ; $2.condFalse = (genlabel $2.stateout 2)
         ; $$.stateout = if ($$.tipo == $4.tipo && $$.tipo == $6.tipo) then skipState $6.stateout 0 2
@@ -785,9 +786,14 @@ Ass : LExp '=' RExp
                                                         [(Rules (Assgm (toTACType $$.tipo) (gentemp $3.statein 0) $3.addr))] ++
                                                         [(Rules (Assgm (toTACType $$.tipo) $1.addr (gentemp $3.statein 0)))] 
     }
-    | LExp '=' RExp '?' RExp ':' RExp 
+    | LExp '=' RExp '?' RExp ':' RExp -- TODO: controlla tipo, come per DECL e sopra
     { 
-        $$.parsetree = AbsAuL.AssDIfT $1.parsetree $3.parsetree $5.parsetree $7.parsetree 
+        $$.parsetree = AbsAuL.AssDIfT $1.parsetree $3.parsetree $5.parsetree $7.parsetree
+        ; $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $5.envin = $$.envin
+        ; $7.envin = $$.envin
+        ; $$.errs = [] ++ $3.errs ++ $5.errs ++ $7.errs
     }
     
 --  ========================
@@ -814,7 +820,7 @@ Func : FuncWrite
         ; $$.tipo = $1.tipo
         ; $$.code = $1.code
     }
-    | LIdent '(' ListRExp ')'
+    | LIdent '(' ListRExp ')'  -- TODO: rifai controlFnctTipo -> devi controllare le modalità!
     { 
         $$.parsetree = AbsAuL.FnctCall $1.vlident $3.parsetree
         ; $1.envin = $$.envin
