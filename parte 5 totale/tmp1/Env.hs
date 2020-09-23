@@ -408,9 +408,6 @@ higherType t1 t2 = case (getBaseType t1) of BasicType_Float -> case getBaseType 
                                             BasicType_Int -> case getBaseType t2 of BasicType_Int -> Base BasicType_Int 
                                                                                     BasicType_Float -> Base BasicType_Float 
                                                                                     BasicType_Char -> Base BasicType_Int 
-                                            BasicType_Char -> case getBaseType t2 of BasicType_Char -> Base BasicType_Char 
-                                                                                     BasicType_String -> Base BasicType_String 
-                                            BasicType_String -> case getBaseType t2 of BasicType_Char -> Base BasicType_String 
 
 isAritmetic :: CmpType -> Bool
 isAritmetic vtype = ((getBaseType vtype) == BasicType_Int || (getBaseType vtype) == BasicType_Float)

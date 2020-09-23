@@ -178,6 +178,7 @@ L_LIdent { PT _ (T_LIdent _) }
 %attribute listDim { [ArgOp] }
 %attribute listElem { [ArgOp] }
 %attribute listRexp { [ArgOp] }
+%attribute parf { ArgOp }
 
 %%
 
@@ -319,6 +320,7 @@ BlockF : ListStm
                     else ["Compiler Frontend General Error: listen to me, you must go to sleep..."]) ++ $1.errs
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
+        ; $1.listparf = $$.listparf
         ; $$.code = $1.code        
     }
 ListStm : {- empty -} 
@@ -341,6 +343,8 @@ ListStm : {- empty -}
         ; $1.statein = $$.statein
         ; $2.statein = $1.stateout
         ; $$.stateout = $2.stateout
+        ; $1.listparf = $$.listparf
+        ; $2.listparf = $$.listparf
         ; $$.code = $1.code ++  $2.code
     }
 
@@ -454,6 +458,7 @@ Stm : Decl ';'
         ; $1.statein = $$.statein
         ; $1.nextLabel = genlabel $$.statein 0
         ; $$.stateout = $1.stateout
+        ; $1.listparf = $$.listparf
         ; $$.code = $1.code
     }
     | While 
@@ -629,9 +634,10 @@ VarInit : {- empty -}
         ; $2.nextLabel = $$.nextLabel
         ; $$.code = if $2.code == [] then 
                         if (isPointerType $$.tipo) then [Rules (Assgm (toTACType $$.tipo) (gentemp $2.statein 0) $2.addr)]
-                        else if (not $ ($$.tipo == $2.tipo)) then [Rules (Cast (gentemp $$.statein 0) (toTACType $$.tipo) (toTACType $2.tipo) $2.addr)] 
-                                                             else [Rules (Assgm (toTACType $$.tipo) (gentemp $2.statein 0) $2.addr)]
-                    else $2.code
+                                                   else (if (not $ ($$.tipo == $2.tipo)) then [Rules (Cast (gentemp $$.statein 0) (toTACType $$.tipo) (toTACType $2.tipo) $2.addr)] 
+                                                                                         else [Rules (Assgm (toTACType $$.tipo) (gentemp $2.statein 0) $2.addr)])
+                    else if (null $2.listDim) then $2.code
+                                              else [Rules (AssEl (toTACType $$.tipo) (gentemp $2.statein 0) $2.addr (listDimToString $2.listDim))]
     }
     | '=' Array 
     { 
@@ -761,12 +767,12 @@ Ass : LExp '=' RExp
         ; $1.nextLabel = $$.nextLabel
         ; $3.nextLabel = $$.nextLabel
         ; $$.stateout = skipState $3.stateout 0 2
-        ; $$.code = if (not ($3.tipo == $$.tipo)) then [Rules (Cast (gentemp $$.statein 0) (toTACType $$.tipo) (toTACType $3.tipo) $3.addr)] 
-                                                        ++ [(Rules (Assgm (toTACType $$.tipo) $1.addr (gentemp $$.statein 0) ))]
+        ; $$.code = if (not ($3.tipo == $$.tipo)) then [Rules (Cast (gentemp $$.statein 0) (toTACType $$.tipo) (toTACType $3.tipo) (searchParam $$.listparf $3.addr))] 
+                                                        ++ [(Rules (Assgm (toTACType $$.tipo) (searchParam $$.listparf $1.addr) (gentemp $$.statein 0) ))]
                                                    else (if (null $1.listDim) then $3.code ++
-                                                                                   [(Rules (Assgm (toTACType $$.tipo) (gentemp $3.statein 0) $3.addr))] ++
-                                                                                   [(Rules (Assgm (toTACType $$.tipo) $1.addr (gentemp $3.statein 0)))] 
-                                                                              else [(Rules (ArrayEl (toTACType $$.tipo) $1.addr $3.addr (listDimToString $1.listDim)))] )
+                                                                                   [(Rules (Assgm (toTACType $$.tipo) (gentemp $3.statein 0) (searchParam $$.listparf $3.addr)))] ++
+                                                                                   [(Rules (Assgm (toTACType $$.tipo) (searchParam $$.listparf $1.addr) (gentemp $3.statein 0)))] 
+                                                                              else [(Rules (ArrayEl (toTACType $$.tipo) (searchParam $$.listparf $1.addr) (searchParam $$.listparf $3.addr) (listDimToString $1.listDim)))] )
                                                         
     }
     
@@ -1252,6 +1258,7 @@ FuncD : CompoundType 'function' LIdent '(' ListParamF ')' BlockF 'end'
         ; $7.statein = $3.stateout
         ; $7.nextLabel = $$.nextLabel
         ; $$.stateout = $7.stateout
+        ; $7.listparf = $5.listparf
         ; $$.code = [(LRules (argOpToString $3.addr) (Func (length $5.listparf))) ] ++ (paramToTac $5.listparf)  ++ $7.code       
     }
 ParamF : Modality BasicType LExp 
@@ -1396,6 +1403,7 @@ RExp : RExp1 '?' RExp1 ':' RExp1
         ; $5.envin = $$.envin
         ; $$.parsetree = AbsAuL.IfT $1.parsetree $3.parsetree $5.parsetree
         ; $$.tipo = $3.tipo
+        ; $$.listDim = [] 
         ; $$.errs = (if $1.tipo == (Base BasicType_Bool)
                      then (if (all (\x -> (not ((compCmpType $3.tipo x)== ErrT))) [$3.tipo,$5.tipo])
                             then []
@@ -1428,6 +1436,7 @@ RExp : RExp1 '?' RExp1 ':' RExp1
         ; $$.parsetree = $1.parsetree
         ; $$.errs = $1.errs
         ; $$.tipo = $1.tipo
+        ; $$.listDim = $1.listDim
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $1.condTrue = $$.condTrue
@@ -1446,6 +1455,7 @@ RExp1 : RExp1 'or' RExp2
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for 'or' operations!"]) ++ $1.errs ++ $3.errs
         ; $$.tipo = Base BasicType_Bool 
+        ; $$.listDim = [] 
         ; $1.statein = $$.statein 
       	; $3.statein = $1.stateout
         ; $$.stateout = skipState $3.stateout 0 1 
@@ -1466,6 +1476,7 @@ RExp1 : RExp1 'or' RExp2
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for 'and' operations!"]) ++ $1.errs ++ $3.errs
         ; $$.tipo = Base BasicType_Bool 
+        ; $$.listDim = [] 
         ; $1.statein = $$.statein 
       	; $3.statein = $1.stateout
         ; $$.stateout = skipState $3.stateout 0 1 
@@ -1483,6 +1494,7 @@ RExp1 : RExp1 'or' RExp2
         ; $$.parsetree = $1.parsetree
         ; $$.errs = $1.errs
         ; $$.tipo = $1.tipo
+        ; $$.listDim = $1.listDim
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $1.condTrue = $$.condTrue
@@ -1499,6 +1511,7 @@ RExp2 : 'not' RExp4
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $1) ++ ": type need to be compatible in 'not' operations!"]) ++ $2.errs
         ; $$.tipo = Base BasicType_Bool
+        ; $$.listDim = [] 
         ; $2.statein = $$.statein
         ; $$.stateout = $2.stateout 
         ; $2.condFalse = $$.condTrue
@@ -1512,6 +1525,7 @@ RExp2 : 'not' RExp4
         ; $$.parsetree = $1.parsetree
         ; $$.errs = $1.errs
         ; $$.tipo = $1.tipo 
+        ; $$.listDim = $1.listDim
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $1.condTrue = $$.condTrue
@@ -1529,6 +1543,7 @@ RExp4 : RExp5 '==' RExp5
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '==' operations!"]) ++ $1.errs ++ $3.errs
         ; $$.tipo = Base BasicType_Bool 
+        ; $$.listDim = [] 
         ; $1.statein = $$.statein
       	; $3.statein = $1.stateout
         ; $$.stateout = stateoutRelOpEqDif $1.tipo $3.tipo $1.code $3.code $$.condTrue $$.condFalse $1.addr $3.addr $3.stateout IsEq
@@ -1548,6 +1563,7 @@ RExp4 : RExp5 '==' RExp5
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '~=' operations!"]) ++ $1.errs ++ $3.errs
         ; $$.tipo = Base BasicType_Bool 
+        ; $$.listDim = [] 
         ; $1.statein = $$.statein
       	; $3.statein = $1.stateout
         ; $$.stateout = stateoutRelOpEqDif $1.tipo $3.tipo $1.code $3.code $$.condTrue $$.condFalse $1.addr $3.addr $3.stateout IsDiff
@@ -1567,6 +1583,7 @@ RExp4 : RExp5 '==' RExp5
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '<' operations!"]) ++ $1.errs ++ $3.errs
         ; $$.tipo = Base BasicType_Bool
+        ; $$.listDim = [] 
         ; $1.statein = $$.statein
       	; $3.statein = $1.stateout
         ; $$.stateout = stateRelOpDisEq  $1.tipo $3.tipo $1.code $3.code $$.condTrue $$.condFalse $1.addr $3.addr $3.stateout IsL
@@ -1586,6 +1603,7 @@ RExp4 : RExp5 '==' RExp5
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '<=' operations!"]) ++ $1.errs ++ $3.errs
         ; $$.tipo = Base BasicType_Bool
+        ; $$.listDim = [] 
         ; $1.statein = $$.statein
       	; $3.statein = $1.stateout
         ; $$.stateout = stateRelOpDisEq  $1.tipo $3.tipo $1.code $3.code $$.condTrue $$.condFalse $1.addr $3.addr $3.stateout IsLEQ
@@ -1605,6 +1623,7 @@ RExp4 : RExp5 '==' RExp5
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '>' operations!"]) ++ $1.errs ++ $3.errs
         ; $$.tipo = Base BasicType_Bool
+        ; $$.listDim = [] 
         ; $1.statein = $$.statein
       	; $3.statein = $1.stateout
         ; $$.stateout = stateRelOpDisEq  $1.tipo $3.tipo $1.code $3.code $$.condTrue $$.condFalse $1.addr $3.addr $3.stateout IsG
@@ -1624,6 +1643,7 @@ RExp4 : RExp5 '==' RExp5
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": type need to be compatible for '>=' operations!"]) ++ $1.errs ++ $3.errs
         ; $$.tipo = Base BasicType_Bool
+        ; $$.listDim = [] 
         ; $1.statein = $$.statein
       	; $3.statein = $1.stateout
         ; $$.stateout = stateRelOpDisEq  $1.tipo $3.tipo $1.code $3.code $$.condTrue $$.condFalse $1.addr $3.addr $3.stateout IsGEQ
@@ -1640,6 +1660,7 @@ RExp4 : RExp5 '==' RExp5
         ; $$.parsetree = $1.parsetree
         ; $$.errs = $1.errs
         ; $$.tipo = $1.tipo 
+        ; $$.listDim = $1.listDim
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $1.condTrue = $$.condTrue
@@ -1659,6 +1680,7 @@ RExp6 : RExp6 '+' RExp7
         ; $$.tipo = ( if ((op2CompType AddO $1.tipo $3.tipo) == ErrT) 
                          then (Base BasicType_Float)
                          else (op2CompType AddO $1.tipo $3.tipo) )  
+        ; $$.listDim = [] 
         ; $1.statein = $$.statein
       	; $3.statein = $1.stateout
         ; $$.stateout = stateoutBinOp $1.tipo $3.tipo $1.addr $3.addr $3.stateout TAC.Add 
@@ -1677,6 +1699,7 @@ RExp6 : RExp6 '+' RExp7
         ; $$.tipo = ( if ((op2CompType SubO $1.tipo $3.tipo) == ErrT) 
                          then (Base BasicType_Float)
                          else (op2CompType SubO $1.tipo $3.tipo) )   
+        ; $$.listDim = [] 
         ; $1.statein = $$.statein
       	; $3.statein = $1.stateout
         ; $$.stateout = stateoutBinOp $1.tipo $3.tipo $1.addr $3.addr $3.stateout TAC.Sub 
@@ -1690,6 +1713,7 @@ RExp6 : RExp6 '+' RExp7
         ; $$.parsetree = $1.parsetree
         ; $$.errs = $1.errs
         ; $$.tipo = $1.tipo 
+        ; $$.listDim = $1.listDim
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $1.condTrue = $$.condTrue
@@ -1709,6 +1733,7 @@ RExp7 : RExp7 '*' RExp8
         ; $$.tipo = ( if ((op2CompType MulO $1.tipo $3.tipo) == ErrT) 
                          then (Base BasicType_Float)
                          else (op2CompType MulO $1.tipo $3.tipo) )  
+        ; $$.listDim = [] 
         ; $1.statein = $$.statein
       	; $3.statein = $1.stateout
         ; $$.stateout = stateoutBinOp $1.tipo $3.tipo $1.addr $3.addr $3.stateout TAC.Mul
@@ -1727,6 +1752,7 @@ RExp7 : RExp7 '*' RExp8
         ; $$.tipo = ( if ((op2CompType DivO $1.tipo $3.tipo) == ErrT) 
                          then (Base BasicType_Float)
                          else (op2CompType DivO $1.tipo $3.tipo) )
+        ; $$.listDim = [] 
         ; $1.statein = $$.statein
       	; $3.statein = $1.stateout
         ; $$.stateout = stateoutBinOp $1.tipo $3.tipo $1.addr $3.addr $3.stateout TAC.Div
@@ -1743,6 +1769,7 @@ RExp7 : RExp7 '*' RExp8
                          then []
                          else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ ": '%' arguments' types need to be Int or Float!"]) ++ $1.errs ++ $3.errs
         ; $$.tipo = (Base BasicType_Int) 
+        ; $$.listDim = [] 
         ; $1.statein = $$.statein
       	; $3.statein = $1.stateout
         ; $$.stateout = stateoutBinOp $1.tipo $3.tipo $1.addr $3.addr $3.stateout TAC.Mod 
@@ -1756,6 +1783,7 @@ RExp7 : RExp7 '*' RExp8
         ; $$.parsetree = $1.parsetree
         ; $$.errs = $1.errs
         ; $$.tipo = $1.tipo 
+        ; $$.listDim = $1.listDim
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $1.condTrue = $$.condTrue
@@ -1775,6 +1803,7 @@ RExp8 : RExp9 '^' RExp8
         ; $$.tipo = ( if ((op2CompType PowO $1.tipo $3.tipo) == ErrT) 
                          then (Base BasicType_Float)
                          else (op2CompType PowO $1.tipo $3.tipo) )
+        ; $$.listDim = [] 
         ; $1.statein = $$.statein
       	; $3.statein = $1.stateout
         ; $$.stateout = stateoutBinOp $1.tipo $3.tipo $1.addr $3.addr $3.stateout TAC.Exp 
@@ -1793,6 +1822,7 @@ RExp8 : RExp9 '^' RExp8
         ; $1.condTrue = $$.condTrue
         ; $1.condFalse = $$.condFalse
         ; $1.nextLabel = $$.nextLabel
+        ; $$.listDim = $1.listDim
         ; $$.addr = $1.addr
         ; $$.code = $1.code
     }
@@ -1808,6 +1838,7 @@ RExp9 : '-' RExp10
         ; $$.tipo = if (op1CompType NegO $2.tipo) == ErrT
                          then (Base BasicType_Float)
                          else (op1CompType NeqO $2.tipo)
+        ; $$.listDim = [] 
         ; $$.addr = (gentemp $$.statein 0)
         ; $$.code = [(Rules (AssgmUn (toTACType $2.tipo) $$.addr (unop Negation (toTACType $2.tipo)) $2.addr))] ++ $2.code
     } 
@@ -1822,6 +1853,7 @@ RExp9 : '-' RExp10
         ; $1.condTrue = $$.condTrue
         ; $1.condFalse = $$.condFalse
         ; $1.nextLabel = $$.nextLabel
+        ; $$.listDim = $1.listDim
         ; $$.addr = $1.addr
         ; $$.code = $1.code
     }
@@ -1837,6 +1869,7 @@ RExp10 : Func
                         else []) ++ $1.errs
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
+        ; $$.listDim = [] 
         ; $$.addr = $1.addr 
         ; $$.code = $1.code
     }
@@ -1849,6 +1882,7 @@ RExp10 : Func
         ; $$.errs = (if (op2CompType ConcatO $1.tipo $3.tipo) == ErrT
                         then ["error at "++ ((showFromPosn . tokenPosn) $2) ++": '..' need to have 'Char'(s) or 'String'(s) as arguments!"]
                         else []) ++ $1.errs ++ $3.errs 
+        ; $$.listDim = [] 
         ; $1.statein = $$.statein
         ; $3.statein = $1.stateout
         ; $$.stateout = skipState $3.stateout 1 0
@@ -1862,6 +1896,7 @@ RExp10 : Func
         ; $$.errs = (if (op1CompType SizeO $2.tipo) == ErrT
                         then ["error at "++ ((showFromPosn . tokenPosn) $1) ++": '#' need to have Arrays or Pointer as argument!"]
                         else []) ++ $2.errs 
+        ; $$.listDim = [] 
         ; $2.statein = $$.statein
         ; $$.stateout = $2.stateout
         ; $$.addr = $2.addr
@@ -1878,6 +1913,7 @@ RExp10 : Func
         ; $1.condTrue = $$.condTrue
         ; $1.condFalse = $$.condFalse
         ; $1.nextLabel = $$.nextLabel
+        ; $$.listDim = $1.listDim
         ; $$.addr = $1.addr
         ; $$.code = $1.code
     }
@@ -1890,6 +1926,7 @@ RExp11 : Integer
         ; $$.addr = $1.addr
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
+        ; $$.listDim = []
         ; $$.errs = []
         ; $$.code = []
     }
@@ -1920,6 +1957,7 @@ RExp11 : Integer
                                     else []
                             else [])
         ; $$.addr = $1.addr
+        ; $$.listDim = $1.listDim
         ; $$.code = if (not $ null $1.listDim) then [(Rules (ArrayEl (toTACType $$.tipo) (gentemp $1.stateout 0) $$.addr (listDimToString $1.listDim)))]   
                                                else []
         ; $1.statein = $$.statein
@@ -1950,6 +1988,7 @@ RExp11 : Integer
                                     then ["error at "++ (showFromPosn $2.posn) ++": cannot refer this variable in modality 'res'!"]
                                     else []
                             else [])
+        ; $$.listDim = [] 
         ; $2.statein = $$.statein
         ; $$.stateout = $2.stateout 
         ; $$.code =  [(Rules (AssignAddress (gentemp $$.stateout 0) (toTACType $$.tipo) $2.addr))]  
@@ -2011,6 +2050,7 @@ RExp11 : Integer
         ; $$.parsetree = $1.parsetree 
         ; $$.errs = $1.errs
         ; $$.tipo = $1.tipo
+        ; $$.listDim = $1.listDim
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $1.condTrue = $$.condTrue
@@ -2024,6 +2064,7 @@ RExp3 : RExp4
         ; $$.parsetree = $1.parsetree
         ; $$.errs = $1.errs
         ; $$.tipo = $1.tipo 
+        ; $$.listDim = $1.listDim
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $1.condTrue = $$.condTrue
@@ -2038,6 +2079,7 @@ RExp5 : RExp6
         ; $$.parsetree = $1.parsetree
         ; $$.errs = $1.errs
         ; $$.tipo = $1.tipo 
+        ; $$.listDim = $1.listDim
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $1.condTrue = $$.condTrue
@@ -2051,6 +2093,7 @@ RExp12 : '(' RExp ')'
         ; $$.parsetree = $2.parsetree
         ; $$.errs = $2.errs
         ; $$.tipo = $2.tipo 
+        ; $$.listDim = $2.listDim
         ; $2.statein = $$.statein
         ; $$.stateout = $2.stateout
         ; $2.condTrue = $$.condTrue

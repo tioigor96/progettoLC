@@ -20,12 +20,13 @@ data RulesTac = AssgmBin TypeTac ArgOp ArgOp BinaryOp ArgOp             -- x = y
               | CondFalse ArgOp LabelTac                                -- ifFalse x goto y
               | CondRelation ArgOp ArgOp RelationOp ArgOp LabelTac      -- t = if  (x rel y) goto z 
               | ProcCall FuncDef Int                                    -- call p, n
-              | FuncCall ArgOp TypeTac FuncDef Int                        -- y =t call p, n
+              | FuncCall ArgOp TypeTac FuncDef Int                      -- y =t call p, n
               | Load ArgOp                                                      
               | Func Int                                                -- func n                               
               | ArgFun ArgOp 
-              | ArrayEl TypeTac ArgOp ArgOp String                            -- x =t y[i] o y[i] =t x
-              | ArrayDef TypeTac ArgOp String                                 -- Int pippo[3]
+              | ArrayEl TypeTac ArgOp ArgOp String                      -- y[i] =t x
+              | AssEl  TypeTac ArgOp ArgOp String                       -- x =t y[i]
+              | ArrayDef TypeTac ArgOp String                           -- Int pippo[3]
               | ListElem ArgOp Int ArgOp                                -- int a [n] = {...} 
               | ListRexp ArgOp    
               | AssignAddress ArgOp TypeTac ArgOp                       -- x =t &y
@@ -46,7 +47,7 @@ data TypeTac = IntTypeTac | FloatTypeTac | CharTypeTac | StringTypeTac | BoolTyp
 trueVal  = BoolTac True  -- alias
 falseVal = BoolTac False -- alias
 
-data ArgOp = NameTac String Posn | TempTac String | IntTac Int | FloatTac Double | CharTac Char | BoolTac Bool | StringTac String | VoidTac
+data ArgOp = NameTac String Posn | TempTac String | IntTac Int | FloatTac Double | CharTac Char | BoolTac Bool | StringTac String | VoidTac | Param String Posn
   deriving (Eq, Show)
 
 
@@ -174,6 +175,8 @@ printRules (ArgFun a) =
         "arg func " ++ argOpToString a 
 printRules (ArrayEl t a b1 ldim) = 
         (printType t) ++ " " ++(argOpToString a) ++ ldim ++" = " ++ (argOpToString b1) 
+printRules (AssEl t a b1 index) = 
+        (printType t) ++ " " ++(argOpToString a) ++ " = " ++ (argOpToString b1) ++ index 
 printRules (ArrayDef t a ldim) =
         (printType t ) ++ " " ++ argOpToString a ++ ldim
 printRules (ListElem arr i val) =
@@ -196,6 +199,7 @@ printRules (Error err) =
         "error: " ++ err
 printRules (Local a) =
         "local " ++ (argOpToString a)
+
 
 labelRules :: LabelTac -> [TAC] -> [TAC]
 labelRules "" tac = tac
@@ -221,6 +225,7 @@ argOpToString (FloatTac f) = show f
 argOpToString (CharTac c) = "'" ++ showLitChar c "" ++ "'"
 argOpToString (BoolTac b) = show b
 argOpToString (StringTac s) = "\"" ++ s ++ "\""
+argOpToString (Param name (Pn _ line col)) = name ++ "$local$copy@"  ++ show line ++ "," ++ show col
 argOpToString VoidTac = ""
 
 binOpToString :: BinaryOp -> String

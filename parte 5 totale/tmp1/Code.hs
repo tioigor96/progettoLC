@@ -19,18 +19,29 @@ toTACType a = case (getBaseType a) of BasicType_Bool -> BoolTypeTac
                                       BasicType_Float -> FloatTypeTac
                                       BasicType_Int -> IntTypeTac
                                       BasicType_String -> StringTypeTac
+toTACType' a = case a of BasicType_Bool -> BoolTypeTac
+                         BasicType_Char -> CharTypeTac
+                         BasicType_Float -> FloatTypeTac
+                         BasicType_Int -> IntTypeTac
+                         BasicType_String -> StringTypeTac
 
 paramToTac :: [(ParamF,Posn,String)] ->  [TAC]
 paramToTac [] = []
-paramToTac ((_ , psn, id ):xs)  = (Rules (ArgFun (NameTac id psn))) : paramToTac xs  
+paramToTac (((ParmDeclF m t _) , psn, id ):xs)  = if m == Modality_valres then (Rules (AssignPointer (Param id psn) (toTACType' t) (NameTac id psn))) : paramToTac xs  
+                                                                          else (Rules (ArgFun (NameTac id psn))) : paramToTac xs  
 
 argOpToInt :: ArgOp -> Int
 argOpToInt (IntTac a) = a
 
+searchParam :: [(ParamF,Posn,String)] -> ArgOp -> ArgOp
+searchParam [] a = a
+searchParam (((ParmDeclF m _ _), _, id ):xs) (NameTac s p ) = if (id == s && m /= Modality1) then (Param s p)
+                                                                                              else searchParam xs (NameTac s p)
+searchParam ((_, _, id ):xs) a = a                                                   
 
 listDimToString :: [(ArgOp)] -> String
 listDimToString [] = ""
-listDimToString (x:xs) = "[" ++ show ((argOpToInt x)*4) ++ "]" ++ listDimToString xs
+listDimToString (x:xs) = "[" ++ argOpToString x ++ "*4]" ++ listDimToString xs
 
 listElemToTac :: ArgOp -> [(ArgOp)] -> [TAC]
 listElemToTac arr l = aidListElem arr l 0 
