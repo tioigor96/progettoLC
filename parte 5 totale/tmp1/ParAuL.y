@@ -1382,7 +1382,7 @@ Dim : '[' RExp ']'
 --  ========================
 --  =======  REXP  =========
 --  ========================
---TODO: $$.tipo = if...., $$.errs = if......
+--TODO: testa che funzioni
 --TODO: condtrue condfalse addr(?) nextLabel(?)
 
 RExp : RExp1 '?' RExp1 ':' RExp1 
@@ -1391,8 +1391,16 @@ RExp : RExp1 '?' RExp1 ':' RExp1
         ; $3.envin = $$.envin
         ; $5.envin = $$.envin
         ; $$.parsetree = AbsAuL.IfT $1.parsetree $3.parsetree $5.parsetree
-        ; $$.tipo = undefined
-        ; $$.errs = [] ++ $1.errs ++ $3.errs ++ $5.errs
+        ; $$.tipo = $3.tipo
+        ; $$.errs = (if $1.tipo == (Base BasicType_Bool)
+                     then (if (all (\x -> (not ((compCmpType $3.tipo x)== ErrT)) [$3.tipo,$5.tipo]))
+                            then []
+                            else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ 
+                                  ": in 'ternary if' type in 'then expression' and in 'else expression'" ++
+                                  "mismatch! (First type is '"++ (showCmpType $3.tipo) ++"', but second type is '"++
+                                  (showCmpType $5.tipo)++"')"])
+                     else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ 
+                           ": in 'ternary if' test need to be 'Bool' type!"] ) ++ $1.errs ++ $3.errs ++ $5.errs
         
         ; $1.stetein = $$.statein
         ; $3.stetein = $1.stateout
