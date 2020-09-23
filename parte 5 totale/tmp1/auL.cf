@@ -60,7 +60,6 @@ DeclSP.      Decl ::= BasicType LExp VarInit ;
 VarINil.     VarInit ::= {- empty -} ;
 VarExp.      VarInit ::= "=" RExp ;
 VarMat.      VarInit ::= "=" Array ;
-VarIfT.      VarInit ::= "=" RExp "?" RExp ":" RExp;;
 
 -- Array definition "inline"
 -- TODO: ridefinisci. niente ibridi
@@ -81,7 +80,6 @@ token LIdent (letter|'_'lower)(letter|digit|'_')*;
 ----ASGN-----
 -------------
 AssD.        Ass ::= LExp "=" RExp;
-AssDIfT.        Ass ::= LExp "=" RExp "?" RExp ":" RExp;
 
 ------------
 --Base Fnct-
@@ -165,17 +163,17 @@ Dims.   Dim ::= "[" RExp "]" ;
 --------------
 -----REXP-----
 --------------
+IfT.           RExp ::= RExp1 "?" RExp1 ":" RExp1;
+Or.            RExp1 ::= RExp1 "or" RExp2;
+And.           RExp1 ::= RExp2 "and" RExp3;
+Not.           RExp2 ::= "not" RExp4;
 
-Or.            RExp ::= RExp "or" RExp1;
-And.           RExp ::= RExp1 "and" RExp2;
-Not.           RExp2 ::= "not" RExp3;
-
-Eq.            RExp3 ::= RExp5 "==" RExp5;
-Neq.           RExp3 ::= RExp5 "~=" RExp5;
-Lt.            RExp3 ::= RExp5 "<"  RExp5;
-LtE.           RExp3 ::= RExp5 "<=" RExp5;
-Gt.            RExp3 ::= RExp5 ">"  RExp5;
-GtE.           RExp3 ::= RExp5 ">=" RExp5;
+Eq.            RExp4 ::= RExp5 "==" RExp5;
+Neq.           RExp4 ::= RExp5 "~=" RExp5;
+Lt.            RExp4 ::= RExp5 "<"  RExp5;
+LtE.           RExp4 ::= RExp5 "<=" RExp5;
+Gt.            RExp4 ::= RExp5 ">"  RExp5;
+GtE.           RExp4 ::= RExp5 ">=" RExp5;
 
 Add.           RExp6 ::= RExp6 "+" RExp7;
 Sub.           RExp6 ::= RExp6 "-" RExp7;
@@ -200,6 +198,7 @@ ValString.     RExp11 ::= String;
 ValChar.       RExp11 ::= Char;
 ValBoolean.    RExp11 ::= Boolean;
 ValPtr.        RExp11 ::= PtrVoid;
+
 
 coercions RExp 12;
 

@@ -138,7 +138,6 @@ import TAC
   '}' { PT _ (TS _ 64) }
   '~=' { PT _ (TS _ 65) }
 
-
 L_integ  { PT _ (TI $$) }
 L_doubl  { PT _ (TD $$) }
 L_quoted { PT _ (TL $$) }
@@ -638,27 +637,6 @@ VarInit : {- empty -}
         ; $2.addr = $$.addr
         ; $$.code = listElemToTac $$.addr $2.listElem 
     }
-    | '=' RExp '?' RExp ':' RExp -- TODO: errs, controllo $2 bool, $4 e $6 medesimo tipo superiore
-    { 
-        $$.parsetree = AbsAuL.VarIfT $2.parsetree $4.parsetree $6.parsetree 
-        ; $2.envin = $$.envin
-        ; $4.envin = $$.envin
-        ; $6.envin = $$.envin
-        ; $$.errs = []++ $2.errs ++ $4.errs ++ $6.errs
-        
-        ; $2.statein = $$.statein
-        ; $4.statein = $2.stateout
-        ; $6.statein = $4.stateout
-        ; $2.condTrue = (genlabel $2.stateout 1)
-        ; $2.condFalse = (genlabel $2.stateout 2)
-        ; $$.stateout = if ($$.tipo == $4.tipo && $$.tipo == $6.tipo) then skipState $6.stateout 0 2
-                                              else skipState $6.stateout 1 2
-        ; $$.code = $2.code ++ [(Rules (CondFalse $2.addr $2.condFalse))] ++ 
-                               (labelRules $2.condTrue [(Rules (Assgm (toTACType $$.tipo) (gentemp $2.statein 0) $4.addr))]) ++ 
-                               [(Rules (Goto $$.nextLabel))] ++ 
-                               (labelRules $2.condFalse [(Rules (Assgm (toTACType $$.tipo) (gentemp $2.statein 0) $6.addr))]) ++ 
-                               (labelRules (genlabel $6.stateout 0) [])
-    }
 
 
 Array : '{' ListArray '}'
@@ -785,15 +763,6 @@ Ass : LExp '=' RExp
                                                         ++ $3.code ++
                                                         [(Rules (Assgm (toTACType $$.tipo) (gentemp $3.statein 0) $3.addr))] ++
                                                         [(Rules (Assgm (toTACType $$.tipo) $1.addr (gentemp $3.statein 0)))] 
-    }
-    | LExp '=' RExp '?' RExp ':' RExp -- TODO: controlla tipo, come per DECL e sopra
-    { 
-        $$.parsetree = AbsAuL.AssDIfT $1.parsetree $3.parsetree $5.parsetree $7.parsetree
-        ; $1.envin = $$.envin
-        ; $3.envin = $$.envin
-        ; $5.envin = $$.envin
-        ; $7.envin = $$.envin
-        ; $$.errs = [] ++ $3.errs ++ $5.errs ++ $7.errs
     }
     
 --  ========================
@@ -1413,9 +1382,42 @@ Dim : '[' RExp ']'
 --  ========================
 --  =======  REXP  =========
 --  ========================
+--TODO: $$.tipo = if...., $$.errs = if......
+--TODO: condtrue condfalse addr(?) nextLabel(?)
 
+RExp : RExp1 '?' RExp1 ':' RExp1 
+    { 
+        $1.envin = $$.envin
+        ; $3.envin = $$.envin
+        ; $5.envin = $$.envin
+        ; $$.parsetree = AbsAuL.IfT $1.parsetree $3.parsetree $5.parsetree
+        ; $$.tipo = undefined
+        ; $$.errs = [] ++ $1.errs ++ $3.errs ++ $5.errs
+        
+        ; $1.stetein = $$.statein
+        ; $3.stetein = $1.stateout
+        ; $5.stetein = $3.stateout
+        ; $$.stateout = $5.stateout
+        
+        ; $$.addr = gentemp $$.statein 0
+        ; $$.code = $1.code ++ $3.code ++ $5.code
+        
+    }
+    | RExp1 
+    { 
+        $1.envin = $$.envin
+        ; $$.parsetree = $1.parsetree
+        ; $$.errs = $1.errs
+        ; $$.tipo = $1.tipo
+        ; $1.statein = $$.statein
+        ; $$.stateout = $1.stateout
+        ; $1.condTrue = $$.condTrue
+        ; $1.condFalse = $$.condFalse
+        ; $$.addr = $1.addr
+        ; $$.code = $1.code
+    }
 
-RExp : RExp 'or' RExp1 
+RExp1 : RExp1 'or' RExp2 
     { 
         $1.envin = $$.envin
         ; $3.envin = $$.envin
@@ -1435,7 +1437,7 @@ RExp : RExp 'or' RExp1
         ; $$.code = [(Rules (CondRelation $$.addr $1.addr (relop TAC.OrOp (toTACType (op2CompType OrO $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 0)))] ++ 
                     $1.code ++ $3.code
     }
-    | RExp1 'and' RExp2 
+    | RExp2 'and' RExp3 
     { 
         $1.envin = $$.envin
         ; $3.envin = $$.envin
@@ -1455,7 +1457,7 @@ RExp : RExp 'or' RExp1
         ; $$.code = [(Rules (CondRelation $$.addr $1.addr (relop TAC.AndOp (toTACType (op2CompType AndO $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 0)))] ++
                      $1.code ++ $3.code
     }
-    | RExp1 
+    | RExp2 
     { 
         $1.envin = $$.envin
         ; $$.parsetree = $1.parsetree
@@ -1468,7 +1470,7 @@ RExp : RExp 'or' RExp1
         ; $$.addr = $1.addr
         ; $$.code = $1.code
     }
-RExp2 : 'not' RExp3 
+RExp2 : 'not' RExp4 
     { 
         $2.envin = $$.envin
         ; $$.parsetree = AbsAuL.Not $2.parsetree
@@ -1496,7 +1498,7 @@ RExp2 : 'not' RExp3
         ; $$.addr = $1.addr
         ; $$.code = $1.code
     }
-RExp3 : RExp5 '==' RExp5 
+RExp4 : RExp5 '==' RExp5 
     { 
         $1.envin = $$.envin
         ; $3.envin = $$.envin
@@ -1610,7 +1612,7 @@ RExp3 : RExp5 '==' RExp5
         ; $$.addr = (gentemp $$.statein 0)
         ; $$.code = [(Rules (CondRelation $$.addr $1.addr (relop IsGEQ (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
     }                        
-    | RExp4 
+    | RExp5 
     { 
         $1.envin = $$.envin
         ; $$.parsetree = $1.parsetree
@@ -1988,21 +1990,7 @@ RExp11 : Integer
         ; $$.addr = $1.addr
         ; $$.code = $1.code
     }
-
-RExp1 : RExp2 
-    { 
-        $1.envin = $$.envin
-        ; $$.parsetree = $1.parsetree
-        ; $$.errs = $1.errs
-        ; $$.tipo = $1.tipo
-        ; $1.statein = $$.statein
-        ; $$.stateout = $1.stateout
-        ; $1.condTrue = $$.condTrue
-        ; $1.condFalse = $$.condFalse
-        ; $$.addr = $1.addr
-        ; $$.code = $1.code
-    }
-RExp4 : RExp5 
+RExp3 : RExp4 
     { 
         $1.envin = $$.envin
         ; $$.parsetree = $1.parsetree
@@ -2015,6 +2003,7 @@ RExp4 : RExp5
         ; $$.addr = $1.addr
         ; $$.code = $1.code
     }
+
 RExp5 : RExp6 
     { 
         $1.envin = $$.envin
