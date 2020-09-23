@@ -8,6 +8,7 @@ ParAuL.info
 SkelAuL.hs
 TestAuL*
 main
+main.exe
 *.hi
 *.o
 
