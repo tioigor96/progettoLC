@@ -261,10 +261,6 @@ compStrictCmpType (Base BasicType_Float) (Base BasicType_Float) = Base BasicType
 compStrictCmpType (Base BasicType_Bool) (Base BasicType_Bool) = Base BasicType_Bool
 compStrictCmpType (Base BasicType_Char) (Base BasicType_Char) = Base BasicType_Char
 compStrictCmpType (Base BasicType_String) (Base BasicType_String) = Base BasicType_String
-compStrictCmpType (ArrT (Base BasicType_Char)) (Base BasicType_String) = (ArrT (Base BasicType_Char))
-compStrictCmpType (PtrT (Base BasicType_Char)) (Base BasicType_String) = (PtrT (Base BasicType_Char))
-compStrictCmpType (Base BasicType_String) (ArrT (Base BasicType_Char)) = (Base BasicType_String)
-compStrictCmpType (Base BasicType_String) (PtrT (Base BasicType_Char)) = (Base BasicType_String)
 compStrictCmpType (PtrT t1) (PtrT t2) = PtrT (compStrictCmpType t1 t2)
 compStrictCmpType (ArrT t1) (ArrT t2) = ArrT (compStrictCmpType t1 t2)
 compStrictCmpType (PtrT t1) (ArrT t2) = PtrT (compStrictCmpType t1 t2)
@@ -390,8 +386,6 @@ op2CompType RemO (Base BasicType_Float) (Base BasicType_Float) = (Base BasicType
 
 op2CompType ConcatO (Base BasicType_Char) (Base BasicType_Char) = (Base BasicType_String)
 op2CompType ConcatO (Base BasicType_String) (Base BasicType_String) = (Base BasicType_String)
-op2CompType ConcatO (Base BasicType_Char) (Base BasicType_String) = (Base BasicType_String)
-op2CompType ConcatO (Base BasicType_String) (Base BasicType_Char) = (Base BasicType_String)
 
 op2CompType _ _ _ = ErrT
 
