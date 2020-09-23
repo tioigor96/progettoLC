@@ -31,36 +31,7 @@ render d = rend 0 (map ($ "") $ d []) "" where
     "{"      :ts -> showChar '{' . new (i+1) . rend (i+1) ts
     "}" : ";":ts -> new (i-1) . space "}" . showChar ';' . new (i-1) . rend (i-1) ts
     "}"      :ts -> new (i-1) . showChar '}' . new (i-1) . rend (i-1) ts
-    ";"      :ts -> showChar ';' . (if ts /= [] then
-                                      (case (head ts) of "end" -> (new(i-1) . rend (i-1) ts)
-                                                         "until" -> (new i . rend (i-1) ts)
-                                                         "else" -> (new (i-1) . rend i ts) 
-                                                         "elseif" -> (new (i-1) . rend (i-1) ts) 
-                                                         _ -> new i . rend i ts)
-                                    else new i . rend i ts)
-    ")"      :ts -> showChar ')' . (if ts /= [] then
-                                      if (head ts /= "+" && head ts /= "-" && head ts /= "/" && head ts /= ";" && head ts /= "*" &&
-                                          head ts /= "%" && head ts /= "&") 
-                                          then new (i+1) . rend (i+1) ts
-                                      else  rend i ts
-                                    else new i . rend i ts)
-    "do"     :ts -> showString "do" . new (i+1) . rend (i+1) ts
-    "then"   :ts -> showString "then" . new (i+1) . rend (i+1) ts
-    "else"   :ts -> showString "else" .(if ts /= [] then
-                                        (case (head ts) of "if" -> (new(i) . rend i ts)
-                                                           "until" -> (new i . rend (i-1) ts)
-                                                           "else" -> (new (i-1) . rend i ts) 
-                                                           "elseif" -> (new (i-1) . rend (i-1) ts) 
-                                                           _ -> new i . rend i ts)
-                                        else new (i) . rend (i+1) ts)
-    "repeat" :ts -> showString "repeat" . new (i+1) . rend (i+1) ts
-    "end"    :ts -> showString "end" . (if ts /= [] then
-                                          (case (head ts) of "end" -> (new(i-1) . rend (i-1) ts)
-                                                             "until" -> (new i . rend (i-1) ts)
-                                                             "else" -> (new (i-1) . rend i ts) 
-                                                             "elseif" -> (new (i-1) . rend i ts) 
-                                                             _ -> new i . rend i ts)
-                                       else new i . rend i ts)
+    ";"      :ts -> showChar ';' . new i . rend i ts
     t  : ts@(p:_) | closingOrPunctuation p -> showString t . rend i ts
     t        :ts -> space t . rend i ts
     _            -> id
@@ -203,7 +174,6 @@ instance Print AbsAuL.VarInit where
     AbsAuL.VarINil -> prPrec i 0 (concatD [])
     AbsAuL.VarExp rexp -> prPrec i 0 (concatD [doc (showString "="), prt 0 rexp])
     AbsAuL.VarMat array -> prPrec i 0 (concatD [doc (showString "="), prt 0 array])
-    AbsAuL.VarIfT rexp1 rexp2 rexp3 -> prPrec i 0 (concatD [doc (showString "="), prt 0 rexp1, doc (showString "?"), prt 0 rexp2, doc (showString ":"), prt 0 rexp3])
 
 instance Print AbsAuL.Array where
   prt i e = case e of
@@ -236,7 +206,6 @@ instance Print AbsAuL.Local where
 instance Print AbsAuL.Ass where
   prt i e = case e of
     AbsAuL.AssD lexp rexp -> prPrec i 0 (concatD [prt 0 lexp, doc (showString "="), prt 0 rexp])
-    AbsAuL.AssDIfT lexp rexp1 rexp2 rexp3 -> prPrec i 0 (concatD [prt 0 lexp, doc (showString "="), prt 0 rexp1, doc (showString "?"), prt 0 rexp2, doc (showString ":"), prt 0 rexp3])
 
 instance Print AbsAuL.Func where
   prt i e = case e of
@@ -349,15 +318,16 @@ instance Print AbsAuL.Dim where
 
 instance Print AbsAuL.RExp where
   prt i e = case e of
-    AbsAuL.Or rexp1 rexp2 -> prPrec i 0 (concatD [prt 0 rexp1, doc (showString "or"), prt 1 rexp2])
-    AbsAuL.And rexp1 rexp2 -> prPrec i 0 (concatD [prt 1 rexp1, doc (showString "and"), prt 2 rexp2])
-    AbsAuL.Not rexp -> prPrec i 2 (concatD [doc (showString "not"), prt 3 rexp])
-    AbsAuL.Eq rexp1 rexp2 -> prPrec i 3 (concatD [prt 3 rexp1, doc (showString "=="), prt 5 rexp2])
-    AbsAuL.Neq rexp1 rexp2 -> prPrec i 3 (concatD [prt 3 rexp1, doc (showString "~="), prt 5 rexp2])
-    AbsAuL.Lt rexp1 rexp2 -> prPrec i 3 (concatD [prt 3 rexp1, doc (showString "<"), prt 5 rexp2])
-    AbsAuL.LtE rexp1 rexp2 -> prPrec i 3 (concatD [prt 3 rexp1, doc (showString "<="), prt 5 rexp2])
-    AbsAuL.Gt rexp1 rexp2 -> prPrec i 3 (concatD [prt 3 rexp1, doc (showString ">"), prt 5 rexp2])
-    AbsAuL.GtE rexp1 rexp2 -> prPrec i 3 (concatD [prt 3 rexp1, doc (showString ">="), prt 5 rexp2])
+    AbsAuL.IfT rexp1 rexp2 rexp3 -> prPrec i 0 (concatD [prt 1 rexp1, doc (showString "?"), prt 1 rexp2, doc (showString ":"), prt 1 rexp3])
+    AbsAuL.Or rexp1 rexp2 -> prPrec i 1 (concatD [prt 1 rexp1, doc (showString "or"), prt 2 rexp2])
+    AbsAuL.And rexp1 rexp2 -> prPrec i 1 (concatD [prt 2 rexp1, doc (showString "and"), prt 3 rexp2])
+    AbsAuL.Not rexp -> prPrec i 2 (concatD [doc (showString "not"), prt 4 rexp])
+    AbsAuL.Eq rexp1 rexp2 -> prPrec i 4 (concatD [prt 5 rexp1, doc (showString "=="), prt 5 rexp2])
+    AbsAuL.Neq rexp1 rexp2 -> prPrec i 4 (concatD [prt 5 rexp1, doc (showString "~="), prt 5 rexp2])
+    AbsAuL.Lt rexp1 rexp2 -> prPrec i 4 (concatD [prt 5 rexp1, doc (showString "<"), prt 5 rexp2])
+    AbsAuL.LtE rexp1 rexp2 -> prPrec i 4 (concatD [prt 5 rexp1, doc (showString "<="), prt 5 rexp2])
+    AbsAuL.Gt rexp1 rexp2 -> prPrec i 4 (concatD [prt 5 rexp1, doc (showString ">"), prt 5 rexp2])
+    AbsAuL.GtE rexp1 rexp2 -> prPrec i 4 (concatD [prt 5 rexp1, doc (showString ">="), prt 5 rexp2])
     AbsAuL.Add rexp1 rexp2 -> prPrec i 6 (concatD [prt 6 rexp1, doc (showString "+"), prt 7 rexp2])
     AbsAuL.Sub rexp1 rexp2 -> prPrec i 6 (concatD [prt 6 rexp1, doc (showString "-"), prt 7 rexp2])
     AbsAuL.Mul rexp1 rexp2 -> prPrec i 7 (concatD [prt 7 rexp1, doc (showString "*"), prt 8 rexp2])

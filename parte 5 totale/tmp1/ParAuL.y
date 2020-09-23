@@ -441,6 +441,7 @@ Stm : Decl ';'
         ; $$.envout = $1.envout
         ; $$.errs = $1.errs
         ; $1.statein = $$.statein
+        ; $1.nextLabel = genlabel $$.statein 0
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code
     }
@@ -451,6 +452,7 @@ Stm : Decl ';'
         ; $$.envout = $$.envloc
         ; $$.errs = $1.errs
         ; $1.statein = $$.statein
+        ; $1.nextLabel = genlabel $$.statein 0
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code
     }
@@ -624,6 +626,7 @@ VarInit : {- empty -}
         ; $2.statein = $$.statein
         ; $$.stateout = if $$.tipo == $2.tipo then $2.stateout
                                               else skipState $2.stateout 1 0
+        ; $2.nextLabel = $$.nextLabel
         ; $$.code = if $2.code == [] then 
                         if (isPointerType $$.tipo) then [Rules (Assgm (toTACType $$.tipo) (gentemp $2.statein 0) $2.addr)]
                         else if (not $ ($$.tipo == $2.tipo)) then [Rules (Cast (gentemp $$.statein 0) (toTACType $$.tipo) (toTACType $2.tipo) $2.addr)] 
@@ -755,6 +758,8 @@ Ass : LExp '=' RExp
                                         "' but has type '"++ (showCmpType $3.tipo) ++"'"]) ++ $1.errs ++ $3.errs
         ; $1.statein = $$.statein
         ; $3.statein = $1.stateout
+        ; $1.nextLabel = $$.nextLabel
+        ; $3.nextLabel = $$.nextLabel
         ; $$.stateout = skipState $3.stateout 0 2
         ; $$.code = if (not ($3.tipo == $$.tipo)) then [Rules (Cast (gentemp $$.statein 0) (toTACType $$.tipo) (toTACType $3.tipo) $3.addr)] 
                                                         ++ [(Rules (Assgm (toTACType $$.tipo) $1.addr (gentemp $$.statein 0) ))]
@@ -952,7 +957,6 @@ While : 'while' RExp EBlk
         ; $2.condFalse = $$.nextLabel
         ; $3.nextLabel = $$.nextLabel
         ; $$.code = (labelRules (genlabel $3.stateout 1) $2.code) ++ 
-                    [(Rules (CondTrue $2.addr $2.condTrue))] ++
                     [(Rules (CondFalse $2.addr $2.condFalse))] ++
                     (labelRules $2.condTrue $3.code) ++ 
                     [(Rules (Goto (genlabel $3.stateout 1)))] ++
@@ -1391,17 +1395,32 @@ RExp : RExp1 '?' RExp1 ':' RExp1
         ; $3.envin = $$.envin
         ; $5.envin = $$.envin
         ; $$.parsetree = AbsAuL.IfT $1.parsetree $3.parsetree $5.parsetree
-        ; $$.tipo = undefined
-        ; $$.errs = [] ++ $1.errs ++ $3.errs ++ $5.errs
+        ; $$.tipo = $3.tipo
+        ; $$.errs = (if $1.tipo == (Base BasicType_Bool)
+                        then (if (all (\x -> (not ((compCmpType $3.tipo x)== ErrT))) [$3.tipo,$5.tipo])
+                            then []
+                            else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ 
+                                  ": in 'ternary if' type in 'then expression' and in 'else expression'" ++
+                                  "mismatch! (First type is '"++ (showCmpType $3.tipo) ++"', but second type is '"++
+                                  (showCmpType $5.tipo)++"')"])
+                     else ["error at "++ ((showFromPosn . tokenPosn) $2) ++ 
+                           ": in 'ternary if' test need to be 'Bool' type!"] ) ++ $1.errs ++ $3.errs ++ $5.errs
+        ; $1.statein = $$.statein
+        ; $3.statein = $1.stateout
+        ; $5.statein = $3.stateout
         
-        ; $1.stetein = $$.statein
-        ; $3.stetein = $1.stateout
-        ; $5.stetein = $3.stateout
-        ; $$.stateout = $5.stateout
+        ; $$.stateout = if ($$.tipo == $3.tipo && $$.tipo == $5.tipo) then skipState $3.stateout 0 2
+                                              else skipState $3.stateout 1 2
         
         ; $$.addr = gentemp $$.statein 0
-        ; $$.code = $1.code ++ $3.code ++ $5.code
         
+        ; $1.condTrue = (genlabel $1.stateout 1)
+        ; $1.condFalse = (genlabel $1.stateout 2)
+        ; $$.code = $1.code ++ [(Rules (CondFalse $1.addr $1.condFalse))] ++ 
+                               (labelRules $1.condTrue [(Rules (Assgm (toTACType $$.tipo) (gentemp $1.statein 0) $3.addr))]) ++ 
+                               [(Rules (Goto $$.nextLabel))] ++ 
+                               (labelRules $1.condFalse [(Rules (Assgm (toTACType $$.tipo) (gentemp $1.statein 0) $5.addr))]) ++ 
+                               (labelRules (genlabel $5.stateout 0) [])
     }
     | RExp1 
     { 
@@ -1413,6 +1432,7 @@ RExp : RExp1 '?' RExp1 ':' RExp1
         ; $$.stateout = $1.stateout
         ; $1.condTrue = $$.condTrue
         ; $1.condFalse = $$.condFalse
+        ; $1.nextLabel = $$.nextLabel
         ; $$.addr = $1.addr
         ; $$.code = $1.code
     }
@@ -1467,6 +1487,7 @@ RExp1 : RExp1 'or' RExp2
         ; $$.stateout = $1.stateout
         ; $1.condTrue = $$.condTrue
         ; $1.condFalse = $$.condFalse
+        ; $1.nextLabel = $$.nextLabel
         ; $$.addr = $1.addr
         ; $$.code = $1.code
     }
@@ -1495,6 +1516,7 @@ RExp2 : 'not' RExp4
         ; $$.stateout = $1.stateout
         ; $1.condTrue = $$.condTrue
         ; $1.condFalse = $$.condFalse
+        ; $1.nextLabel = $$.nextLabel
         ; $$.addr = $1.addr
         ; $$.code = $1.code
     }
@@ -1622,6 +1644,7 @@ RExp4 : RExp5 '==' RExp5
         ; $$.stateout = $1.stateout
         ; $1.condTrue = $$.condTrue
         ; $1.condFalse = $$.condFalse
+        ; $1.nextLabel = $$.nextLabel
         ; $$.addr = $1.addr
         ; $$.code = $1.code
     }
@@ -1671,6 +1694,7 @@ RExp6 : RExp6 '+' RExp7
         ; $$.stateout = $1.stateout
         ; $1.condTrue = $$.condTrue
         ; $1.condFalse = $$.condFalse
+        ; $1.nextLabel = $$.nextLabel
         ; $$.addr = $1.addr
         ; $$.code = $1.code
     }
@@ -1736,6 +1760,7 @@ RExp7 : RExp7 '*' RExp8
         ; $$.stateout = $1.stateout
         ; $1.condTrue = $$.condTrue
         ; $1.condFalse = $$.condFalse
+        ; $1.nextLabel = $$.nextLabel
         ; $$.addr = $1.addr
         ; $$.code = $1.code
     }
@@ -1767,6 +1792,7 @@ RExp8 : RExp9 '^' RExp8
         ; $$.stateout = $1.stateout
         ; $1.condTrue = $$.condTrue
         ; $1.condFalse = $$.condFalse
+        ; $1.nextLabel = $$.nextLabel
         ; $$.addr = $1.addr
         ; $$.code = $1.code
     }
@@ -1795,6 +1821,7 @@ RExp9 : '-' RExp10
         ; $$.stateout = $1.stateout
         ; $1.condTrue = $$.condTrue
         ; $1.condFalse = $$.condFalse
+        ; $1.nextLabel = $$.nextLabel
         ; $$.addr = $1.addr
         ; $$.code = $1.code
     }
@@ -1850,6 +1877,7 @@ RExp10 : Func
         ; $$.stateout = $1.stateout
         ; $1.condTrue = $$.condTrue
         ; $1.condFalse = $$.condFalse
+        ; $1.nextLabel = $$.nextLabel
         ; $$.addr = $1.addr
         ; $$.code = $1.code
     }
