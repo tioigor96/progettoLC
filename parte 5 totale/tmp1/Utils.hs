@@ -85,6 +85,16 @@ getLIdentlexp x = case x of
 fromLIdent :: LIdent -> String
 fromLIdent (LIdent s) = s
 
+--------------------------
+-----REXP trattamenti-----
+--------------------------
+isValVariable :: RExp -> Bool
+isValVariable (ValVariable rexp) = True
+isValVariable _ = False
+
+fromValVariable :: RExp -> LExp
+fromValVariable (ValVariable lexp) = lexp
+
 
 --------------------------
 -----LEXP trattamenti-----

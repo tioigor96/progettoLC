@@ -813,13 +813,13 @@ Func : FuncWrite
         ; $$.errs = (if (isJust (lookupEnv (fromLIdent $1.vlident) $$.envin))
                         then (if ((isFnctEnv . fromJust) (lookupEnv (fromLIdent $1.vlident) $$.envin))
                               then (controlFnctTipo
-                                        (map (\x -> (fst . getType) x) 
+                                        (map (\x -> getType x) 
                                             ((getParamF . fromJust) (lookupEnv (fromLIdent $1.vlident) $$.envin)))
-                                        $3.lrexptpe
+                                        (zip $3.lrexptpe $3.parsetree)
                                         $1.posn
                                    )
-                              else ["error at "++(showFromPosn $1.posn)++": "++(fromLIdent $1.vlident)++"isn't defined as function!"])
-                        else ["error at "++(showFromPosn $1.posn)++": function "++(fromLIdent $1.vlident)++"is undefined!"]) ++ $3.errs
+                              else ["error at "++(showFromPosn $1.posn)++": "++(fromLIdent $1.vlident)++" isn't defined as function!"])
+                        else ["error at "++(showFromPosn $1.posn)++": function "++(fromLIdent $1.vlident)++" is undefined!"]) ++ $3.errs
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $$.addr = $1.addr
@@ -1394,7 +1394,6 @@ Dim : '[' RExp ']'
 --  =======  REXP  =========
 --  ========================
 --TODO: testa che funzioni
---TODO: condtrue condfalse addr(?) nextLabel(?)
 
 RExp : RExp1 '?' RExp1 ':' RExp1 
     { 
@@ -2140,21 +2139,31 @@ controlArrTipo ts arr tok
                                                       ": array initialization isn't of the same type of " ++
                                                       "variable type ('"++ (showCmpType (Base (getBaseType ts))) ++"')!"]
 
-controlFnctTipo' :: [CmpType] -> [CmpType] -> [String]
-controlFnctTipo' ps rexps = foldr (\(te,tr,pn) xs -> (cmpType te tr pn) ++ xs) [] (zip3 ps rexps [1..])
-    where cmpType te tr pn = if (compCmpType te tr) == ErrT
-                                then ["    param "++ (show pn)++": expected type was '" ++ 
-                                     (showCmpType te) ++ "' but recieved type '" ++ 
-                                     (showCmpType tr) ++ "'"]
-                                else []
+controlFnctMdP :: (CmpType,Modality) -> (CmpType,RExp) -> Int -> [String]
+controlFnctMdP pe@(_, Modality_res) pr@(_, rexp) pn
+    | isValVariable rexp = []
+    | otherwise = ["    param "++ (show pn)++": expected a l-expr for 'res' modality!"]
+controlFnctMdP pe@(_, Modality_valres) pr@(_, rexp) pn
+    | isValVariable rexp = []
+    | otherwise = ["    param "++ (show pn)++": expected a l-expr for 'valres' modality!"]
+controlFnctMdP _ _ _ = []
 
+controlFnctTipo' :: [(CmpType,Modality)] -> [(CmpType,RExp)] -> [String]
+controlFnctTipo' ps rexps = foldr (\(te,tr,pn) xs -> (cmpType te tr pn) ++ xs) [] (zip3 ps rexps [1..])
+    where cmpType te tr pn = if (compCmpType (fst te) (fst tr)) == ErrT
+                                then ["    param "++ (show pn)++": expected type was '" ++ 
+                                     (showCmpType (fst te)) ++ "' but recieved type '" ++ 
+                                     (showCmpType (fst tr)) ++ "'"]
+                                else (controlFnctMdP te tr pn)
+
+controlFnctTipo :: [(CmpType,Modality)] -> [(CmpType,RExp)] -> Posn -> [String]
 controlFnctTipo ps rexps posn = let errs = controlFnctTipo' ps rexps
                                  in if ((length ps) /= (length rexps))
                                      then ["error at "++(showFromPosn posn)++
                                            ": the parameters passed to function are insufficient!"]
                                      else if ((length errs) == 0)
                                             then []
-                                            else ["error at "++(showFromPosn posn)++":"]++errs
+                                            else ["error at " ++ (showFromPosn posn) ++ ":"] ++ errs
 
 returnM :: a -> Err a
 returnM = return
