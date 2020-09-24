@@ -850,12 +850,10 @@ Func : FuncWrite
                         else ["error at "++(showFromPosn $1.posn)++": function "++(fromLIdent $1.vlident)++" is undefined!"]) ++ $3.errs
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
-<<<<<<< HEAD
+
         ; $1.isfunc = 1
         ; $$.addr = $1.addr        
-=======
-        ; $$.addr = $1.addr
->>>>>>> 735868b4f179704cb98284230604805fabcef9d4
+
         ; $$.code = [(Rules (FuncCall (gentemp $1.stateout 0) 
                                       (toTACType ((getTypeF . fromJust) (lookupEnv (fromLIdent $1.vlident) $$.envin))) 
                                       (InternalFunc (argOpToString $1.addr)) 
