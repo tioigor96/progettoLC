@@ -1,0 +1,20 @@
+-- test sulle modality
+
+Int c = 4;
+
+Int function f (valres Int a)
+    a = a+2;
+    return a;
+end
+
+
+Int function d (res Int b)
+    b = 9;
+    return 3;
+end
+
+Void function main ()
+    Int y = f(c);
+    Int w = d(c);
+    return;
+end

@@ -1,0 +1,31 @@
+-- test con algoritmi ordinamento
+
+
+Void function swap (Int a, Int b)
+    Int tmp;
+    tmp = a;
+    a = b;
+    b = tmp;
+end
+
+
+Void function gnomesort (Int *arr, Int dim)
+    Int i =1;
+    Int j =2;
+    while i < dim do
+        if (arr[i-1]<=arr[i]) then
+            i=j;
+            j=j+1;
+        else
+            swap(arr[i-1], arr[i]);
+            i = i>1 ? i : i-1;
+        end
+    end
+end
+
+
+Void function main ()
+    Int array [3] = {5, 4, 9};
+    Int l = #array;
+    gnomesort(array, l);
+end

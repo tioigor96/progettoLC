@@ -1,0 +1,19 @@
+-- test if ternario
+
+
+Int function mcd (Int a, Int b)
+    Int t;
+    while b~=0 do 
+        t = b;
+        b = a % b;
+        a = t;
+    end
+    return a;
+end
+
+
+Void function main()
+    Int n = 3+1;
+    Int m = (n*7)+12;
+    Int result = mcd(n,m);
+end
