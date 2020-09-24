@@ -1500,15 +1500,24 @@ RExp1 : RExp1 'or' RExp2
         ; $$.tipo = Base BasicType_Bool 
         ; $$.listDim = [] 
         ; $1.statein = $$.statein 
-      	; $3.statein = $1.stateout
-        ; $$.stateout = skipState $3.stateout 0 1 
+      	; $3.statein = if (not $ ($1.listDim == [])) then skipState $1.stateout 1 0 
+                                             else $1.stateout
+        ; $$.stateout = if (not $ ($3.listDim == [])) then skipState $3.stateout 1 1 
+                                             else skipState $3.stateout 1 1
         ; $1.condTrue = $$.condTrue
         ; $1.condFalse = genlabel $3.stateout 1
         ; $3.condTrue = $$.condTrue
         ; $3.condFalse = $$.condFalse
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (CondRelation $$.addr $1.addr (relop TAC.OrOp (toTACType (op2CompType OrO $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 0)))] ++ 
-                    $1.code ++ $3.code
+        ; $$.code = if ($1.listDim == []) then if ($3.listDim == []) then [(Rules (CondRelation $$.addr $1.addr (relop TAC.OrOp (toTACType (op2CompType OrO $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 0)))] ++ 
+                                                                           $1.code ++ $3.code
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr $1.addr (relop TAC.OrOp (toTACType (op2CompType OrO $1.tipo $3.tipo))) (gentemp $1.stateout 1) (genlabel $$.statein 0)))] ++ $1.code 
+                                          else if ($3.listDim == []) then [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr (gentemp $1.statein 1) (relop TAC.OrOp (toTACType (op2CompType OrO $1.tipo $3.tipo))) (gentemp $1.stateout 1) (genlabel $$.statein 0)))] ++ $3.code                     
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr (gentemp $1.statein 1) (relop TAC.OrOp (toTACType (op2CompType OrO $1.tipo $3.tipo))) (gentemp $1.stateout 1) (genlabel $$.statein 0)))]                  
     }
     | RExp2 'and' RExp3 
     { 
@@ -1521,15 +1530,24 @@ RExp1 : RExp1 'or' RExp2
         ; $$.tipo = Base BasicType_Bool 
         ; $$.listDim = [] 
         ; $1.statein = $$.statein 
-      	; $3.statein = $1.stateout
-        ; $$.stateout = skipState $3.stateout 0 1 
+      	; $3.statein = if (not $ ($1.listDim == [])) then skipState $1.stateout 1 0 
+                                             else $1.stateout
+        ; $$.stateout = if (not $ ($3.listDim == [])) then skipState $3.stateout 1 1 
+                                             else skipState $3.stateout 1 1
         ; $1.condTrue = genlabel $3.stateout 1
         ; $2.condFalse = $$.condFalse
         ; $3.condTrue = $$.condTrue
         ; $3.condFalse = $$.condFalse
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (CondRelation $$.addr $1.addr (relop TAC.AndOp (toTACType (op2CompType AndO $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 0)))] ++
-                     $1.code ++ $3.code
+        ; $$.code = if ($1.listDim == []) then if ($3.listDim == []) then [(Rules (CondRelation $$.addr $1.addr (relop TAC.AndOp (toTACType (op2CompType AndO $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 0)))] ++ 
+                                                                           $1.code ++ $3.code
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr $1.addr (relop TAC.AndOp (toTACType (op2CompType AndO $1.tipo $3.tipo))) (gentemp $1.stateout 1) (genlabel $$.statein 0)))] ++ $1.code 
+                                          else if ($3.listDim == []) then [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr (gentemp $1.statein 1) (relop TAC.AndOp (toTACType (op2CompType AndO $1.tipo $3.tipo))) (gentemp $1.stateout 1) (genlabel $$.statein 0)))] ++ $3.code                     
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr (gentemp $1.statein 1) (relop TAC.AndOp (toTACType (op2CompType AndO $1.tipo $3.tipo))) (gentemp $1.stateout 1) (genlabel $$.statein 0)))]                  
     }
     | RExp2 
     { 
@@ -1588,14 +1606,24 @@ RExp4 : RExp5 '==' RExp5
         ; $$.tipo = Base BasicType_Bool 
         ; $$.listDim = [] 
         ; $1.statein = $$.statein
-      	; $3.statein = $1.stateout
-        ; $$.stateout = stateoutRelOpEqDif $1.tipo $3.tipo $1.code $3.code $$.condTrue $$.condFalse $1.addr $3.addr $3.stateout IsEq
+      	; $3.statein = if (not $ ($1.listDim == [])) then skipState $1.stateout 1 0 
+                                             else $1.stateout
+        ; $$.stateout = if (not $ ($3.listDim == [])) then skipState $3.stateout 1 0 
+                                             else $3.stateout
     	; $1.condTrue  = genlabel $3.stateout 1
     	; $1.condFalse = genlabel $3.stateout 2
     	; $3.condTrue  = genlabel $3.stateout 4
     	; $3.condFalse = genlabel $3.stateout 5
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (CondRelation $$.addr $1.addr (relop IsEq (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
+        ; $$.code = if ($1.listDim == []) then if ($3.listDim == []) then [(Rules (CondRelation $$.addr $1.addr (relop IsEq (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 0)))] ++ 
+                                                                           $1.code ++ $3.code
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr $1.addr (relop IsEq (toTACType (higherType $1.tipo $3.tipo)))(gentemp $1.stateout 1) (genlabel $$.statein 0)))] ++ $1.code 
+                                          else if ($3.listDim == []) then [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr (gentemp $1.statein 1) (relop IsEq (toTACType (higherType $1.tipo $3.tipo))) (gentemp $1.stateout 1) (genlabel $$.statein 0)))] ++ $3.code                     
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr (gentemp $1.statein 1) (relop IsEq (toTACType (higherType $1.tipo $3.tipo))) (gentemp $1.stateout 1) (genlabel $$.statein 0)))]                  
     }
     | RExp5 '~=' RExp5 
     { 
@@ -1608,14 +1636,24 @@ RExp4 : RExp5 '==' RExp5
         ; $$.tipo = Base BasicType_Bool 
         ; $$.listDim = [] 
         ; $1.statein = $$.statein
-      	; $3.statein = $1.stateout
-        ; $$.stateout = stateoutRelOpEqDif $1.tipo $3.tipo $1.code $3.code $$.condTrue $$.condFalse $1.addr $3.addr $3.stateout IsDiff
+      	; $3.statein = if (not $ ($1.listDim == [])) then skipState $1.stateout 1 0 
+                                             else $1.stateout
+        ; $$.stateout = if (not $ ($3.listDim == [])) then skipState $3.stateout 1 0 
+                                             else $3.stateout
     	; $1.condTrue  = genlabel $3.stateout 1
     	; $1.condFalse = genlabel $3.stateout 2
     	; $3.condTrue  = genlabel $3.stateout 4
     	; $3.condFalse = genlabel $3.stateout 5
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (CondRelation $$.addr $1.addr (relop IsDiff (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
+        ; $$.code = if ($1.listDim == []) then if ($3.listDim == []) then [(Rules (CondRelation $$.addr $1.addr (relop IsDiff (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 0)))] ++ 
+                                                                           $1.code ++ $3.code
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr $1.addr (relop IsDiff (toTACType (higherType $1.tipo $3.tipo)))(gentemp $1.stateout 1) (genlabel $$.statein 0)))] ++ $1.code 
+                                          else if ($3.listDim == []) then [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr (gentemp $1.statein 1) (relop IsDiff (toTACType (higherType $1.tipo $3.tipo))) (gentemp $1.stateout 1) (genlabel $$.statein 0)))] ++ $3.code                     
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr (gentemp $1.statein 1) (relop IsDiff (toTACType (higherType $1.tipo $3.tipo))) (gentemp $1.stateout 1) (genlabel $$.statein 0)))]                  
     }
     | RExp5 '<' RExp5 
     { 
@@ -1628,14 +1666,24 @@ RExp4 : RExp5 '==' RExp5
         ; $$.tipo = Base BasicType_Bool
         ; $$.listDim = [] 
         ; $1.statein = $$.statein
-      	; $3.statein = $1.stateout
-        ; $$.stateout = stateRelOpDisEq  $1.tipo $3.tipo $1.code $3.code $$.condTrue $$.condFalse $1.addr $3.addr $3.stateout IsL
+      	; $3.statein = if (not $ ($1.listDim == [])) then skipState $1.stateout 1 0 
+                                             else $1.stateout
+        ; $$.stateout = if (not $ ($3.listDim == [])) then skipState $3.stateout 1 0 
+                                             else $3.stateout
     	; $1.condTrue  = genlabel $3.stateout 1
     	; $1.condFalse = genlabel $3.stateout 2
     	; $3.condTrue  = genlabel $3.stateout 4
     	; $3.condFalse = genlabel $3.stateout 5
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (CondRelation $$.addr $1.addr (relop IsL (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
+        ; $$.code = if ($1.listDim == []) then if ($3.listDim == []) then [(Rules (CondRelation $$.addr $1.addr (relop IsL (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 0)))] ++ 
+                                                                           $1.code ++ $3.code
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr $1.addr (relop IsL (toTACType (higherType $1.tipo $3.tipo)))(gentemp $1.stateout 1) (genlabel $$.statein 0)))] ++ $1.code 
+                                          else if ($3.listDim == []) then [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr (gentemp $1.statein 1) (relop IsL (toTACType (higherType $1.tipo $3.tipo)))(gentemp $1.stateout 1) (genlabel $$.statein 0)))] ++ $3.code                     
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr (gentemp $1.statein 1) (relop IsL (toTACType (higherType $1.tipo $3.tipo))) (gentemp $1.stateout 1) (genlabel $$.statein 0)))]                  
     }
     | RExp5 '<=' RExp5 
     { 
@@ -1648,15 +1696,25 @@ RExp4 : RExp5 '==' RExp5
         ; $$.tipo = Base BasicType_Bool
         ; $$.listDim = [] 
         ; $1.statein = $$.statein
-      	; $3.statein = $1.stateout
-        ; $$.stateout = stateRelOpDisEq  $1.tipo $3.tipo $1.code $3.code $$.condTrue $$.condFalse $1.addr $3.addr $3.stateout IsLEQ
+      	; $3.statein = if (not $ ($1.listDim == [])) then skipState $1.stateout 1 0 
+                                             else $1.stateout
+        ; $$.stateout = if (not $ ($3.listDim == [])) then skipState $3.stateout 1 0 
+                                             else $3.stateout
     	; $1.condTrue  = genlabel $3.stateout 1
     	; $1.condFalse = genlabel $3.stateout 2
     	; $3.condTrue  = genlabel $3.stateout 4
     	; $3.condFalse = genlabel $3.stateout 5
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (CondRelation $$.addr $1.addr (relop IsLEQ (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
-    }
+        ; $$.code = if ($1.listDim == []) then if ($3.listDim == []) then [(Rules (CondRelation $$.addr $1.addr (relop IsLEQ (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 0)))] ++ 
+                                                                           $1.code ++ $3.code
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr $1.addr (relop IsLEQ (toTACType (higherType $1.tipo $3.tipo)))(gentemp $1.stateout 1) (genlabel $$.statein 0)))] ++ $1.code 
+                                          else if ($3.listDim == []) then [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr (gentemp $1.statein 1) (relop IsLEQ (toTACType (higherType $1.tipo $3.tipo)))(gentemp $1.stateout 1) (genlabel $$.statein 0)))] ++ $3.code                     
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr (gentemp $1.statein 1) (relop IsLEQ (toTACType (higherType $1.tipo $3.tipo))) (gentemp $1.stateout 1) (genlabel $$.statein 0)))]                  
+   }
     | RExp5 '>' RExp5 
     { 
         $1.envin = $$.envin
@@ -1668,15 +1726,25 @@ RExp4 : RExp5 '==' RExp5
         ; $$.tipo = Base BasicType_Bool
         ; $$.listDim = [] 
         ; $1.statein = $$.statein
-      	; $3.statein = $1.stateout
-        ; $$.stateout = stateRelOpDisEq  $1.tipo $3.tipo $1.code $3.code $$.condTrue $$.condFalse $1.addr $3.addr $3.stateout IsG
+      	; $3.statein = if (not $ ($1.listDim == [])) then skipState $1.stateout 1 0 
+                                             else $1.stateout
+        ; $$.stateout = if (not $ ($3.listDim == [])) then skipState $3.stateout 1 0 
+                                             else $3.stateout
     	; $1.condTrue  = genlabel $3.stateout 1
     	; $1.condFalse = genlabel $3.stateout 2
     	; $3.condTrue  = genlabel $3.stateout 4
     	; $3.condFalse = genlabel $3.stateout 5
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (CondRelation $$.addr $1.addr (relop IsG (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
-    }
+        ; $$.code = if ($1.listDim == []) then if ($3.listDim == []) then [(Rules (CondRelation $$.addr $1.addr (relop IsG (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 0)))] ++ 
+                                                                           $1.code ++ $3.code
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr $1.addr (relop IsG (toTACType (higherType $1.tipo $3.tipo)))(gentemp $1.stateout 1) (genlabel $$.statein 0)))] ++ $1.code 
+                                          else if ($3.listDim == []) then [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr (gentemp $1.statein 1) (relop IsG (toTACType (higherType $1.tipo $3.tipo)))(gentemp $1.stateout 1) (genlabel $$.statein 0)))] ++ $3.code                     
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr (gentemp $1.statein 1) (relop IsG (toTACType (higherType $1.tipo $3.tipo))) (gentemp $1.stateout 1) (genlabel $$.statein 0)))]                  
+   }
     | RExp5 '>=' RExp5 
     { 
         $1.envin = $$.envin
@@ -1688,14 +1756,24 @@ RExp4 : RExp5 '==' RExp5
         ; $$.tipo = Base BasicType_Bool
         ; $$.listDim = [] 
         ; $1.statein = $$.statein
-      	; $3.statein = $1.stateout
-        ; $$.stateout = stateRelOpDisEq  $1.tipo $3.tipo $1.code $3.code $$.condTrue $$.condFalse $1.addr $3.addr $3.stateout IsGEQ
+      	; $3.statein = if (not $ ($1.listDim == [])) then skipState $1.stateout 1 0 
+                                             else $1.stateout
+        ; $$.stateout = if (not $ ($3.listDim == [])) then skipState $3.stateout 1 0 
+                                             else $3.stateout
     	; $1.condTrue  = genlabel $3.stateout 1
     	; $1.condFalse = genlabel $3.stateout 2
     	; $3.condTrue  = genlabel $3.stateout 4
     	; $3.condFalse = genlabel $3.stateout 5
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (CondRelation $$.addr $1.addr (relop IsGEQ (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 1)))] ++ $1.code ++ $3.code
+        ; $$.code = if ($1.listDim == []) then if ($3.listDim == []) then [(Rules (CondRelation $$.addr $1.addr (relop IsGEQ (toTACType (higherType $1.tipo $3.tipo))) $3.addr (genlabel $$.statein 0)))] ++ 
+                                                                           $1.code ++ $3.code
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr $1.addr (relop IsGEQ (toTACType (higherType $1.tipo $3.tipo)))(gentemp $1.stateout 1) (genlabel $$.statein 0)))] ++ $1.code 
+                                          else if ($3.listDim == []) then [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr (gentemp $1.statein 1) (relop IsGEQ (toTACType (higherType $1.tipo $3.tipo)))(gentemp $1.stateout 1) (genlabel $$.statein 0)))] ++ $3.code                     
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (CondRelation $$.addr (gentemp $1.statein 1) (relop IsGEQ (toTACType (higherType $1.tipo $3.tipo))) (gentemp $1.stateout 1) (genlabel $$.statein 0)))]                  
     }                        
     | RExp5 
     { 

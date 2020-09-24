@@ -34,12 +34,6 @@ paramToTac (((ParmDeclF m t _) , psn, id ):xs)  = if m == Modality_valres then (
 argOpToInt :: ArgOp -> Int
 argOpToInt (IntTac a) = a
 
-searchParam :: [(ParamF,Posn,String)] -> ArgOp -> ArgOp
-searchParam [] a = a
-searchParam (((ParmDeclF m _ _), _, id ):xs) (NameTac s p ) = if (id == s && m /= Modality1) then (Param s p)
-                                                                                              else searchParam xs (NameTac s p)
-searchParam ((_, _, id ):xs) a = a                                                   
-
 listDimToString :: [(ArgOp)] -> String
 listDimToString [] = ""
 listDimToString (x:xs) = "[" ++ argOpToString x ++ "*4]" ++ listDimToString xs
@@ -52,9 +46,16 @@ aidListElem arr [] _ = []
 aidListElem arr (x:xs) 0 = (Rules (ListElem arr 0 x)) : aidListElem arr xs 4
 aidListElem arr (x:xs) n = (Rules (ListElem arr n x)) : aidListElem arr xs (n*2)
 
+-- listRexpToTac :: [(ArgOp)] -> [TAC]
+-- listRexpToTac [] = []
+-- listRexpToTac (x:xs) = (Rules (ListRexp x)): listRexpToTac xs
+
 listRexpToTac :: [(ArgOp)] -> [TAC]
-listRexpToTac [] = []
-listRexpToTac (x:xs) = (Rules (ListRexp x)): listRexpToTac xs
+listRexpToTac rexps = aidRexpToTac rexps 0
+
+aidRexpToTac :: [(ArgOp)] -> Int -> [TAC]
+aidRexpToTac [] _ = []
+aidRexpToTac (x:xs) n = (Rules (ListRexp x n)) : aidRexpToTac xs (n+1)
 
 
 getString :: Token -> String

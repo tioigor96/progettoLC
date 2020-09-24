@@ -28,7 +28,7 @@ data RulesTac = AssgmBin TypeTac ArgOp ArgOp BinaryOp ArgOp             -- x = y
               | AssEl TypeTac ArgOp ArgOp String                       -- x =t y[i]
               | ArrayDef TypeTac ArgOp String                           -- Int pippo[3]
               | ListElem ArgOp Int ArgOp                                -- int a [n] = {...} 
-              | ListRexp ArgOp    
+              | ListRexp ArgOp Int
               | AssignAddress ArgOp TypeTac ArgOp                       -- x =t &y
               | AssignPointer ArgOp TypeTac ArgOp                       -- x =t *y
               | DerefAssign ArgOp TypeTac ArgOp                         -- *x =t y      
@@ -181,8 +181,8 @@ printRules (ArrayDef t a ldim) =
         (printType t ) ++ " " ++ argOpToString a ++ ldim
 printRules (ListElem arr i val) =
         argOpToString arr ++ "[" ++ show i ++ "] = " ++ argOpToString val                                          
-printRules (ListRexp a) =
-        "Argument " ++  argOpToString a    
+printRules (ListRexp a i) =
+        "arg_" ++ show i ++ " "++ argOpToString a    
 printRules (AssignAddress a1 t a2) =
         (printType t) ++ " " ++ (argOpToString a1) ++ " = &" ++ (argOpToString a2)
 printRules (AssignPointer a1 t a2) =
