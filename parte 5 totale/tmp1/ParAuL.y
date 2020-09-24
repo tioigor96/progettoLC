@@ -288,7 +288,9 @@ Block : ListStm
                                 ((getTypeR . fromJust) (lookupEnv "return" $$.envloc))
                                 ((foundIstr . fromJust) (lookupEnv "return" $$.envloc))
                                 (if (isJust ((lookupEnv "break" $$.envloc)))
-                                    then (insertBreakEnv ((label . fromJust) (lookupEnv "break" $$.envloc)) emptyEnv)
+                                    then (insertBreakEnv ((label . fromJust) (lookupEnv "break" $$.envloc))
+                                                         ((labelcontinue . fromJust) (lookupEnv "break" $$.envloc))
+                                                         emptyEnv)
                                     else emptyEnv))
                          else emptyEnv
         ; $$.parsetree = AbsAuL.Blk (reverse $1.parsetree)
@@ -464,10 +466,12 @@ Stm : Decl ';'
     | While 
     { 
         $1.envin = $$.envin
-        ; $1.envloc = insertBreakEnv $1.nextLabel $$.envloc
+        ; $1.envloc = $$.envloc
         ; $$.parsetree = AbsAuL.SWhile $1.parsetree
         ; $$.envout = if (isJust (lookupEnv "break" $$.envin)) 
-                         then (insertBreakEnv ((label . fromJust) (lookupEnv "break" $$.envin)) (deleteEnv "break" $1.envout))
+                         then (insertBreakEnv ((label . fromJust) (lookupEnv "break" $$.envin))
+                                              ((labelcontinue . fromJust) (lookupEnv "break" $$.envin))
+                                              (deleteEnv "break" $1.envout))
                          else (deleteEnv "break" $1.envout)
         ; $$.errs = $1.errs
         ; $1.nextLabel = genlabel $$.statein 0
@@ -478,10 +482,12 @@ Stm : Decl ';'
     | Repeat ';'
     {
         $1.envin = $$.envin
-        ; $1.envloc = insertBreakEnv $1.nextLabel $$.envloc
+        ; $1.envloc = $$.envloc
         ; $$.parsetree = AbsAuL.SRepeat $1.parsetree
         ; $$.envout = if (isJust (lookupEnv "break" $$.envin)) 
-                         then (insertBreakEnv ((label . fromJust) (lookupEnv "break" $$.envin)) (deleteEnv "break" $1.envout))
+                         then (insertBreakEnv ((label . fromJust) (lookupEnv "break" $$.envin))
+                                              ((labelcontinue . fromJust) (lookupEnv "break" $$.envin))
+                                              (deleteEnv "break" $1.envout))
                          else (deleteEnv "break" $1.envout)
         ; $$.errs = $1.errs  
         ; $1.nextLabel = genlabel $$.statein 0
@@ -557,10 +563,13 @@ Stm : Decl ';'
     }
     | Continue ';' --TODO: completa per TAC
     { 
-       $$.parsetree = AbsAuL.SContinue $1.parsetree
-       ; $$.envout = $$.envloc
-       ; $1.envloc = mergeEnv $$.envloc $$.envin
-       ; $$.errs = $1.errs
+        $$.parsetree = AbsAuL.SContinue $1.parsetree
+        ; $$.envout = $$.envloc
+        ; $1.envloc = mergeEnv $$.envloc $$.envin
+        ; $$.errs = $1.errs
+        ; $1.statein = $$.statein
+        ; $$.stateout = $1.stateout
+        ; $$.code = $1.code
     }
 
 --  ========================
@@ -955,7 +964,7 @@ While : 'while' RExp EBlk
     { 
        $2.envin = mergeEnv $$.envloc $$.envin
         ; $3.envin = $$.envin
-        ; $3.envloc = $$.envloc
+        ; $3.envloc = insertBreakEnv $$.nextLabel $2.condTrue $$.envloc
         ; $$.parsetree = AbsAuL.LoopW $2.parsetree $3.parsetree
         ; $$.envout = $3.envout
         ; $$.errs = (if (op2CompType EqO (Base BasicType_Bool) $2.tipo) == ErrT
@@ -981,7 +990,7 @@ While : 'while' RExp EBlk
 Repeat : 'repeat' Block 'until' RExp 
     { 
           $2.envin = $$.envin
-        ; $2.envloc = $$.envloc
+        ; $2.envloc = insertBreakEnv $$.nextLabel $4.condTrue $$.envloc
         ; $4.envin = mergeEnv $$.envloc $$.envin
         ; $$.parsetree = AbsAuL.LoopR $2.parsetree $4.parsetree
         ; $$.envout = $2.envout
@@ -1236,6 +1245,10 @@ Continue : 'continue'
         ; $$.envout = $$.envloc
         ; $$.errs = if (isNothing (lookupEnv "break" $$.envloc))
                     then ["error at "++ ((showFromPosn . tokenPosn) $1) ++ ":cannot use 'continue' out of indeterminate loop!"]
+                    else []
+        ; $$.stateout = $$.statein
+        ; $$.code = if (isJust (lookupEnv "break" $$.envloc))
+                    then [(Rules (Goto ((((labelcontinue . fromJust) (lookupEnv "break" $$.envloc))))))]
                     else []
     }
 

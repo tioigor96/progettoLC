@@ -40,7 +40,8 @@ data Entity = Var { getTypeV :: (CmpType, AbsAuL.Modality),
             | Return { getTypeR :: CmpType,
                        foundIstr :: Bool
                     }
-            | Break { label :: String
+            | Break { label :: String,
+                      labelcontinue :: String
                     }
             deriving (Show, Eq)
 
@@ -161,8 +162,8 @@ reinsertRetEnv :: CmpType -> Bool -> EnvT -> EnvT
 reinsertRetEnv tip bool env = Map.insert "return" (Return tip bool) env
 
 --inserisce break nell'env
-insertBreakEnv :: String -> EnvT -> EnvT
-insertBreakEnv label env = Map.insert "break" (Break label) env
+insertBreakEnv :: String -> String -> EnvT -> EnvT
+insertBreakEnv label labtrue env = Map.insert "break" (Break label labtrue) env
 ---------------------------------
 ---- Bse per creare funzioni ----
 ---------------------------------
