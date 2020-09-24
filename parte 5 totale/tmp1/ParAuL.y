@@ -1704,11 +1704,20 @@ RExp6 : RExp6 '+' RExp7
                          else (op2CompType AddO $1.tipo $3.tipo) )  
         ; $$.listDim = [] 
         ; $1.statein = $$.statein
-      	; $3.statein = $1.stateout
-        ; $$.stateout = stateoutBinOp $1.tipo $3.tipo $1.addr $3.addr $3.stateout TAC.Add 
+      	; $3.statein = if (not $ ($1.listDim == [])) then skipState $1.stateout 1 0 
+                                             else $1.stateout
+        ; $$.stateout = if (not $ ($3.listDim == [])) then skipState $3.stateout 1 0 
+                                             else $3.stateout
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (AssgmBin (toTACType $$.tipo) $$.addr $1.addr (binop TAC.Add (toTACType $$.tipo)) $3.addr))] ++ $1.code ++ $3.code
-    
+        ; $$.code = if ($1.listDim == []) then if ($3.listDim == []) then [(Rules (AssgmBin (toTACType $$.tipo) $$.addr $1.addr (binop TAC.Add (toTACType $$.tipo)) $3.addr))] ++ $1.code ++ $3.code
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (AssgmBin (toTACType $$.tipo) $$.addr $1.addr (binop TAC.Add (toTACType $$.tipo)) (gentemp $1.stateout 1)))] ++ $1.code 
+                                          else if ($3.listDim == []) then [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (AssgmBin (toTACType $$.tipo) $$.addr (gentemp $1.statein 1) (binop TAC.Add (toTACType $$.tipo)) $3.addr))] ++ $3.code 
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (AssgmBin (toTACType $$.tipo) $$.addr (gentemp $1.statein 1) (binop TAC.Add (toTACType $$.tipo)) (gentemp $1.stateout 1)))]
+
     }
     | RExp6 '-' RExp7 
     { 
@@ -1723,11 +1732,19 @@ RExp6 : RExp6 '+' RExp7
                          else (op2CompType SubO $1.tipo $3.tipo) )   
         ; $$.listDim = [] 
         ; $1.statein = $$.statein
-      	; $3.statein = $1.stateout
-        ; $$.stateout = stateoutBinOp $1.tipo $3.tipo $1.addr $3.addr $3.stateout TAC.Sub 
+      	; $3.statein = if (not $ ($1.listDim == [])) then skipState $1.stateout 1 0 
+                                             else $1.stateout
+        ; $$.stateout = if (not $ ($3.listDim == [])) then skipState $3.stateout 1 0 
+                                             else $3.stateout
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (AssgmBin (toTACType $$.tipo) $$.addr $1.addr (binop TAC.Sub (toTACType $$.tipo)) $3.addr))] ++ $1.code ++ $3.code
-    
+        ; $$.code = if ($1.listDim == []) then if ($3.listDim == []) then [(Rules (AssgmBin (toTACType $$.tipo) $$.addr $1.addr (binop TAC.Sub (toTACType $$.tipo)) $3.addr))] ++ $1.code ++ $3.code
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (AssgmBin (toTACType $$.tipo) $$.addr $1.addr (binop TAC.Sub (toTACType $$.tipo)) (gentemp $1.stateout 1)))] ++ $1.code 
+                                          else if ($3.listDim == []) then [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (AssgmBin (toTACType $$.tipo) $$.addr (gentemp $1.statein 1) (binop TAC.Sub (toTACType $$.tipo)) $3.addr))] ++ $3.code 
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (AssgmBin (toTACType $$.tipo) $$.addr (gentemp $1.statein 1) (binop TAC.Sub (toTACType $$.tipo)) (gentemp $1.stateout 1)))]
     }
     | RExp7 
     { 
@@ -1757,11 +1774,20 @@ RExp7 : RExp7 '*' RExp8
                          else (op2CompType MulO $1.tipo $3.tipo) )  
         ; $$.listDim = [] 
         ; $1.statein = $$.statein
-      	; $3.statein = $1.stateout
-        ; $$.stateout = stateoutBinOp $1.tipo $3.tipo $1.addr $3.addr $3.stateout TAC.Mul
+      	; $3.statein = if (not $ ($1.listDim == [])) then skipState $1.stateout 1 0 
+                                             else $1.stateout
+        ; $$.stateout = if (not $ ($3.listDim == [])) then skipState $3.stateout 1 0 
+                                             else $3.stateout
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (AssgmBin (toTACType $$.tipo) $$.addr $1.addr (binop TAC.Mul (toTACType $$.tipo)) $3.addr))] ++ $1.code ++ $3.code
-    
+        
+        ; $$.code = if ($1.listDim == []) then if ($3.listDim == []) then [(Rules (AssgmBin (toTACType $$.tipo) $$.addr $1.addr (binop TAC.Mul (toTACType $$.tipo)) $3.addr))] ++ $1.code ++ $3.code
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (AssgmBin (toTACType $$.tipo) $$.addr $1.addr (binop TAC.Mul (toTACType $$.tipo)) (gentemp $1.stateout 1)))] ++ $1.code 
+                                          else if ($3.listDim == []) then [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (AssgmBin (toTACType $$.tipo) $$.addr (gentemp $1.statein 1) (binop TAC.Mul (toTACType $$.tipo)) $3.addr))] ++ $3.code 
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (AssgmBin (toTACType $$.tipo) $$.addr (gentemp $1.statein 1) (binop TAC.Mul (toTACType $$.tipo)) (gentemp $1.stateout 1)))]
     }
     | RExp7 '/' RExp8 
     {
@@ -1776,11 +1802,19 @@ RExp7 : RExp7 '*' RExp8
                          else (op2CompType DivO $1.tipo $3.tipo) )
         ; $$.listDim = [] 
         ; $1.statein = $$.statein
-      	; $3.statein = $1.stateout
-        ; $$.stateout = stateoutBinOp $1.tipo $3.tipo $1.addr $3.addr $3.stateout TAC.Div
+      	; $3.statein = if (not $ ($1.listDim == [])) then skipState $1.stateout 1 0 
+                                             else $1.stateout
+        ; $$.stateout = if (not $ ($3.listDim == [])) then skipState $3.stateout 1 0 
+                                             else $3.stateout
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (AssgmBin (toTACType $$.tipo) $$.addr $1.addr (binop TAC.Div (toTACType $$.tipo)) $3.addr))] ++ $1.code ++ $3.code
-    
+        ; $$.code = if ($1.listDim == []) then if ($3.listDim == []) then [(Rules (AssgmBin (toTACType $$.tipo) $$.addr $1.addr (binop TAC.Div (toTACType $$.tipo)) $3.addr))] ++ $1.code ++ $3.code
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (AssgmBin (toTACType $$.tipo) $$.addr $1.addr (binop TAC.Div (toTACType $$.tipo)) (gentemp $1.stateout 1)))] ++ $1.code 
+                                          else if ($3.listDim == []) then [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (AssgmBin (toTACType $$.tipo) $$.addr (gentemp $1.statein 1) (binop TAC.Div (toTACType $$.tipo)) $3.addr))] ++ $3.code 
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (AssgmBin (toTACType $$.tipo) $$.addr (gentemp $1.statein 1) (binop TAC.Div (toTACType $$.tipo)) (gentemp $1.stateout 1)))]
     }
     | RExp7 '%' RExp8 
     {   
@@ -1793,11 +1827,19 @@ RExp7 : RExp7 '*' RExp8
         ; $$.tipo = (Base BasicType_Int) 
         ; $$.listDim = [] 
         ; $1.statein = $$.statein
-      	; $3.statein = $1.stateout
-        ; $$.stateout = stateoutBinOp $1.tipo $3.tipo $1.addr $3.addr $3.stateout TAC.Mod 
+      	; $3.statein = if (not $ ($1.listDim == [])) then skipState $1.stateout 1 0 
+                                             else $1.stateout
+        ; $$.stateout = if (not $ ($3.listDim == [])) then skipState $3.stateout 1 0 
+                                             else $3.stateout
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (AssgmBin (toTACType $$.tipo) $$.addr $1.addr (binop TAC.Mod (toTACType $$.tipo)) $3.addr))] ++ $1.code ++ $3.code
-    
+        ; $$.code = if ($1.listDim == []) then if ($3.listDim == []) then [(Rules (AssgmBin (toTACType $$.tipo) $$.addr $1.addr (binop TAC.Mod (toTACType $$.tipo)) $3.addr))] ++ $1.code ++ $3.code
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (AssgmBin (toTACType $$.tipo) $$.addr $1.addr (binop TAC.Mod (toTACType $$.tipo)) (gentemp $1.stateout 1)))] ++ $1.code 
+                                          else if ($3.listDim == []) then [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (AssgmBin (toTACType $$.tipo) $$.addr (gentemp $1.statein 1) (binop TAC.Mod (toTACType $$.tipo)) $3.addr))] ++ $3.code 
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (AssgmBin (toTACType $$.tipo) $$.addr (gentemp $1.statein 1) (binop TAC.Mod (toTACType $$.tipo)) (gentemp $1.stateout 1)))]
     }
     | RExp8 
     { 
@@ -1827,12 +1869,20 @@ RExp8 : RExp9 '^' RExp8
                          else (op2CompType PowO $1.tipo $3.tipo) )
         ; $$.listDim = [] 
         ; $1.statein = $$.statein
-      	; $3.statein = $1.stateout
-        ; $$.stateout = stateoutBinOp $1.tipo $3.tipo $1.addr $3.addr $3.stateout TAC.Exp 
+      	; $3.statein = if (not $ ($1.listDim == [])) then skipState $1.stateout 1 0 
+                                             else $1.stateout
+        ; $$.stateout = if (not $ ($3.listDim == [])) then skipState $3.stateout 1 0 
+                                             else $3.stateout
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (AssgmBin (toTACType $$.tipo) $$.addr $1.addr (binop TAC.Exp (toTACType $$.tipo)) $3.addr))] ++ $1.code ++ $3.code
-    
-    } 
+        ; $$.code = if ($1.listDim == []) then if ($3.listDim == []) then [(Rules (AssgmBin (toTACType $$.tipo) $$.addr $1.addr (binop TAC.Exp (toTACType $$.tipo)) $3.addr))] ++ $1.code ++ $3.code
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (AssgmBin (toTACType $$.tipo) $$.addr $1.addr (binop TAC.Exp (toTACType $$.tipo)) (gentemp $1.stateout 1)))] ++ $1.code 
+                                          else if ($3.listDim == []) then [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (AssgmBin (toTACType $$.tipo) $$.addr (gentemp $1.statein 1) (binop TAC.Exp (toTACType $$.tipo)) $3.addr))] ++ $3.code 
+                                                                     else [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.statein 1) $1.addr (listDimToString $1.listDim)))] ++
+                                                                          [(Rules (AssEl (toTACType $$.tipo) (gentemp $1.stateout 1) $3.addr (listDimToString $3.listDim)))] ++
+                                                                          [(Rules (AssgmBin (toTACType $$.tipo) $$.addr (gentemp $1.statein 1) (binop TAC.Exp (toTACType $$.tipo)) (gentemp $1.stateout 1)))]
+    }
     | RExp9 
     { 
         $1.envin = $$.envin
@@ -1853,7 +1903,8 @@ RExp9 : '-' RExp10
         $2.envin = $$.envin
         ; $$.parsetree = AbsAuL.Neg $2.parsetree
         ; $2.statein = $$.statein
-        ; $$.stateout = stateoutUnOp $2.tipo $2.addr $2.stateout Negation
+        ; $$.stateout = if ($2.listDim == []) then $2.stateout  
+                                              else skipState $2.stateout 1 0
         ; $$.errs = (if (not ((op1CompType NegO $2.tipo) == ErrT))
                          then []
                          else ["error at " ++ ((showFromPosn . tokenPosn) $1) ++ ": in negation operator type need to be 'Int' or 'Float'!"]   ) ++ $2.errs
@@ -1862,7 +1913,11 @@ RExp9 : '-' RExp10
                          else (op1CompType NeqO $2.tipo)
         ; $$.listDim = [] 
         ; $$.addr = (gentemp $$.statein 0)
-        ; $$.code = [(Rules (AssgmUn (toTACType $2.tipo) $$.addr (unop Negation (toTACType $2.tipo)) $2.addr))] ++ $2.code
+        ; $$.code = if ($2.listDim == []) then [(Rules (AssgmUn (toTACType $2.tipo) $$.addr (unop Negation (toTACType $2.tipo)) $2.addr))] ++ $2.code
+                                          else [(Rules (AssEl (toTACType $2.tipo) (gentemp $2.statein 1) $2.addr (listDimToString $2.listDim)))] ++
+                                               [(Rules (AssgmUn (toTACType $2.tipo) $$.addr (unop Negation (toTACType $2.tipo)) (gentemp $2.statein 1)))] 
+                                         
+                                                                         
     } 
     | RExp10 
     { 
