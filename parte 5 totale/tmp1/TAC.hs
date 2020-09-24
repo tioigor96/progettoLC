@@ -25,7 +25,7 @@ data RulesTac = AssgmBin TypeTac ArgOp ArgOp BinaryOp ArgOp             -- x = y
               | Func Int                                                -- func n                               
               | ArgFun ArgOp 
               | ArrayEl TypeTac ArgOp ArgOp String                      -- y[i] =t x
-              | AssEl  TypeTac ArgOp ArgOp String                       -- x =t y[i]
+              | AssEl TypeTac ArgOp ArgOp String                       -- x =t y[i]
               | ArrayDef TypeTac ArgOp String                           -- Int pippo[3]
               | ListElem ArgOp Int ArgOp                                -- int a [n] = {...} 
               | ListRexp ArgOp    

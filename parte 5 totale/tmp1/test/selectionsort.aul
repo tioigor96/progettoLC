@@ -1,6 +1,4 @@
---[[
-    esempio di programma auL "complesso"
-]]
+--esempio di programma auL "complesso"
 
 Void function selectsort(Int *a)
     for i=0,#a-1,1 do
