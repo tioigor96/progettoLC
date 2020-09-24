@@ -34,17 +34,18 @@ separator nonempty Bracks "";
 --STATEMENT-
 ------------
 
-SDecl.      Stm ::= Decl ";";
-SLocal.     Stm ::= Local ";";
-SAss.       Stm ::= Ass ";";
+SDecl.      Stm ::= Decl ";" ;
+SLocal.     Stm ::= Local ";" ;
+SAss.       Stm ::= Ass ";" ;
 SWhile.     Stm ::= While ;
-SRepeat.    Stm ::= Repeat ";";
+SRepeat.    Stm ::= Repeat ";" ;
 SFor.       Stm ::= For ;
 SIf.        Stm ::= If ;
-SRExp.      Stm ::= Func ";";
+SRExp.      Stm ::= Func ";" ;
 SEBlk.      Stm ::= EBlk ;
-SReturn.    Stm ::= Return ";";
-SBreak.     Stm ::= Break ";";
+SReturn.    Stm ::= Return ";" ;
+SBreak.     Stm ::= Break ";" ;
+SContinue.  Stm ::= Continue ";" ;
 
 
 -------------
@@ -127,7 +128,8 @@ JumpRE.     RValue ::= {- empty -};
 JumpRV.     RValue ::= RExp;
 
 -- break accettabile solo dentro loops!! (da gestire similmente a side effect?)
-JumpB.      Break ::= "break";
+JumpB.      Break ::= "break" ;
+JumpC.      Continue ::= "continue" ;
 
 ------------
 --FUNCTIONS && PARAMETERS-

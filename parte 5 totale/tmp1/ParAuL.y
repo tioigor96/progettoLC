@@ -104,38 +104,39 @@ import TAC
   'and' { PT _ (TS _ 30) }
   'break' { PT _ (TS _ 31) }
   'const' { PT _ (TS _ 32) }
-  'do' { PT _ (TS _ 33) }
-  'else' { PT _ (TS _ 34) }
-  'elseif' { PT _ (TS _ 35) }
-  'end' { PT _ (TS _ 36) }
-  'false' { PT _ (TS _ 37) }
-  'for' { PT _ (TS _ 38) }
-  'function' { PT _ (TS _ 39) }
-  'if' { PT _ (TS _ 40) }
-  'local' { PT _ (TS _ 41) }
-  'nil' { PT _ (TS _ 42) }
-  'not' { PT _ (TS _ 43) }
-  'or' { PT _ (TS _ 44) }
-  'readChar' { PT _ (TS _ 45) }
-  'readFloat' { PT _ (TS _ 46) }
-  'readInt' { PT _ (TS _ 47) }
-  'readString' { PT _ (TS _ 48) }
-  'repeat' { PT _ (TS _ 49) }
-  'res' { PT _ (TS _ 50) }
-  'return' { PT _ (TS _ 51) }
-  'then' { PT _ (TS _ 52) }
-  'true' { PT _ (TS _ 53) }
-  'until' { PT _ (TS _ 54) }
-  'val' { PT _ (TS _ 55) }
-  'valres' { PT _ (TS _ 56) }
-  'while' { PT _ (TS _ 57) }
-  'writeChar' { PT _ (TS _ 58) }
-  'writeFloat' { PT _ (TS _ 59) }
-  'writeInt' { PT _ (TS _ 60) }
-  'writeString' { PT _ (TS _ 61) }
-  '{' { PT _ (TS _ 62) }
-  '}' { PT _ (TS _ 63) }
-  '~=' { PT _ (TS _ 64) }
+  'continue' { PT _ (TS _ 33) }
+  'do' { PT _ (TS _ 34) }
+  'else' { PT _ (TS _ 35) }
+  'elseif' { PT _ (TS _ 36) }
+  'end' { PT _ (TS _ 37) }
+  'false' { PT _ (TS _ 38) }
+  'for' { PT _ (TS _ 39) }
+  'function' { PT _ (TS _ 40) }
+  'if' { PT _ (TS _ 41) }
+  'local' { PT _ (TS _ 42) }
+  'nil' { PT _ (TS _ 43) }
+  'not' { PT _ (TS _ 44) }
+  'or' { PT _ (TS _ 45) }
+  'readChar' { PT _ (TS _ 46) }
+  'readFloat' { PT _ (TS _ 47) }
+  'readInt' { PT _ (TS _ 48) }
+  'readString' { PT _ (TS _ 49) }
+  'repeat' { PT _ (TS _ 50) }
+  'res' { PT _ (TS _ 51) }
+  'return' { PT _ (TS _ 52) }
+  'then' { PT _ (TS _ 53) }
+  'true' { PT _ (TS _ 54) }
+  'until' { PT _ (TS _ 55) }
+  'val' { PT _ (TS _ 56) }
+  'valres' { PT _ (TS _ 57) }
+  'while' { PT _ (TS _ 58) }
+  'writeChar' { PT _ (TS _ 59) }
+  'writeFloat' { PT _ (TS _ 60) }
+  'writeInt' { PT _ (TS _ 61) }
+  'writeString' { PT _ (TS _ 62) }
+  '{' { PT _ (TS _ 63) }
+  '}' { PT _ (TS _ 64) }
+  '~=' { PT _ (TS _ 65) }
 
 L_integ  { PT _ (TI $$) }
 L_doubl  { PT _ (TD $$) }
@@ -491,12 +492,10 @@ Stm : Decl ';'
     | For 
     {
         $1.envin = $$.envin
-        ; $1.envloc = insertBreakEnv $1.nextLabel $$.envloc
+        ; $1.envloc = $$.envloc
         ; $$.parsetree = AbsAuL.SFor $1.parsetree
         ; $$.errs = $1.errs
-        ; $$.envout = if (isJust (lookupEnv "break" $$.envin)) 
-                         then (insertBreakEnv ((label . fromJust) (lookupEnv "break" $$.envin)) (deleteEnv "break" $1.envout))
-                         else (deleteEnv "break" $1.envout)
+        ; $$.envout = $1.envout
         ; $1.nextLabel = genlabel $$.statein 0
         ; $1.statein = skipState $$.statein 0 1
         ; $$.stateout = $1.stateout
@@ -555,6 +554,13 @@ Stm : Decl ';'
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $$.code = $1.code
+    }
+    | Continue ';' --TODO: completa per TAC
+    { 
+       $$.parsetree = AbsAuL.SContinue $1.parsetree
+       ; $$.envout = $$.envloc
+       ; $1.envloc = mergeEnv $$.envloc $$.envin
+       ; $$.errs = $1.errs
     }
 
 --  ========================
@@ -799,7 +805,7 @@ Func : FuncWrite
         ; $$.tipo = $1.tipo
         ; $$.code = $1.code
     }
-    | LIdent '(' ListRExp ')'  -- TODO: rifai controlFnctTipo -> devi controllare le modalità!
+    | LIdent '(' ListRExp ')'
     { 
         $$.parsetree = AbsAuL.FnctCall $1.vlident $3.parsetree
         ; $1.envin = $$.envin
@@ -1216,11 +1222,20 @@ Break : 'break'
         $$.parsetree = AbsAuL.JumpB
         ; $$.envout = $$.envloc
         ; $$.errs = if (isNothing (lookupEnv "break" $$.envloc))
-                    then ["error at "++ ((showFromPosn . tokenPosn) $1) ++ ":cannot use 'break' out of loops!"]
+                    then ["error at "++ ((showFromPosn . tokenPosn) $1) ++ ":cannot use 'break' out of indeterminate loop!"]
                     else []
         ; $$.stateout = $$.statein
         ; $$.code = if (isJust (lookupEnv "break" $$.envloc))
                     then [(Rules (Goto ((((label . fromJust) (lookupEnv "break" $$.envloc))))))]
+                    else []
+    }
+
+Continue : 'continue' 
+    { 
+        $$.parsetree = AbsAuL.JumpC
+        ; $$.envout = $$.envloc
+        ; $$.errs = if (isNothing (lookupEnv "break" $$.envloc))
+                    then ["error at "++ ((showFromPosn . tokenPosn) $1) ++ ":cannot use 'continue' out of indeterminate loop!"]
                     else []
     }
 
