@@ -11,10 +11,19 @@
 \usepackage{graphicx}
 \usepackage{pdfpages}
 
+\usepackage{hyperref}
+
+\usepackage{imakeidx}
+\makeindex
+
 \begin{document}
 
 \pagenumbering{gobble}
 \includepdf[pages={1}]{testa.pdf}
+
+\printindex
+
+
 \pagenumbering{arabic}
 \setcounter{page}{1}
 
@@ -26,11 +35,12 @@ La valutazione della dereferenziazione viene effettuata leggendo la parte di AST
 e successivamente al puntatore, in quanto il tipo complesso (ad esempio, *Int[]) viene memorizzato come array di
 puntatori.
 
-Viene creato e manipolato passo-passo un SDT: questo mi permette di creare quindi sia un AST che un TAC contemporaneamente.
+Viene creato e manipolato passo-passo un SDT: questo permette di creare sia l'AST che il TAC contemporaneamente.
 
 In auL sono presenti le modalità di passaggio dei parametri by value (val), by constant (const), by 
-result (res) and by value/result (valres) e riferimento. Se la modalità non è definita, verrà usata 
-la modalità di default che è by reference per array e stringhe e by value per tutti gli altri tipi.
+result (res) and by value/result (valres) e riferimento (gestito come definizione di Higher-Type). 
+Se la modalità non è definita, verrà usata la modalità di default che è by reference per array e stringhe 
+e by value per tutti gli altri tipi.
 
 Un programma auL è composto da una lista di Statement e/o delle funzioni: il file per essere accettato deve contenere
 almeno una delle due. All'interno del blocco delle funzioni, invece, similmente ai blocchi degli statement, non è richiesto
@@ -164,7 +174,7 @@ all'interno di uno statement o dichiarazione di funzione è valido anche se vuot
 mai accettata se non è presente almeno uno statement o una funzione. Lo statement di \texttt{return} diventa, quindi, 
 disponibile solo all'interno di funzioni.
 
-Il \texttt{break} viene reso disponibile all'utilizzo solo all'interno di cicli.
+Il \texttt{break} ed il \texttt{continue} vengono resi disponibile all'utilizzo solo all'interno di cicli indeterminati.
 
 Si nota quindi come non sia possibile eseguire in qualunque ambiente la sola esecuzione di una right expression, ma si
 possa eseguire qualunque genere di funzione.
@@ -187,9 +197,7 @@ diventa quindi equivalente alla scrittura
   end
 \end{verbatim}
 
-Il linguaggio prende autonomamente, nel caso del for, come tipo per l'etichetta \texttt{LIdent} il tipo definito nelle
-espressioni associate. Nulla vieta di utilizzare delle funzioni come condizioni, basta che queste rispettino il tipo
-tra loro.
+Si dettagliano ulteriormente alcune peculiarità implementative nel capitolo omonimo.
 ~\\
 
 Le right expression sono definite quindi come segue:
@@ -226,6 +234,7 @@ Partiamo dagli operatori unari:
 \begin{tabular}{lcr}
 \hline
 Operatore                                                               & Precedenza & Associatività   \\ \hline\hline
+operatore condizionale (? :)                                             & 0          & non associativo \\
 or                                                                      & 1          & sx              \\
 and                                                                     & 2          & sx              \\
 not                                                                     & 3          & sx              \\
@@ -246,19 +255,20 @@ e non mutuamente ricorsive. Il binding del linguaggio, essendo compilato, è sta
 
 La visibilità dei nomi, siano queste di funzioni o di variabili, è immediatamente successivo alla loro dichiarazione 
 ed a tutti i loro blocchi innestati (a meno di redifinizione nei suoi blocchi). È possibile bypassare la definizione 
-di un qualunque nome attraverso la regola del \textit{local}: local infatti permette di \textbf{definire una variabile} 
-riutilizzando un nome già utilizazato, anche nel medesimo blocco.
+di un qualunque nome attraverso lo statement \textit{local}: local infatti permette di \textbf{definire una variabile} 
+riutilizzando un nome già utilizzato, anche nel medesimo blocco.
 
-Non è possibile dichiarare funzioni innestate: quando si entra in un blocco legato ad uno statement, si perde
-la possibilitò di definirne.
+Non è possibile dichiarare funzioni innestate: quando si entra in un blocco legato ad un blocco, si perde
+la possibilità di definirne.
 
 Non è possibile definire variabili locali come costanti, ma è possibile definire parametri di funzione
 come tali. 
 
-La definizione di variabili (ed array o puntatori) permette la loro inizializzazione: limite dell'inizializzazione è
-che non possono autoriferirsi durante la loro definizione (a meno non ci si trovi in una situazione di utilizzo dello
-statement \textit{local}). La loro non inizializzazione crea un valore generico al suo interno (undefined behaviour),
-ed in sè non genera un errore. Non si richiede che il valore di inizializzazione sia noto a \textit{compile time}.
+La definizione di variabili (ed array o puntatori) permette l'inizializzazione. Unico vincolo è che durante l'inizializzazione
+non è possibile autoriferirsi (a meno non ci si trovi in una situazione di utilizzo dello
+statement \textit{local}). La definizione di una variabile senza conseguente inizializzazione crea un valore
+generico al suo interno (undefined behaviour), ed in sè non genera un errore. Non si richiede che il valore di 
+inizializzazione sia noto a \textit{compile time}.
 
 \section{Tipi e regole di auL}
 \subsection{Definizione dei tipi}
@@ -303,7 +313,10 @@ Quindi deduciamo che:
 	\item se $\tau_1$ è un \emph{higher-type} puntatore, questo accetterà un $\tau_2$ \emph{higher-type} array, a patto che
 		l'``\emph{altezza}'' del puntatore sia la medesima dell'``\emph{altezza}'' e\\ $C_{\tau_1} = C_{\tau_2}$;
 	\item per completezza nel manipolare il tipo canonico ``$String$'' si permette di riferire una singola lettera di questa
-		come fosse un array di ``$Char$'', ma non sono consentite operazioni tra ``$Char$'' e ``$String$''.
+		come fosse un array di ``$Char$'', ma non sono consentite operazioni tra ``$Char$'' e ``$String$''\footnote{Si è deciso in
+		comune accordo che la dereferenziazione di una stringa generi \textbf{comunque} un tipo ``$Char$'', in quanto non sarebbe
+		altrimenti possibile operare in nessuna maniera con le stringhe, come, ad esempio, per far diventare maiuscola una stringa
+		minuscola. Per togliere tale possibilità è sufficiente commentare riga 232 del file ``\textit{Env.hs}''.}.
 	
 \end{itemize}
 
@@ -508,6 +521,7 @@ Esemplifichiamo ulteriormente ``$a$'' un valore per un tipo puntatore a ``$\tau:
 		\BinaryInfC{$\Gamma \vdash_{fnct} id(~)\{C\} : \tau \Rightarrow (\Gamma,id(~):\tau)\models\hat{\Gamma}$ }
 	\end{prooftree}
 	\begin{enumerate}
+	\setcounter{enumi}{1}
 	\item con ``$\Gamma, id\vdash \emptyset :\perp$'' si indica che non è mai stata definita nessuna funzione o variabile con nome definito in ``id''.
 	\end{enumerate}
 \end{itemize}
@@ -582,6 +596,35 @@ Esemplifichiamo il type system per la definizione di funzioni.
 		valore, mentre se la variabile è in modalità ``risultato'' non sarà possibile accedere al suo valore.
 \end{itemize}
 
+\section{Peculiarità implementative}
+\subsection*{Cicli determinati ed inderminati}
+Nell'implementazione si è scelto di inserire i 2 costrutti canonici di ciclo indeterminato, quali ``\texttt{while}''
+e ``\texttt{repeat}'' e  il ciclo determinato quale ``\texttt{for}''. Quest'ultimo ha una particolarità: non viene
+richiesto un tipo esplicito nella definizione della variabile locale usata poichè verrà utilizzato
+come tipo quello della prima espressione (ovvero il tipo che inizializza la variabile). Questo permette di poter 
+creare dei cicli come
+
+\begin{verbatim}
+[...]
+  for a = 0.5, 10 do
+    writeFloat(a);  
+  end
+[...]
+\end{verbatim}
+senza doversi preoccupare del tipo.
+\subsection*{Operatore condizionale o ``if ternario''}
+L'implementazione dell'operatore condizionale è stata legata al fatto che questo ritorna un tipo e quindi è legato ad una
+\textit{R. Expr.} viene quindi inserito nelle \textit{R. Expr.}. In ``Lua'' non esiste normalmente questo operatore, ed è
+stato scelto di implementarlo, come per il C:
+\begin{verbatim}
+[...]
+  LExp = RExp ? RExp : RExp;
+[...]
+\end{verbatim}
+Ovvero la prima \textit{R. Expr.} sarà legata ad un test che sia di tipo ``$Bool$'', mentre le altre due espressioni è richiesto 
+che abbiano necessariamente tipi tra loro compatibili.
+
+La scelta della costruzione sintattica di questo operatore è legata alla decisione di non introdurre conflitti nel parser.
 
 
 \section{TAC}
@@ -618,9 +661,9 @@ Dapprima si è iniziato a definire una grammatica completa di tutte le feature d
 BNFC. Successivamente, dopo aver migrato la grammatica di base di Happy generata da BNFC ad una attributata,
 si è iniziato a definire l'environment (\textit{Env.hs}). Finito di sviluppare le regole base per le dichiarazioni 
 di tipi canonici e le right-expression, si è implementata in maniera iterativa tutte le altre funzionalità pensate 
-nel linguaggio.
+per il linguaggio.
 
-La grammatica attributata si compone di:
+La grammatica attributata di Happy si compone di:
 \begin{itemize}
 	\item alcuni attributi per la generazione dell' AST;
 	\item alcuni attributi per la gestione dell'environment, tra cui il tipo uscente dalle RExp, l'env.
