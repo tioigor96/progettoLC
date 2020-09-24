@@ -299,7 +299,7 @@ instance Print AbsAuL.Modality where
     AbsAuL.Modality_const -> prPrec i 0 (concatD [doc (showString "const")])
     AbsAuL.Modality_res -> prPrec i 0 (concatD [doc (showString "res")])
     AbsAuL.Modality_valres -> prPrec i 0 (concatD [doc (showString "valres")])
-    AbsAuL.Modality_name -> prPrec i 0 (concatD [doc (showString "name")])
+--    AbsAuL.Modality_name -> prPrec i 0 (concatD [doc (showString "name")])
 
 instance Print AbsAuL.LExp where
   prt i e = case e of
