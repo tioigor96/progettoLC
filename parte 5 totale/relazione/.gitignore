@@ -3,4 +3,7 @@
 *.blg
 *.log
 *.synctex.gz
-
+main.idx
+main.ilg
+main.ind
+main.toc
