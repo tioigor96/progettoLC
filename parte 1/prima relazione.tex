@@ -1,0 +1,521 @@
+
+%!TEX encoding = UTF-8 Unicode
+%!TEX TS-program = pdflatex
+\documentclass[a4paper,italian]{article}
+\usepackage{lmodern}
+
+\usepackage{amsmath,amssymb}
+\usepackage{mathtools, nccmath}
+\usepackage{makeidx}
+\usepackage{graphicx}
+%\usepackage{indentfirst}
+\usepackage[parfill]{parskip}	%toglie tutte indentazioni dei paragrafi
+\usepackage{paralist}
+\usepackage{mathrsfs}
+\usepackage{hyperref} %link cliccabili nell'indice
+
+\usepackage{pdfpages}
+\usepackage{adjustbox}
+\usepackage{makecell, multirow,tabularx}  
+
+
+\usepackage{titlesec}
+\usepackage[utf8]{inputenc}
+\usepackage[italian]{babel}
+\usepackage[bottom]{footmisc}
+\pagestyle{headings}
+
+\begin{document}
+\pagenumbering{gobble}
+\includepdf[pages={1}]{primafronte-frn.pdf}
+\pagenumbering{arabic}
+\setcounter{page}{1}
+\section*{Esercizio 1}
+\subsection*{Parte 1: grammatica LL(1)}
+Viene fornita la seguente grammatica equivalente:
+\begin{equation*}
+	\begin{split}
+		& E\ \rightarrow\ T\ A\\
+		& A\ \rightarrow\ \epsilon\ \vert\ and\ T\ A\\
+		& T\ \rightarrow\ P\ O \\
+		& O\ \rightarrow\ \epsilon\ \vert\ or\ P\ O\\
+		& P\ \rightarrow\ next\ P\ \vert\ always\ P\ \vert\ F\\
+		& F\ \rightarrow\ true\ \vert\ atom\ \vert\ (\ E\ )
+	\end{split}
+\end{equation*}
+Tale grammatica risulta \textbf{LL(1)}, poichè, secondo definizione, data $A\ \rightarrow\ \alpha\ \vert\ \beta$, per ogni coppia:
+\begin{itemize}
+    \item $\mbox{{\sc FIRST}(${\alpha}$)} \ {\cap} \ \mbox{{\sc FIRST}(${\beta}$)} \ = \ \emptyset$
+    \item se ${\alpha} \stackrel{\ast}{\Longrightarrow} {\varepsilon}$ allora $\mbox{{\sc FOLLOW}(${A}$)} \ {\cap} \ \mbox{{\sc FIRST}(${\beta}$)} \ = \ \emptyset$
+\end{itemize}
+
+\subsection*{Parte 2: parser top-down}
+Si calcolano $FIRST$ per ogni simbolo non terminale:
+\begin{itemize}
+    \item $FIRST(E)\ =\ \{\ next,\ always,\ true,\ atom,\ (\ \}$;
+    \item $FIRST(A)\ =\ \{\ \epsilon,\ and\ \}$;
+    \item $FIRST(T)\ =\ \{\ next,\ always,\ true,\ atom,\ (\ \}$;
+    \item $FIRST(O)\ =\ \{\ \epsilon,\ or\ \}$;
+    \item $FIRST(P)\ =\ \{\ next,\ always,\ true,\ atom,\ (\ \}$;
+    \item $FIRST(E)\ =\ \{\ true,\ atom,\ (\ \}$.
+\end{itemize}
+
+Si calcolano $FOLLOW$ per ogni simbolo non terminale:
+\begin{itemize}
+    \item $FOLLOW(E)\ =\ \{\ \$,\ )\ \}$;
+    \item $FOLLOW(A)\ =\ \{\ \$,\ )\ \}$;
+    \item $FOLLOW(T)\ =\ \{\ and,\ \$,\ )\ \}$;
+    \item $FOLLOW(O)\ =\ \{\ and,\ \$,\ )\ \}$;
+    \item $FOLLOW(P)\ =\ \{\ and,\ or,\ \$,\ )\ \}$;
+    \item $FOLLOW(E)\ =\ \{\ and,\ or,\ \$,\ )\ \}$.
+\end{itemize}
+
+La parsing table generata è quindi:\\
+\begin{adjustbox}{tabular=|c|c|c|c|c|c|c|c|c|c|,center}
+\hline
+  & always                   & and                     & atom                & next                   & or                    & true                & (                  & )                      & \$                     \\ \hline
+A & e2                       & $A\rightarrow and\ TA$  & e8                  & e1                     & e0                    & e8                  & e0                 & $A\rightarrow\epsilon$ & $A\rightarrow\epsilon$ \\ \hline
+E & $E\rightarrow TA$        & e3                      & $E\rightarrow TA$   & $E\rightarrow TA$      & e3                    & $E\rightarrow TA$   & $E\rightarrow TA$  & e6                     & e4                     \\ \hline
+F & e2                       & e0                      & $F\rightarrow atom$ & e1                     & e0                    & $F\rightarrow true$ & $F\rightarrow (E)$ & e0                     & e0                     \\ \hline
+O & e2                       & $O\rightarrow \epsilon$ & e7                  & e1                     & $O\rightarrow or\ PO$ & e7                  & e5                 & $O\rightarrow\epsilon$ & $O\rightarrow\epsilon$ \\ \hline
+P & $P\rightarrow always\ P$ & e3                      & $P\rightarrow F$    & $P\rightarrow next\ P$ & e3                    & $P\rightarrow F$    & $P\rightarrow F$   & e6                     & e3                     \\ \hline
+T & $T\rightarrow PO$        & e0                      & $T\rightarrow PO$   & $T\rightarrow PO$      & e3                    & $T\rightarrow PO$   & $T\rightarrow PO$  & e9                     & e3                     \\ \hline
+\end{adjustbox}
+
+\subsubsection*{Meccanismi di ``Error Recovery''}
+Si cerca di definire un error recovery per ogni entry non appartenente al core del parser LL(1). Si scrive in notazione \texttt{SideEffect[Stampa]}, al fine di
+mostrare che cosa compare come messaggio e che azione viene intrapresa.\\
+Vengono definiti i seguenti errori nella parsing table:
+\begin{enumerate}\setcounter{enumi}{-1}
+	\item \texttt{ErroreGenerale, svuoto stack, termino[Errore generico di parsing.]};
+	\item \texttt{Rimuovo "next" da input[Token "next" inaspettato.]};
+	\item \texttt{Rimuovo "always" da input[Token "always" inaspettato.]};
+	\item \texttt{Inserisco "true" in input[Token "true" o "atom" mancante.]};
+	\item \texttt{Svuoto Stack, termino[Possibile stringa senza predicati presente!]};
+	\item \texttt{Cambio '(' con ')'[Token ')' in posizione errata!]};
+	\item \texttt{Cambio ')' con '('[Token '(' in posizione errata!]};
+	\item \texttt{Inserisco 'or' in input[Token 'or' mancante, viene aggiunto per contesto]};
+	\item \texttt{Inserisco 'and' in input[Token 'and' mancante, viene aggiunto per contesto]};
+	\item \texttt{Rimuovo un carattere in input[carattere in posizione errata]}.
+\end{enumerate}
+
+\subsection*{Parte 3: esecuzione del parser}
+Viene somministrata la stringa
+$$
+	next\ atom\ next\ atom\ and\ or\ and\ next\ next\ atom
+$$
+e se ne emula l'esecuzione con i passi di \textit{``Error Recovery''} descritti.
+
+\begin{adjustbox}{tabular=|l|r|c|,center}
+\hline
+Stack & Input & Regola \\ \hline
+$E$ & $next\ atom\ next\ atom\ and\ or\ and\ next\ next\ atom\$$ & $E\rightarrow TA$\\ \hline
+$TA$ & $next\ atom\ next\ atom\ and\ or\ and\ next\ next\ atom\$$ & $T\rightarrow PO$\\ \hline
+$POA$ & $next\ atom\ next\ atom\ and\ or\ and\ next\ next\ atom\$$ & $P\rightarrow next\ P$\\ \hline
+$nextPOA$ & $next\ atom\ next\ atom\ and\ or\ and\ next\ next\ atom\$$ & Match $next$\\ \hline
+$POA$ & $atom\ next\ atom\ and\ or\ and\ next\ next\ atom\$$ & $P\rightarrow F$\\ \hline
+$FOA$ & $atom\ next\ atom\ and\ or\ and\ next\ next\ atom\$$ & $F\rightarrow atom$\\ \hline
+$atomOA$ & $atom\ next\ atom\ and\ or\ and\ next\ next\ atom\$$ & Match $atom$\\ \hline
+$OA$ & $next\ atom\ and\ or\ and\ next\ next\ atom\$$ & $e1$\\ \hline
+$OA$ & $atom\ and\ or\ and\ next\ next\ atom\$$ & $e7$\\ \hline
+$OA$ & $or\ atom\ and\ or\ and\ next\ next\ atom\$$ & $O \rightarrow or PO$\\ \hline
+$orPOA$ & $or\ atom\ and\ or\ and\ next\ next\ atom\$$ & Match $or$\\ \hline
+$POA$ & $atom\ and\ or\ and\ next\ next\ atom\$$ & $P\rightarrow F$\\ \hline
+$FOA$ & $atom\ and\ or\ and\ next\ next\ atom\$$ & $F\rightarrow atom$\\ \hline
+$atomOA$ & $atom\ and\ or\ and\ next\ next\ atom\$$ & Match $atom$\\ \hline
+$OA$ & $and\ or\ and\ next\ next\ atom\$$ & $O\rightarrow\epsilon$\\ \hline
+$A$ & $and\ or\ and\ next\ next\ atom\$$ & $A\rightarrow\ and\  TA$\\ \hline
+$andTA$ & $and\ or\ and\ next\ next\ atom\$$ & Match $and$\\ \hline
+$TA$ & $or\ and\ next\ next\ atom\$$ & $e3$\\ \hline
+$TA$ & $true\ or\ and\ next\ next\ atom\$$ & $T\rightarrow\ PO$\\ \hline
+$POA$ & $true\ or\ and\ next\ next\ atom\$$ & $P\rightarrow\ F$\\ \hline
+$FOA$ & $true\ or\ and\ next\ next\ atom\$$ & $F\rightarrow\ true$\\ \hline
+$trueOA$ & $true\ or\ and\ next\ next\ atom\$$ & Match $true$\\ \hline
+$OA$ & $or\ and\ next\ next\ atom\$$ & $O\rightarrow\ or PO$\\ \hline
+$orPOA$ & $or\ and\ next\ next\ atom\$$ & Match $or$\\ \hline
+$POA$ & $and\ next\ next\ atom\$$ & $e3$\\ \hline
+$POA$ & $true\ and\ next\ next\ atom\$$ & $P\rightarrow\ F$\\ \hline
+$FOA$ & $true\ and\ next\ next\ atom\$$ & $F\rightarrow\ true$\\ \hline
+$trueOA$ & $true\ and\ next\ next\ atom\$$ & Match $true$\\ \hline
+$OA$ & $and\ next\ next\ atom\$$ & $O\rightarrow\epsilon$\\ \hline
+$A$ & $and\ next\ next\ atom\$$ & $A\rightarrow\ and \ TA$\\ \hline
+$andTA$ & $and\ next\ next\ atom\$$ & Match $and$\\ \hline
+$TA$ & $next\ next\ atom\$$ & $T\rightarrow\ PO$\\ \hline
+$POA$ & $next\ next\ atom\$$ & $P\rightarrow\ next P$\\ \hline
+$nextPOA$ & $next\ next\ atom\$$ & Match $next$\\ \hline
+$POA$ & $next\ atom\$$ & $P\rightarrow\ next P$\\ \hline
+$nextPOA$ & $next\ atom\$$ & Match $next$\\ \hline
+$POA$ & $atom\$$ & $P\rightarrow\ F$\\ \hline
+$FOA$ & $atom\$$ & $F\rightarrow\ atom$\\ \hline
+$atomOA$ & $atom\$$ & Match $atom$\\ \hline
+$OA$ & $\$$ & $O\rightarrow \epsilon$ \\ \hline
+$A$ & $\$$ & $A\rightarrow \epsilon$ \\ \hline
+ & $\$$ & Accettato \\ \hline
+\end{adjustbox}
+
+\section*{Esercizio 2}
+Viene fornita di seguito la grammatica aumentata comune ai parser LALR e SLR. La regola si ritrova di fianco la sua enumerazione.
+\begin{equation*}
+	\begin{split}
+		& S \rightarrow E\ (0) \\
+		& E \rightarrow L\ =\ R\ (1)\ \vert\ R\ (2) \\
+		& L \rightarrow *R\ (3)\ \vert\ id\ (4)\ \vert\ L[E]\ (5) \\
+		& R \rightarrow num\ (6)\ \vert\ L\ (7)\ \vert\ R+R\ (8)\ \vert\ Lpp\ (9)\ \vert\ ppL(10)
+   \end{split}
+\end{equation*}
+
+Viene calcolato il $FIRST$ per la grammatica:
+\begin{itemize}
+	\item $FIRST(S)=\{*,\ id,\ num,\ pp\}$;
+	\item $FIRST(E)=\{*,\ id,\ num,\ pp\}$;
+	\item $FIRST(L)=\{*,\ id\}$;
+	\item $FIRST(R)=\{*,\ id,\ num,\ pp\}$.
+\end{itemize}
+
+Viene calcolato il $FOLLOW$ per la grammatica:
+\begin{itemize}
+	\item $FOLLOW(S)=\{\$\}$;
+	\item $FOLLOW(E)=\{],\ \$\}$;
+	\item $FOLLOW(L)=\{=,\ [,\ \$,\ pp,\ +,\ ]\}$;
+	\item $FOLLOW(R)=\{=,\ [,\ \$,\ pp,\ +,\ ]\}$.
+\end{itemize}
+
+\subsection*{Parser SLR}
+Di seguito viene presentata la collezione canonica per la grammatica:
+\begin{itemize}
+	\item $I_{0}=Closure(S)=\{S \rightarrow \cdot E,\  E \rightarrow \cdot L = R,\  E \rightarrow \cdot R,\  L \rightarrow \cdot * R,\  L \rightarrow \cdot id,\  L \rightarrow \cdot L [ E ],\  R \rightarrow \cdot num,\  R \rightarrow \cdot L,\  R \rightarrow \cdot R + R,\  R \rightarrow \cdot L pp,\  R \rightarrow \cdot pp L\}$;
+	\item $I_{1}=GOTO(I_{0},E)=\{S\rightarrow E \cdot\}$;
+	\item $I_{2}=GOTO(I_{0},L)=\{E \rightarrow L\cdot = R,\  L \rightarrow L\cdot [ E ],\  R \rightarrow L\cdot ,\  R \rightarrow L\cdot pp\}$;
+	\item $I_{3}=GOTO(I_{0},R)=\{E \rightarrow R\cdot ,\  R \rightarrow R\cdot + R\}$;
+	\item $I_{4}=GOTO(I_{0},*)=\{L \rightarrow  *\cdot R,\  R \rightarrow  \cdot num,\  R \rightarrow  \cdot L,\  R \rightarrow  \cdot R + R,\  R \rightarrow  \cdot L pp,\  R \rightarrow  \cdot pp L,\  L \rightarrow  \cdot * R,\  L \rightarrow  \cdot id,\  L \rightarrow  \cdot L [ E ]\}$;
+	\item $I_{5}=GOTO(I_{0},id)=\{L\rightarrow id\cdot\}$;
+	\item $I_{6}=GOTO(I_{0},num)=\{R\rightarrow num\cdot\}$;
+	\item $I_{7}=GOTO(I_{0},pp)=\{R \rightarrow  pp\cdot L,\  L \rightarrow  \cdot * R,\  L \rightarrow  \cdot id,\  L \rightarrow  \cdot L [ E ]\}$;
+	\item $I_{8}=GOTO(I_{2},=)=\{E \rightarrow L =\cdot R,\ R \rightarrow \cdot num,\ R \rightarrow \cdot L,\ R \rightarrow \cdot R + R,\ R \rightarrow \cdot L pp,\ R \rightarrow \cdot pp L,\ L \rightarrow \cdot * R,\ L \rightarrow \cdot id,\ L \rightarrow \cdot L [ E ]\}$;
+	\item $I_{9}=GOTO(I_{2},[)=\{L \rightarrow L [\cdot E ],\ E \rightarrow \cdot L = R,\ E \rightarrow \cdot R,\ L \rightarrow \cdot * R,\ L \rightarrow \cdot id,\ L \rightarrow \cdot L [ E ],\ R \rightarrow \cdot num,\ R \rightarrow \cdot L,\ R \rightarrow \cdot R + R,\ R \rightarrow \cdot L pp,\ R \rightarrow \cdot pp L\}$;
+	\item $I_{10}=GOTO(I_{2},pp)=\{R \rightarrow L pp\cdot \}$;
+	\item $I_{11}=GOTO(I_{3},+)=\{R \rightarrow R +\cdot R,\ R \rightarrow \cdot num,\ R \rightarrow \cdot L,\ R \rightarrow \cdot R + R,\ R \rightarrow \cdot L pp,\ R \rightarrow \cdot pp L,\ L \rightarrow \cdot * R,\ L \rightarrow \cdot id,\ L \rightarrow \cdot L [ E ]\}$;
+	\item $I_{12}=GOTO(I_{4},R)=\{L \rightarrow * R\cdot ,\ R \rightarrow R\cdot + R\}$;
+	\item $I_{13}=GOTO(I_{4},L)=\{R \rightarrow L\cdot ,\ R \rightarrow L\cdot pp,\ L \rightarrow L\cdot [ E ]\}$;
+	\item $I_{14}=GOTO(I_{7},L)=\{R \rightarrow pp L\cdot ,\ L \rightarrow L\cdot [ E ]\}$;
+	\item $I_{15}=GOTO(I_{8},R)=\{E \rightarrow L = R\cdot ,\ R \rightarrow R\cdot + R\}$;
+	\item $I_{16}=GOTO(I_{9},E)=\{L \rightarrow L [ E\cdot ]\}$;
+	\item $I_{17}=GOTO(I_{11},R)=\{R \rightarrow R + R\cdot ,\ R \rightarrow R\cdot + R\}$;
+	\item $I_{18}=GOTO(I_{16},])=\{L \rightarrow L [ E ]\cdot \}$.
+\end{itemize}
+Si presenta la rimanenza per la creazione delle $ACTION$ e $GOTO$:
+\begin{itemize}
+	\item $GOTO(I_{4},num)\equiv I_{6}$;
+	\item $GOTO(I_{4},pp)\equiv I_{7}$;
+	\item $GOTO(I_{4},*)\equiv I_{4}$;
+	\item $GOTO(I_{4},id)\equiv I_{5}$;
+	\item $GOTO(I_{7},*)\equiv I_{4}$;
+	\item $GOTO(I_{7},id)\equiv I_{5}$;
+	\item $GOTO(I_{8},num)\equiv I_{6}$;
+	\item $GOTO(I_{8},L)\equiv I_{13}$;
+	\item $GOTO(I_{8},pp)\equiv I_{7}$;
+	\item $GOTO(I_{8},*)\equiv I_{4}$;
+	\item $GOTO(I_{8},id)\equiv I_{5}$;
+	\item $GOTO(I_{9},L)\equiv I_{2}$;
+	\item $GOTO(I_{9},R)\equiv I_{3}$;
+	\item $GOTO(I_{9},*)\equiv I_{4}$;
+	\item $GOTO(I_{9},id)\equiv I_{5}$;
+	\item $GOTO(I_{9},num)\equiv I_{6}$;
+	\item $GOTO(I_{9},pp)\equiv I_{7}$;
+	\item $GOTO(I_{11},num)\equiv I_{6}$;
+	\item $GOTO(I_{11},L)\equiv I_{13}$;
+	\item $GOTO(I_{11},pp)\equiv I_{7}$;
+	\item $GOTO(I_{11},*)\equiv I_{4}$;
+	\item $GOTO(I_{11},id)\equiv I_{5}$;
+	\item $GOTO(I_{12},+)\equiv I_{11}$;
+	\item $GOTO(I_{13},pp)\equiv I_{10}$;
+	\item $GOTO(I_{13},[)\equiv I_{9}$;
+	\item $GOTO(I_{14},[)\equiv I_{9}$;
+	\item $GOTO(I_{15},+)\equiv I_{11}$;
+	\item $GOTO(I_{17},+)\equiv I_{11}$;
+\end{itemize}
+\subsubsection*{Tabella di parsing SLR}
+Di seguito la tabella di parsing SLR.
+
+\begin{adjustbox}{tabular=|c|c|c|c|c|c|c|c|c|c|c|c|c|c|,center}
+\hline
+   & id  & num  & pp       & *   & +        & =       & {[}      & {]} & \$  & E  & L  & R   & S \\ \hline
+0  & s5  & s6   & s7       & s4  &   e5     &  e6     &  e7      &  e8  & e11 & 1  & 2  & 3  &   \\ \hline
+1  & e0  & e0   &  e0      & e0  &   e0     &  e0     &  e0      &  e0  & acc &    &    &    &   \\ \hline
+2  & e14 & e15  & s10 / r7 & e4  & r7       & s8 / r7 & s9 / r7  & r7   & r7  &    &    &    &   \\ \hline
+3  & e14 & e15  &   e17    & e4  & s11      &  e6     &  e7      & r2   & r2  &    &    &    &   \\ \hline
+4  & s5  & s6   & s7       & s4  &     e5   &    e6   &    e7    & e8   & e17 &    & 13 & 12 &   \\ \hline
+5  & e14 & e15  & r4       & e13 & r4       & r4      & r4       & r4   & r4  &    &    &    &   \\ \hline
+6  & e14 & e15  & r6       & e13 & r6       & r6      & r6       & r6   & r6  &    &    &    &   \\ \hline
+7  & s5  & e15  &    e3    & s4  &  e17     &  e17    &  e17     & e8   & e17 &    & 14 &    &   \\ \hline
+8  & s5  & s6   & s7       & s4  &  e17     & e6      & e7       & e8   & e18 &    & 13 & 15 &   \\ \hline
+9  & s5  & s6   & s7       & s4  &  e5      &  e17    &   e7     & e17  & e18 & 16 & 2  & 3  &   \\ \hline
+10 & e14 & e15  & r9       & e4  & r9       & r9      & r9       & r9   & r9  &    &    &    &   \\ \hline
+11 & s5  & s6   & s7       & s4  &   e5     &  e6     &  e12     & e12  & e17 &    & 13 & 17 &   \\ \hline
+12 & e14 & e15  & r3       & e4  & s11 / r3 & r3      & r3       & r3   & r3  &    &    &    &   \\ \hline
+13 & e14 & e15  & s10 / r7 & e16 & r7       & r7      & s9 / r7  & r7   & r7  &    &    &    &   \\ \hline
+14 & e14 & e15  & r10      & e4  & r10      & r10     & s9 / r10 & r10  & r10 &    &    &    &   \\ \hline
+15 & e14 & e15  & e3       & e4  & s11      & e6      & e7       & r1   & r1  &    &    &    &   \\ \hline
+16 & e14 & e15  & e3       & e4  & e5       & e6      & e7       & s18  &     &    &    &    &   \\ \hline
+17 & e14 & e15  & r8       & e4  & s11 / r8 & r8      & r8       & r8   & r8  &    &    &    &   \\ \hline
+18 & e14 & e15  & r5       & e4  & r5       & r5      & r5       & r5   & r5  &    &    &    &   \\ \hline
+\end{adjustbox}
+
+~\\
+
+Gli errori mantengono la notazione espressa nell'esercizio precedente, ovvero \texttt{SideEffect[StampaErrore]}.
+Gli errori definiti quindi sono:
+\begin{enumerate}\setcounter{enumi}{-1}
+	\item \texttt{ErroreGenerale, svuoto stack, termino[Errore generico di parsing.]};
+	\item \texttt{Rimuovo token $id$ dall'input[Token $id$ in posizione inaspettata]};
+	\item \texttt{Rimuovo token $num$ dall'input[Token $num$ in posizione inaspettata]};
+	\item \texttt{Rimuovo token $pp$ dall'input[Token $pp$ in posizione inaspettata]};
+	\item \texttt{Rimuovo token $*$ dall'input[Token $*$ in posizione inaspettata]};
+	\item \texttt{Rimuovo token $+$ dall'input[Token $+$ in posizione inaspettata]};
+	\item \texttt{Rimuovo token $=$ dall'input[Token $=$ in posizione inaspettata]};
+	\item \texttt{Rimuovo token $[$ dall'input[Token $[$ in posizione inaspettata]};
+	\item \texttt{Rimuovo token $]$ dall'input[Token $]$ in posizione inaspettata]};
+	\item \texttt{Rimuovo token $\$$ dall'input[Token $\$$ in posizione inaspettata]};
+	\item \texttt{Termino l'esecuzione[Stringa vuota non accettata!]};
+	\item \texttt{Pop stack stato attuale e simbolo precedente[Token $id$ o $num$ non trovato, ripristino a stato precedente]};
+	\item \texttt{Aggiunta in input token $+$ per contesto su token $*$[Token $+$ non trovato, aggiunto per contesto]};
+	\item \texttt{Aggiunta in input token $+$ per contesto su token $id$[Token $+$ non trovato, aggiunto per contesto]};
+	\item \texttt{Aggiunta in input token $+$ per contesto su token $num$[Token $+$ non trovato, aggiunto per contesto]};
+	\item \texttt{Aggiunta in input token $*$ per contesto[Token $id$ o $num$ non trovato, aggiunto per contesto]};
+	\item \texttt{Aggiunta in input token $id$ per contesto[Token $id$ non trovato, aggiunto per contesto]};
+	\item \texttt{Aggiunta in input token $num$ per contesto[Token $num$ non trovato, aggiunto per contesto]};
+\end{enumerate}
+
+
+\subsection*{Parser LALR}
+Viene ora calcolato, seguendo quanto spiegato a lezione, i kernel per gli item del parser SLR al fine di calcolare la parsing table del
+parser LALR. Sappiamo per certo che gli stati del parser SLR ed LALR coincidono e differiscono solo nel calcolo dei \emph{lookahead},
+passo affrontato successivamente.
+
+\subsubsection*{Calcolo dei Kernel}
+Definiamo di seguito i kernel per ogni item del parser SLR.
+\begin{itemize}
+	\item $K_{0}=\{S \rightarrow \cdot E\}$;
+	\item $K_{1}=\{S\rightarrow E \cdot\}$;
+	\item $K_{2}=\{E \rightarrow L\cdot = R,\  L \rightarrow L\cdot [ E ],\  R \rightarrow L\cdot ,\  R \rightarrow L\cdot pp\}$;
+	\item $K_{3}=\{E \rightarrow R\cdot ,\  R \rightarrow R\cdot + R\}$;
+	\item $K_{4}=\{L \rightarrow  *\cdot R\}$;
+	\item $K_{5}=\{L\rightarrow id\cdot\}$;
+	\item $K_{6}=\{R\rightarrow num\cdot\}$;
+	\item $K_{7}=\{R \rightarrow  pp\cdot L\}$;
+	\item $K_{8}=\{E \rightarrow L =\cdot R\}$;
+	\item $K_{9}=\{L \rightarrow L [\cdot E ]\}$;
+	\item $K_{10}=\{R \rightarrow L pp\cdot \}$;
+	\item $K_{11}=\{R \rightarrow R +\cdot R\}$;
+	\item $K_{12}=\{L \rightarrow * R\cdot ,\ R \rightarrow R\cdot + R\}$;
+	\item $K_{13}=\{R \rightarrow L\cdot ,\ R \rightarrow L\cdot pp,\ L \rightarrow L\cdot [ E ]\}$;
+	\item $K_{14}=\{R \rightarrow pp L\cdot ,\ L \rightarrow L\cdot [ E ]\}$;
+	\item $K_{15}=\{E \rightarrow L = R\cdot ,\ R \rightarrow R\cdot + R\}$;
+	\item $K_{16}=\{L \rightarrow L [ E\cdot ]\}$;
+	\item $K_{17}=\{R \rightarrow R + R\cdot ,\ R \rightarrow R\cdot + R\}$;
+	\item $K_{18}=\{L \rightarrow L [ E ]\cdot \}$.
+\end{itemize}
+
+Si definisce la tabella di propagazione dei lookahead:
+
+\begin{adjustbox}{tabular=|cc|c|,center}
+\hline
+$I_{0}$  & $S  \rightarrow   \cdot E$    & $I_{1}$  \\ \cline{3-3} 
+         &                               & $I_{2}$  \\ \cline{3-3} 
+         &                               & $I_{3}$  \\ \cline{3-3} 
+         &                               & $I_{4}$  \\ \cline{3-3} 
+         &                               & $I_{5}$  \\ \cline{3-3} 
+         &                               & $I_{6}$  \\ \cline{3-3} 
+         &                               & $I_{7}$  \\ \hline
+$I_{2}$  & $E  \rightarrow  L \cdot =R$  & $I_{8}$  \\ \cline{2-3} 
+         & $L  \rightarrow  L \cdot [E]$ & $I_{9}$  \\ \cline{2-3} 
+         & $R  \rightarrow  L \cdot $    &          \\ \cline{2-3} 
+         & $R  \rightarrow  L \cdot pp$  & $I_{10}$ \\ \hline
+$I_{3}$  & $E  \rightarrow  R \cdot $    &          \\ \cline{2-3} 
+         & $R  \rightarrow  R \cdot +R$  & $I_{11}$ \\ \hline
+$I_{4}$  & $L  \rightarrow  * \cdot R$   & $I_{4}$  \\ \cline{3-3} 
+         &                               & $I_{5}$  \\ \cline{3-3} 
+         &                               & $I_{6}$  \\ \cline{3-3} 
+         &                               & $I_{7}$  \\ \cline{3-3} 
+         &                               & $I_{12}$ \\ \cline{3-3} 
+         &                               & $I_{13}$ \\ \hline
+$I_{7}$  & $R  \rightarrow  pp \cdot L$  & $I_{4}$  \\ \cline{3-3} 
+         &                               & $I_{5}$  \\ \cline{3-3} 
+         &                               & $I_{14}$ \\ \hline
+$I_{8}$  & $E  \rightarrow  L= \cdot R$  & $I_{4}$  \\ \cline{3-3} 
+         &                               & $I_{5}$  \\ \cline{3-3} 
+         &                               & $I_{6}$  \\ \cline{3-3} 
+         &                               & $I_{7}$  \\ \cline{3-3} 
+         &                               & $I_{13}$ \\ \cline{3-3} 
+         &                               & $I_{15}$ \\ \hline
+$I_{9}$  & $L  \rightarrow  L[ \cdot E]$ & $I_{16}$ \\ \hline
+\end{adjustbox}
+
+\begin{adjustbox}{tabular=|cc|c|,center,scale=0.95}
+\hline
+$I_{11}$ & $R  \rightarrow  R+ \cdot R$  & $I_{4}$  \\ \cline{3-3} 
+         &                               & $I_{5}$  \\ \cline{3-3} 
+         &                               & $I_{6}$  \\ \cline{3-3} 
+         &                               & $I_{7}$  \\ \cline{3-3} 
+         &                               & $I_{13}$ \\ \cline{3-3} 
+         &                               & $I_{17}$ \\ \hline
+$I_{12}$ & $L  \rightarrow    *R \cdot $ &          \\ \cline{2-3} 
+         & $R  \rightarrow  R \cdot +R$  & $I_{11}$ \\ \hline
+$I_{13}$ & $R  \rightarrow  L \cdot $    &          \\ \cline{2-3} 
+         & $R  \rightarrow  L \cdot pp$  & $I_{10}$ \\ \cline{2-3} 
+         & $L  \rightarrow  L \cdot [E]$ & $I_{9}$  \\ \hline
+$I_{14}$ & $R  \rightarrow  ppL \cdot $  &          \\ \cline{2-3} 
+         & $L  \rightarrow  L \cdot [E]$ & $I_{9}$  \\ \hline
+$I_{15}$ & $E  \rightarrow  L=R \cdot $  &          \\ \cline{2-3} 
+         & $R  \rightarrow  R \cdot +R$  & $I_{11}$ \\ \hline
+$I_{16}$ & $L  \rightarrow  L[E \cdot ]$ & $I_{18}$ \\ \hline
+$I_{17}$ & $R \rightarrow  R+R   \cdot $ &          \\ \cline{2-3} 
+         & $R  \rightarrow  R \cdot +R$  & $I_{11}$ \\ \hline
+\end{adjustbox}
+
+Si passa quindi al calcolo dei lookahead attraverso la propagazione:
+
+\begin{adjustbox}{tabular=|lc|r|c|,center}
+\hline
+         &                            & spontanee  & propagate     \\ \hline
+$I_{0}$  & $S \rightarrow \cdot E    $ & \$         &               \\ \hline
+$I_{1}$  & $S \rightarrow E \cdot    $ &            & \$            \\ \hline
+$I_{2}$  & $E \rightarrow L \cdot =R $ & ]          & \$    \\ \cline{2-4} 
+         & $L \rightarrow L \cdot [E]$ & = [ pp + ] & \$            \\ \cline{2-4} 
+         & $R \rightarrow L \cdot    $ & + ]        & \$     \\ \cline{2-4} 
+         & $R \rightarrow L \cdot pp $ & + ]        & \$     \\ \hline
+$I_{3}$  & $E \rightarrow R \cdot    $ & ]          & \$   \\ \cline{2-4} 
+         & $R \rightarrow R \cdot +R $ & + ]        & \$     \\ \hline
+$I_{4}$  & $L \rightarrow * \cdot R  $ & = [ pp + ] & \$            \\ \hline
+$I_{5}$  & $L \rightarrow id \cdot   $ & = [ pp + ] & \$            \\ \hline
+$I_{6}$  & $R \rightarrow num \cdot  $ & + ]        & \$ = [ pp     \\ \hline
+$I_{7}$  & $R \rightarrow pp \cdot L $ & + ]        & \$ = [ pp     \\ \hline
+$I_{8}$  & $E \rightarrow L= \cdot R $ &            & ] \$ \\ \hline
+$I_{9}$  & $L \rightarrow L[ \cdot E]$ &            & = [ pp + ] \$ \\ \hline
+$I_{10}$ & $R \rightarrow Lpp \cdot  $ &            & + ] \$ = [ pp \\ \hline
+$I_{11}$ & $R \rightarrow R+ \cdot R $ &            & + ] \$ = [ pp \\ \hline
+$I_{12}$ & $L \rightarrow *R \cdot   $ &            & = [ pp + ] \$ \\ \cline{2-4} 
+         & $R \rightarrow R \cdot +R $ & +          & = [ pp ] \$   \\ \hline
+$I_{13}$ & $R \rightarrow L \cdot    $ & +          & = [ pp ] \$   \\ \cline{2-4} 
+         & $R \rightarrow L \cdot pp $ & +          & \$ ] = [ pp   \\ \cline{2-4} 
+         & $L \rightarrow L \cdot [E]$ & + pp [     & \$ ] =        \\ \hline
+$I_{14}$ & $R \rightarrow ppL \cdot  $ &            & + ] \$ = [ pp \\ \cline{2-4} 
+         & $L \rightarrow L \cdot [E]$ & [          & + ] \$ =  pp  \\ \hline
+$I_{15}$ & $E \rightarrow L=R \cdot  $ &            & ] \$ \\ \cline{2-4} 
+         & $R \rightarrow R \cdot +R $ & +          & ] \$   \\ \hline
+$I_{16}$ & $L \rightarrow L[E \cdot ]$ &            & = [ pp + ] \$ \\ \hline
+$I_{17}$ & $R \rightarrow R+R \cdot  $ &            & + ] \$ = [ pp \\ \cline{2-4} 
+         & $R \rightarrow R \cdot +R $ & +          & ] \$ = [ pp   \\ \hline
+$I_{18}$ & $L \rightarrow L[E] \cdot $ &            & = [ pp + ] \$ \\ \hline
+\end{adjustbox}
+
+
+\subsubsection*{Tabella di parsing LALR}
+Di seguito la tabella di parsing LALR.
+
+\begin{adjustbox}{tabular=|c|c|c|c|c|c|c|c|c|c|c|c|c|c|,center}
+\hline
+   & id  & num  & pp       & *   & +        & =       & {[}      & {]} & \$  & E  & L  & R   & S \\ \hline
+0  & s5  & s6   & s7       & s4  &   e5     &  e6     &  e7      &  e8  & e11 & 1  & 2  & 3  &   \\ \hline
+1  & e0  & e0   &  e0      & e0  &   e0     &  e0     &  e0      &  e0  & acc &    &    &    &   \\ \hline
+2  & e14 & e15  & s10      & e4  & r7       & s8      & s9       & r7   & r7  &    &    &    &   \\ \hline
+3  & e14 & e15  &   e17    & e4  & s11      &  e6     &  e7      & r2   & r2  &    &    &    &   \\ \hline
+4  & s5  & s6   & s7       & s4  &     e5   &    e6   &    e7    & e8   & e17 &    & 13 & 12 &   \\ \hline
+5  & e14 & e15  & r4       & e13 & r4       & r4      & r4       & r4   & r4  &    &    &    &   \\ \hline
+6  & e14 & e15  & r6       & e13 & r6       & r6      & r6       & r6   & r6  &    &    &    &   \\ \hline
+7  & s5  & e15  &    e3    & s4  &  e17     &  e17    &  e17     & e8   & e17 &    & 14 &    &   \\ \hline
+8  & s5  & s6   & s7       & s4  &  e17     & e6      & e7       & e8   & e18 &    & 13 & 15 &   \\ \hline
+9  & s5  & s6   & s7       & s4  &  e5      &  e17    &   e7     & e17  & e18 & 16 & 2  & 3  &   \\ \hline
+10 & e14 & e15  & r9       & e4  & r9       & r9      & r9       & r9   & r9  &    &    &    &   \\ \hline
+11 & s5  & s6   & s7       & s4  &   e5     &  e6     &  e12     & e12  & e17 &    & 13 & 17 &   \\ \hline
+12 & e14 & e15  & r3       & e4  & s11 / r3 & r3      & r3       & r3   & r3  &    &    &    &   \\ \hline
+13 & e14 & e15  & s10 / r7 & e16 & r7       & r7      & s9 / r7  & r7   & r7  &    &    &    &   \\ \hline
+14 & e14 & e15  & r10      & e4  & r10      & r10     & s9 / r10 & r10  & r10 &    &    &    &   \\ \hline
+15 & e14 & e15  & e3       & e4  & s11      & e6      & e7       & r1   & r1  &    &    &    &   \\ \hline
+16 & e14 & e15  & e3       & e4  & e5       & e6      & e7       & s18  &     &    &    &    &   \\ \hline
+17 & e14 & e15  & r8       & e4  & s11 / r8 & r8      & r8       & r8   & r8  &    &    &    &   \\ \hline
+18 & e14 & e15  & r5       & e4  & r5       & r5      & r5       & r5   & r5  &    &    &    &   \\ \hline
+\end{adjustbox}
+
+Gli errori definiti sono i medesimi del parser SLR.
+
+\newpage
+
+\subsection*{Parsing della stringa}
+
+Di seguito viene mostrata il parsing della stringa \texttt{id [ id + id + ] = num  id pp + num} fornita.
+Si mostra un parsing unico in quanto le azioni intraprese dal parser SLR e LALR sono le medesime.
+
+\begin{adjustbox}{scale=0.89,tabular=|l|r|c|,center}
+\hline
+Stack & Input & Azione \\ \hline
+0    &    id [ id + id + ] = num  id pp + num \$    &    ACTION(0, id) = s5  \\ \hline
+$<$0, id$>$ 5    &    [ id + id + ] = num id pp + num \$    &    ACTION( 5, [) = r4  \\ \hline
+$<$0, L$>$     &    [ id + id + ] = num id pp + num \$    &    GOTO 2  \\ \hline
+$<$0, L$>$ 2    &    [ id + id + ] = num id pp + num \$    &    ACTION( 2, [) = s9  \\ \hline
+$<$0, L$>$ $<$2, [$>$ 9    &    id + id + ] = num id pp + num \$    &    ACTION( 9, id) = s5  \\ \hline
+$<$0, L$>$ $<$2, [$>$ $<$9, id$>$ 5    &    + id + ] = num id pp + num \$    &    ACTION( 5, +) = r4  \\ \hline
+$<$0, L$>$ $<$2, [$>$ $<$9, L$>$     &    + id + ] = num id pp + num \$    &    GOTO 2  \\ \hline
+$<$0, L$>$ $<$2, [$>$ $<$9, L$>$ 2    &    + id + ] = num id pp + num \$    &    ACTION( 2, +) = r7  \\ \hline
+$<$0, L$>$ $<$2, [$>$ $<$9, R$>$     &    + id + ] = num id pp + num \$    &    GOTO 3  \\ \hline
+$<$0, L$>$ $<$2, [$>$ $<$9, R$>$ 3    &    + id  + ] = num id pp + num \$    &    ACTION( 3, +) = s11  \\ \hline
+$<$0, L$>$ $<$2, [$>$ $<$9, R$>$ $<$3, +$>$ 11    &    id + ] = num id pp + num \$    &    ACTION(11, id) = s5  \\ \hline
+$<$0, L$>$ $<$2, [$>$ $<$9, R$>$ $<$3, +$>$ $<$11, id$>$ 5    &    + ] = num id pp + num \$    &    ACTION( 5, +) = r4  \\ \hline
+$<$0, L$>$ $<$2, [$>$ $<$9, R$>$ $<$3, +$>$ $<$11, L$>$     &    + ] = num id pp + num \$    &    GOTO 13  \\ \hline
+$<$0, L$>$ $<$2, [$>$ $<$9, R$>$ $<$3, +$>$ $<$11, L$>$ 13    &    + ] = num id pp + num \$    &    ACTION(13, +) = r7  \\ \hline
+$<$0, L$>$ $<$2, [$>$ $<$9, R$>$ $<$3, +$>$ $<$11, R$>$     &    + ] = num id pp + num \$    &    GOTO 17  \\ \hline
+$<$0, L$>$ $<$2, [$>$ $<$9, R$>$ $<$3, +$>$ $<$11, R$>$ 17    &     ] = num id pp + num \$    &    ACTION(17, ) = s11  \\ \hline
+$<$0, L$>$ $<$2, [$>$ $<$9, R$>$ $<$3, +$>$ $<$11, R$>$ $<$17, +$>$ 11    &     ] = num id pp + num \$    &    E12   \\ \hline
+$<$0, L$>$ $<$2, [$>$ $<$9, R$>$ $<$3, +$>$ $<$11, R$>$ 17    &    ] = num id pp + num \$    &    ACTION(17, ]) = r8  \\ \hline
+$<$0, L$>$ $<$2, [$>$ $<$9, R$>$     &    ] = num id pp + num \$    &    GOTO 3  \\ \hline
+$<$0, L$>$ $<$2, [$>$ $<$9, R$>$ 3    &    ] = num id pp + num \$    &    ACTION( 3, ]) = r2  \\ \hline
+$<$0, L$>$ $<$2, [$>$ $<$9, E$>$     &    ] = num id pp + num \$    &    GOTO 16  \\ \hline
+$<$0, L$>$ $<$2, [$>$ $<$9, E$>$ 16    &    ] = num id pp + num \$    &    ACTION(16, ]) = s18  \\ \hline
+$<$0, L$>$ $<$2, [$>$ $<$9, E$>$ $<$16, ]$>$ 18    &    = num id pp + num \$    &    ACTION(18, =) = r5  \\ \hline
+$<$0, L$>$     &    = num id pp + num \$    &    GOTO 2  \\ \hline
+$<$0, L$>$ 2    &    = num id pp + num \$    &    ACTION( 2, =) = s8  \\ \hline
+$<$0, L$>$ $<$2, =$>$ 8    &    num id pp + num \$    &    ACTION( 8, num) = s6  \\ \hline
+$<$0, L$>$ $<$2, =$>$ $<$8, num$>$ 6    &     id pp + num \$    &    E14   \\ \hline
+$<$0, L$>$ $<$2, =$>$ $<$8, num$>$ 6    &    + id pp + num \$    &    ACTION( 6, +) = r6  \\ \hline
+$<$0, L$>$ $<$2, =$>$ $<$8, R$>$     &    + id pp + num \$    &    GOTO 15  \\ \hline
+$<$0, L$>$ $<$2, =$>$ $<$8, R$>$ 15    &    + id pp + num \$    &    ACTION(15, +) = s11  \\ \hline
+$<$0, L$>$ $<$2, =$>$ $<$8, R$>$ $<$15, +$>$ 11    &    id pp + num \$    &    ACTION(11, id) = s5  \\ \hline
+$<$0, L$>$ $<$2, =$>$ $<$8, R$>$ $<$15, +$>$ $<$11, id$>$ 5    &    pp + num \$    &    ACTION( 5, pp) = r4  \\ \hline
+$<$0, L$>$ $<$2, =$>$ $<$8, R$>$ $<$15, +$>$ $<$11, L$>$     &    pp + num \$    &    GOTO 13  \\ \hline
+$<$0, L$>$ $<$2, =$>$ $<$8, R$>$ $<$15, +$>$ $<$11, L$>$ 13    &    pp + num \$    &    ACTION(13, pp) = s10  \\ \hline
+$<$0, L$>$ $<$2, =$>$ $<$8, R$>$ $<$15, +$>$ $<$11, L$>$ $<$13, pp$>$ 10    &    + num \$    &    ACTION(10, +) = r9  \\ \hline
+$<$0, L$>$ $<$2, =$>$ $<$8, R$>$ $<$15, +$>$ $<$11, R$>$     &    + num \$    &    GOTO 17  \\ \hline
+$<$0, L$>$ $<$2, =$>$ $<$8, R$>$ $<$15, +$>$ $<$11, R$>$ 17    &    + num \$    &    ACTION(17, +) = s11  \\ \hline
+$<$0, L$>$ $<$2, =$>$ $<$8, R$>$ $<$15, +$>$ $<$11, R$>$ $<$17, +$>$ 11    &    num \$    &    ACTION(11, num) = s6  \\ \hline
+$<$0, L$>$ $<$2, =$>$ $<$8, R$>$ $<$15, +$>$ $<$11, R$>$ $<$17, +$>$ $<$11, num$>$ 6    &    \$    &    ACTION( 6, \$) = r6  \\ \hline
+$<$0, L$>$ $<$2, =$>$ $<$8, R$>$ $<$15, +$>$ $<$11, R$>$ $<$17, +$>$ $<$11, R$>$     &    \$    &    GOTO 17  \\ \hline
+$<$0, L$>$ $<$2, =$>$ $<$8, R$>$ $<$15, +$>$ $<$11, R$>$ $<$17, +$>$ $<$11, R$>$ 17    &    \$    &    ACTION(17, \$) = r8  \\ \hline
+$<$0, L$>$ $<$2, =$>$ $<$8, R$>$ $<$15, +$>$ $<$11, R$>$     &    \$    &    GOTO 17  \\ \hline
+$<$0, L$>$ $<$2, =$>$ $<$8, R$>$ $<$15, +$>$ $<$11, R$>$ 17    &    \$    &    ACTION(17, \$) = r8  \\ \hline
+$<$0, L$>$ $<$2, =$>$ $<$8, R$>$     &    \$    &    GOTO 15  \\ \hline
+$<$0, L$>$ $<$2, =$>$ $<$8, R$>$ 15    &    \$    &    ACTION(15, \$) = r1  \\ \hline
+$<$0, E$>$     &    \$    &    GOTO 1  \\ \hline
+$<$0, E$>$ 1    &    \$    &    ACTION( 1, \$) = acc  \\ \hline
+
+\end{adjustbox}
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
