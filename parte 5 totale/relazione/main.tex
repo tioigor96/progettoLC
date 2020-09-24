@@ -52,25 +52,23 @@ Le parole riservate in auL sono:
 \begin{verbatim}
   Bool       Char       Float       Int
   String     Void       and         break
-  const      do         else        elseif
-  end        false      for         function
-  if         local      name        nil
+  const      continue   do          else        
+  elseif     end        false       for
+  function   if         local       nil
   not        or         readChar    readFloat
   readInt    readString repeat      res
-  return     then        true       until
-  val        valres      while      writeChar
-  writeFloat writeInt    writeString
+  return     then       true        until
+  val        valres     while       writeChar
+  writeFloat writeInt   writeString
 \end{verbatim}
 
 \subsection*{Simboli riservati}
 I simboli riservati sono:
 \begin{verbatim}
-   *  [   ]  ;
-   =  {   }  ,
-   (  )  ==  ~=
-   <  <=  >  >=
-   +  -   /  %
-   ^  ..  #  &
+   *   [   ]  ;  =   {   }   ,
+   (   )   ?  :  ==  ~=  <   <=
+   >   >=  +  -  /   %   ^   ..
+   #   &
 \end{verbatim}
 \subsection*{Commenti}
 Sono presenti sia commenti in-line che commenti multi-line. Sono definiti quindi dalle seguenti espressioni regolari
@@ -153,6 +151,7 @@ Gli statement sono definiti come:
   
   Stm ::= "return" RValue ";";
   Stm ::= "break" ";";
+  Stm ::= "continue" ";";
   
   Block ::= [Stm];
   
@@ -195,7 +194,8 @@ tra loro.
 
 Le right expression sono definite quindi come segue:
 \begin{verbatim}
-  Rexp ::= RExp Op2 RExp
+  Rexp ::= RExp ? RExp : RExp
+         | RExp Op2 RExp
          | Op1 Rexp
          | FuncRead
          | Func         
@@ -231,13 +231,14 @@ and                                                                     & 2     
 not                                                                     & 3          & sx              \\
 ==, $\sim$=, \textgreater{}, \textgreater{}=, \textless{}, \textless{}= & 4          & non associativo \\
 +, -                                                                    & 5          & sx              \\
-$*$, /, \%                                                                & 6          & sx              \\
+$*$, /, \%                                                              & 6          & sx              \\
 \textasciicircum{}                                                      & 7          & dx              \\
 - (unario)                                                              & 8          & sx              \\
 \#                                                                      & 9          & sx              \\
 \&                                                                      & 10         & sx              \\ \hline
 \end{tabular}
 \end{table}
+
 
 \section{Scoping e binding  di auL}
 Lo scoping di auL è prettamente statico, similmente a C. È possibile definire quindi sole funzioni ricorsive semplici
@@ -298,11 +299,11 @@ Int         &  Char      &  Bool        &       Void                  \\
 Quindi deduciamo che:
 \begin{itemize}
 	\item se assegniamo un \emph{Int} ad un \emph{Float}, questo sarà accettato;
-	\item se ``\emph{dereferenziamo}'' un tipo \emph{String} attraverso come ad un array,
-		questo accetterà un carattere;
 	\item ogni $C_{\tau}$ accetterà ogni $C_{\tau}$;
 	\item se $\tau_1$ è un \emph{higher-type} puntatore, questo accetterà un $\tau_2$ \emph{higher-type} array, a patto che
-		l'``\emph{altezza}'' del puntatore sia la medesima dell'``\emph{altezza}'' e\\ $C_{\tau_1} = C_{\tau_2}$.
+		l'``\emph{altezza}'' del puntatore sia la medesima dell'``\emph{altezza}'' e\\ $C_{\tau_1} = C_{\tau_2}$;
+	\item per completezza nel manipolare il tipo canonico ``$String$'' si permette di riferire una singola lettera di questa
+		come fosse un array di ``$Char$'', ma non sono consentite operazioni tra ``$Char$'' e ``$String$''.
 	
 \end{itemize}
 
@@ -365,15 +366,23 @@ Esemplifichiamo ulteriormente ``$a$'' un valore per un tipo puntatore a ``$\tau:
 		\TrinaryInfC{$\Gamma \vdash_{rexp} a \% b : Int$}
 	\end{prooftree}
 
-	\item $\tau_1,\tau_2\in\{Char,String\}$
+	\item $\tau \in \{String\}$
 	\begin{prooftree}
-		\AxiomC{$\Gamma \vdash_{rexp} a : \tau_1$}
-		\AxiomC{$\Gamma \vdash_{rexp} b : \tau_2$}
+		\AxiomC{$\Gamma \vdash_{rexp} a : \tau$}
+		\AxiomC{$\Gamma \vdash_{rexp} b : \tau$}
 		\AxiomC{$a .. b : String$}
 		\TrinaryInfC{$\Gamma \vdash_{rexp} a .. b : String$}
 	\end{prooftree}
+	
+	\item $\tau \in \{Int, Float, Char\}$ e $\odot \in \{\leq,\geq,<,>\}$
+	\begin{prooftree}
+		\AxiomC{$\Gamma \vdash_{rexp} a : \tau$}
+		\AxiomC{$\Gamma \vdash_{rexp} b : \tau$}
+		\AxiomC{$a \odot b : Bool$}
+		\TrinaryInfC{$\Gamma \vdash_{rexp} a \odot b : Bool$}
+	\end{prooftree}
 
-	\item $\tau_1,\tau_2 = C_\tau$ e $\odot \in \{\leq,\geq,<,>,==,\not=\}$
+	\item $\tau_1,\tau_2 = C_\tau$ e $\odot \in \{==,\not=\}$
 	\begin{prooftree}
 		\AxiomC{$\Gamma \vdash_{rexp} a : \tau_1$}
 		\AxiomC{$\Gamma \vdash_{rexp} b : \tau_2$}
@@ -451,6 +460,14 @@ Esemplifichiamo ulteriormente ``$a$'' un valore per un tipo puntatore a ``$\tau:
 	\begin{prooftree}
 		\AxiomC{$\Gamma \vdash_{val}val:\tau$}
 		\UnaryInfC{$\Gamma \vdash_{rexp}val : \tau$}
+	\end{prooftree}
+	
+	\item sia $c$ un ulteriore \textit{R. Exp.}. Allora, definito l'operatore condizionale si avrà:
+	\begin{prooftree}
+		\AxiomC{$\Gamma \vdash_{rexp}a : Bool$}
+		\AxiomC{$\Gamma \vdash_{rexp}b : \tau$}
+		\AxiomC{$\Gamma \vdash_{rexp}c : \tau$}
+		\TrinaryInfC{$\Gamma \vdash_{rexp} a$ \texttt{?} $b$ \texttt{:} $c : \tau$}
 	\end{prooftree}
 \end{itemize}
 \subsection{Regole per le Left-Expression}
@@ -538,7 +555,7 @@ Esemplifichiamo il type system per la definizione di funzioni.
 	\item Una chiamata di funzione in una espressione non può avere tipo di
 		ritorno void, perché le espressioni non possono avere tipo void;
 	
-	\item \textbf{break} e \textbf{continue} possono comparire solo nel corpo di un loop.
+	\item \textbf{break} e \textbf{continue} possono comparire solo nel corpo di un loop indeterminato.
 		In caso di loop annidati, questi statement si riferiscono al ciclo più interno;
 	
 	\item poichè il return è prerogativa nelle sole funzioni, e non è possibile verificare che
