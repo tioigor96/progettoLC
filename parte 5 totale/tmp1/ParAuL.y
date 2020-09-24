@@ -1040,12 +1040,10 @@ For : 'for' LIdent '=' RExp ',' RExp Increment EBlk
         ; $6.envin = mergeEnv $$.envloc $$.envin
         ; $7.envin = mergeEnv $$.envloc $$.envin
         ; $8.envin = $$.envin
-        ; $8.envloc = if((all (\(x,y) -> x == y ) [($4.tipo,$6.tipo),($6.tipo,$7.tipo),($7.tipo,$4.tipo)]) )
-                        then (mergeEnv (fromOk (insertEnv (getBaseType $7.tipo) Modality1 (LExpS $2.vlident) emptyEnv $2.posn)) $$.envloc)
-                        else (mergeEnv (fromOk (insertEnv (getBaseType $4.tipo) Modality1 (LExpS $2.vlident) emptyEnv $2.posn)) $$.envloc)
+        ; $8.envloc = (mergeEnv (fromOk (insertEnv (getBaseType $4.tipo) Modality1 (LExpS $2.vlident) emptyEnv $2.posn)) $$.envloc)
         ; $$.parsetree = AbsAuL.LoopF $2.vlident $4.parsetree $6.parsetree $7.parsetree $8.parsetree
         ; $$.envout = $$.envloc
-        ; $$.errs = (if ( all (\(x,y) -> x == y ) [($4.tipo,$6.tipo),($6.tipo,$7.tipo),($7.tipo,$4.tipo)])
+        ; $$.errs = (if (all (\x -> (compCmpType $4.tipo x) == $4.tipo) [$4.tipo, $6.tipo, $7.tipo])
                         then []
                         else ["error at "++ (showFromPosn $2.posn) ++": incompatible types in 'for' loop conditions!"])
                                ++ $4.errs ++ $6.errs ++ $7.errs ++ $8.errs
