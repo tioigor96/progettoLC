@@ -179,6 +179,7 @@ L_LIdent { PT _ (T_LIdent _) }
 %attribute listElem { [ArgOp] }
 %attribute listRexp { [ArgOp] }
 %attribute parf { ArgOp }
+%attribute isfunc { Int }
 
 %%
 
@@ -211,9 +212,15 @@ LIdent : L_LIdent
     {         
             $$.posn =  (tokenPosn $1)                          
             ; $$.vlident = LIdent (getLIdentT $1)
-            ; $$.addr = NameTac (getLIdentT $1) (if isNothing(lookupEnv (getLIdentT $1) $$.envin)
-                                                    then $$.posn
-                                                    else ((getPos . fromJust) (lookupEnv (getLIdentT $1) $$.envin)))
+            ; $$.addr = if ($$.isfunc == 1) then NameTac (getLIdentT $1) (if isNothing(lookupEnv (getLIdentT $1) $$.envin)
+                                                                                                            then $$.posn
+                                                                                                            else ((getPos . fromJust) (lookupEnv (getLIdentT $1) $$.envin)))
+                        else (if (lookUpMod (getLIdentT $1) $$.envin == Modality1) then NameTac (getLIdentT $1) (if isNothing(lookupEnv (getLIdentT $1) $$.envin)
+                                                                                                                    then $$.posn
+                                                                                                                    else ((getPos . fromJust) (lookupEnv (getLIdentT $1) $$.envin)))
+                                                                                   else Param  (getLIdentT $1) (if isNothing(lookupEnv (getLIdentT $1) $$.envin)
+                                                                                                                    then $$.posn
+                                                                                                                    else ((getPos . fromJust) (lookupEnv (getLIdentT $1) $$.envin))))
             ; $$.stateout = $$.statein
             ; $$.code = []
     }
@@ -781,12 +788,12 @@ Ass : LExp '=' RExp
         ; $1.nextLabel = $$.nextLabel
         ; $3.nextLabel = $$.nextLabel
         ; $$.stateout = skipState $3.stateout 0 2
-        ; $$.code = if (not ($3.tipo == $$.tipo)) then [Rules (Cast (gentemp $$.statein 0) (toTACType $$.tipo) (toTACType $3.tipo) (searchParam $$.listparf $3.addr))] 
-                                                        ++ [(Rules (Assgm (toTACType $$.tipo) (searchParam $$.listparf $1.addr) (gentemp $$.statein 0) ))]
+        ; $$.code = if (not ($3.tipo == $$.tipo)) then [Rules (Cast (gentemp $$.statein 0) (toTACType $$.tipo) (toTACType $3.tipo) $3.addr)] 
+                                                        ++ [(Rules (Assgm (toTACType $$.tipo) $1.addr (gentemp $$.statein 0) ))]
                                                    else (if (null $1.listDim) then $3.code ++
-                                                                                   [(Rules (Assgm (toTACType $$.tipo) (gentemp $3.statein 0) (searchParam $$.listparf $3.addr)))] ++
-                                                                                   [(Rules (Assgm (toTACType $$.tipo) (searchParam $$.listparf $1.addr) (gentemp $3.statein 0)))] 
-                                                                              else [(Rules (ArrayEl (toTACType $$.tipo) (searchParam $$.listparf $1.addr) (searchParam $$.listparf $3.addr) (listDimToString $1.listDim)))] )
+                                                                                   [(Rules (Assgm (toTACType $$.tipo) (gentemp $3.statein 0) $3.addr))] ++
+                                                                                   [(Rules (Assgm (toTACType $$.tipo) $1.addr (gentemp $3.statein 0)))] 
+                                                                              else [(Rules (ArrayEl (toTACType $$.tipo) $1.addr $3.addr (listDimToString $1.listDim)))] )
                                                         
     }
     
@@ -836,8 +843,12 @@ Func : FuncWrite
                         else ["error at "++(showFromPosn $1.posn)++": function "++(fromLIdent $1.vlident)++" is undefined!"]) ++ $3.errs
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
-        ; $$.addr = $1.addr
-        ; $$.code = [(Rules (FuncCall (gentemp $1.stateout 0) IntTypeTac (InternalFunc (argOpToString $1.addr)) (length $3.listRexp)))] ++ listRexpToTac $3.listRexp
+        ; $1.isfunc = 1
+        ; $$.addr = $1.addr        
+        ; $$.code = [(Rules (FuncCall (gentemp $1.stateout 0) 
+                                      (toTACType ((getTypeF . fromJust) (lookupEnv (fromLIdent $1.vlident) $$.envin))) 
+                                      (InternalFunc (argOpToString $1.addr)) 
+                                      (length $3.listRexp)))] ++ listRexpToTac $3.listRexp
     }
 ListRExp : {- empty -} 
     { 
@@ -1030,7 +1041,7 @@ For : 'for' LIdent '=' RExp ',' RExp Increment EBlk
                         else ["error at "++ (showFromPosn $2.posn) ++": incompatible types in 'for' loop conditions!"])
                                ++ $4.errs ++ $6.errs ++ $7.errs ++ $8.errs
                                ++ $4.errs ++ $6.errs ++ $7.errs ++ $8.errs
-        
+        ; $2.isfunc = 0
         ; $2.statein = $$.statein
         ; $4.statein = $2.stateout
         ; $6.statein = skipState $4.stateout 1 1
@@ -1223,7 +1234,7 @@ RValue : {- empty -}
                         else ["error at " ++ (showFromPosn $$.posn) ++ ": return statement out of function!"]) ++ $1.errs
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
-        ; $$.code = [(Rules (ReturnTac $1.addr))]
+        ; $$.code = $1.code ++ [(Rules (ReturnTac $1.addr))]
     }
 
 Break : 'break' 
@@ -1281,6 +1292,7 @@ FuncD : CompoundType 'function' LIdent '(' ListParamF ')' BlockF 'end'
                         then ["error at " ++((showFromPosn . tokenPosn) $2) ++": erroneus definition of function type. Maybe you "++
                               "would define it as Int, Float,...?"]
                         else [])
+        ; $3.isfunc = 0
         ; $3.statein = $$.statein
         ; $7.statein = $3.stateout
         ; $7.nextLabel = $$.nextLabel
@@ -1338,6 +1350,7 @@ LExp : LIdent
         ; $1.envin = $$.envin
         ; $$.posn = $1.posn
         ; $$.errs = []
+        ; $1.isfunc = 0
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $$.listDim = []
@@ -1365,6 +1378,7 @@ LExp : LIdent
         ; $$.parsetree = AbsAuL.LExpA $1.vlident $2.parsetree
         ; $$.posn = $1.posn
         ; $$.errs = $2.errs
+        ; $1.isfunc = 0
         ; $1.statein = $$.statein
         ; $2.statein = $1.stateout
         ; $$.stateout = $2.stateout
@@ -2066,6 +2080,7 @@ RExp11 : Integer
                                     else []
                             else [])
         ; $$.listDim = [] 
+        ; $2.listparf = $$.listparf
         ; $2.statein = $$.statein
         ; $$.stateout = $2.stateout 
         ; $$.code =  [(Rules (AssignAddress (gentemp $$.stateout 0) (toTACType $$.tipo) $2.addr))]  
@@ -2242,6 +2257,18 @@ controlFnctTipo ps rexps posn = let errs = controlFnctTipo' ps rexps
                                      else if ((length errs) == 0)
                                             then []
                                             else ["error at " ++ (showFromPosn posn) ++ ":"] ++ errs
+
+-- lookUpMod :: LExp -> EnvT -> Modality
+-- lookUpMod lexp env = let var = lookupEnv ((fromLIdent.getLIdentlexp) lexp) env
+--                       in if isNothing var then ((snd.getType.fromJust) var)
+--                                           else Modality1
+
+lookUpMod :: String -> EnvT -> Modality
+lookUpMod s env = let var = lookupEnv s env
+                      in if isJust var then ((snd.getType.fromJust) var)
+                                          else Modality1
+
+
 
 returnM :: a -> Err a
 returnM = return

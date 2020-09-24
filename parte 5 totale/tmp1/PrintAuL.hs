@@ -158,6 +158,7 @@ instance Print AbsAuL.Stm where
     AbsAuL.SEBlk eblk -> prPrec i 0 (concatD [prt 0 eblk])
     AbsAuL.SReturn return -> prPrec i 0 (concatD [prt 0 return, doc (showString ";")])
     AbsAuL.SBreak break -> prPrec i 0 (concatD [prt 0 break, doc (showString ";")])
+    AbsAuL.SContinue continue -> prPrec i 0 (concatD [prt 0 continue, doc (showString ";")])
   prtList _ [] = concatD []
   prtList _ (x:xs) = concatD [prt 0 x, prt 0 xs]
 
@@ -275,6 +276,10 @@ instance Print AbsAuL.Break where
   prt i e = case e of
     AbsAuL.JumpB -> prPrec i 0 (concatD [doc (showString "break")])
 
+instance Print AbsAuL.Continue where
+  prt i e = case e of
+    AbsAuL.JumpC -> prPrec i 0 (concatD [doc (showString "continue")])
+
 instance Print [AbsAuL.RExp] where
   prt = prtList
 
@@ -299,7 +304,6 @@ instance Print AbsAuL.Modality where
     AbsAuL.Modality_const -> prPrec i 0 (concatD [doc (showString "const")])
     AbsAuL.Modality_res -> prPrec i 0 (concatD [doc (showString "res")])
     AbsAuL.Modality_valres -> prPrec i 0 (concatD [doc (showString "valres")])
-    AbsAuL.Modality_name -> prPrec i 0 (concatD [doc (showString "name")])
 
 instance Print AbsAuL.LExp where
   prt i e = case e of
