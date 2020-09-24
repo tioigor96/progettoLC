@@ -19,6 +19,7 @@ toTACType a = case (getBaseType a) of BasicType_Bool -> BoolTypeTac
                                       BasicType_Float -> FloatTypeTac
                                       BasicType_Int -> IntTypeTac
                                       BasicType_String -> StringTypeTac
+                                      BasicType_Void -> VoidTypeTac
 toTACType' a = case a of BasicType_Bool -> BoolTypeTac
                          BasicType_Char -> CharTypeTac
                          BasicType_Float -> FloatTypeTac

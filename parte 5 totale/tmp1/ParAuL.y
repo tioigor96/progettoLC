@@ -844,7 +844,10 @@ Func : FuncWrite
         ; $1.statein = $$.statein
         ; $$.stateout = $1.stateout
         ; $$.addr = $1.addr
-        ; $$.code = [(Rules (FuncCall (gentemp $1.stateout 0) IntTypeTac (InternalFunc (argOpToString $1.addr)) (length $3.listRexp)))] ++ listRexpToTac $3.listRexp
+        ; $$.code = [(Rules (FuncCall (gentemp $1.stateout 0) 
+                                      (toTACType ((getTypeF . fromJust) (lookupEnv (fromLIdent $1.vlident) $$.envin))) 
+                                      (InternalFunc (argOpToString $1.addr)) 
+                                      (length $3.listRexp)))] ++ listRexpToTac $3.listRexp
     }
 ListRExp : {- empty -} 
     { 
