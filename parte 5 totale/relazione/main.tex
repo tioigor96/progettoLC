@@ -227,8 +227,9 @@ Le right expression sono definite quindi come segue:
         | # ; 
 \end{verbatim}
 
-Mostriamo quindi le associatibità e le precedenze per ogni operatore.\\
-Partiamo dagli operatori unari:
+\subsection*{Precedenza degli operatori}
+Mostriamo quindi le associatibità e le precedenze per ogni operatore. Si ricorda che 0 è il valore più basso
+(e quindi ha la precedenza minima) e 10 è il valore più alto (precedenza massima).\\
 
 \begin{table}[h]
 \begin{tabular}{lcr}
@@ -621,7 +622,7 @@ stato scelto di implementarlo, come per il C:
   LExp = RExp ? RExp : RExp;
 [...]
 \end{verbatim}
-Ovvero la prima \textit{R. Expr.} sarà legata ad un test che sia di tipo ``$Bool$'', mentre le altre due espressioni è richiesto 
+la prima \textit{R. Expr.} sarà legata ad un test che sia di tipo ``$Bool$'', mentre le altre due espressioni è richiesto 
 che abbiano necessariamente tipi tra loro compatibili.
 
 La scelta della costruzione sintattica di questo operatore è legata alla decisione di non introdurre conflitti nel parser.
