@@ -1,0 +1,75 @@
+\documentclass[10pt,a4paper,titlepage]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[italian]{babel}
+\usepackage[write]{frontespizio}
+\usepackage[T1]{fontenc}
+
+
+% filetti tipografici delle tabelle
+\usepackage{booktabs}
+
+
+% lstinline colorati
+\newlength{\DepthReference}
+\settodepth{\DepthReference}{4pt}
+\newlength{\HeightReference}
+\settoheight{\HeightReference}{4pt}
+\newlength{\Width}
+
+\newcommand{\lst}[1]%
+{%
+ \settowidth{\Width}{\lstinline!#1!}%
+ \colorbox{black!15}%
+ {%      
+        \raisebox{-1.2pt}%
+        {%
+                \parbox[b][\HeightReference+\DepthReference][c]{\Width}{%
+                 \raisebox{-9.5pt}{\centering\strut\lstinline!#1!}}%
+        }%
+ }%
+}
+\setlength{\fboxsep}{1pt}
+
+\begin{document}
+
+\begin{frontespizio}
+ \Preambolo{\usepackage{listings,textcomp,xcolor,calc}}
+ \Preambolo{\lstset{basicstyle=\small\ttfamily,breaklines=true}}
+ \Preambolo{% lstinline colorati
+  \newlength{\DepthReference}
+  \settodepth{\DepthReference}{4pt}
+  \newlength{\HeightReference}
+  \settoheight{\HeightReference}{4pt}
+  \newlength{\Width}
+
+  \newcommand{\lst}[1]%
+  {%
+   \settowidth{\Width}{\lstinline!callegari.filippo@spes.uniud.it!}%
+   \colorbox{black!15}%
+   {%      
+          \raisebox{-1.2pt}%
+          {%
+                  \parbox[b][\HeightReference+\DepthReference][c]{\Width}{%
+                   \raisebox{-9.5pt}{\centering\strut\lstinline!callegari.filippo@spes.uniud.it!}}%
+          }%
+   }%
+  }
+  
+  \setlength{\fboxsep}{1pt}
+ } % fine Preambolo
+ 
+ \NCandidato{Studente}
+ \NRelatore{Professore dell'insegnamento}{Professori dell'insegnamento}
+
+ \Universita{Udine}
+ \Dipartimento{Scienze Matematiche, Informatiche e Fisiche}
+ \Logo{Logo.pdf}
+ \Corso[Laurea Magistrale]{Informatica}
+ \Annoaccademico{2019--2020 - Secondo Semestre}
+ \Titoletto{Relazione del progetto\\ per l'insegnamento\\ Linguaggi e compilatori}
+ \Titolo{ProgettoLC parte2b }
+ \Candidato[128602]{Filippo Callegari \\ \lst{mail}}
+ \Relatore{Marco Comini}
+\end{frontespizio}
+
+\end{document}
