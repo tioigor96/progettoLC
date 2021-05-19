@@ -1,0 +1,365 @@
+%!TEX encoding = UTF-8 Unicode
+%!TEX TS-program = pdflatex
+\documentclass[italian,a4paper,10pt]{report}
+\usepackage{lmodern}
+\usepackage[latin1]{inputenc}
+\usepackage[italian]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+\usepackage{xcolor}
+\usepackage{color}
+\usepackage{tcolorbox}
+
+\usepackage{titlesec}
+
+\usepackage{pdfpages}
+
+
+\usepackage{listings}% http://ctan.org/pkg/listings
+\lstset{
+  basicstyle=\ttfamily,
+  mathescape
+}
+
+\begin{document}
+
+\pagenumbering{gobble}
+\includepdf[pages={1}]{fronte-frn.pdf}
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+\paragraph*{Assunzioni}
+In quanto non presente una vera e propria regola da utilizzare all'interno del ``prelude'', 
+si è ricorsi alla funzione \texttt{if'} definita sulla wiki di haskell, 
+presso il seguente indirizzo \href{https://wiki.haskell.org/If-then-else}{Wiki Haskell: If-Then-Else}
+
+\subsection*{Esercizio 1}
+Le regole sono quindi descritte come segue:
+\begin{tcolorbox}[colback=white!5!white,colframe=cyan!75!black]
+\begin{center}
+\begin{verbatim}
+        fact :: Integer -> Integer
+R1:     fact n = if n == 0 then 1 else n * fact (n - 1)
+
+        take :: Int -> [ a ] -> [ a ]
+R2:     take _ [] = []
+R3:     take n _ | n <= 0 = []
+R4:     take n ( x : xs ) = x : take (n -1) xs
+
+        map :: (a -> b) -> [a] -> [b]
+R5:     map f ( x : xs ) = f x : map f xs
+R6:     map _ [] = []
+
+        if :: Bool -> a -> a -> a
+R7:     if True  x _ = x
+R8:     if False _ y = y
+\end{verbatim}
+\end{center}
+\end{tcolorbox}
+
+Si chiede di rappresentare l'esecuzione della seguente query:
+\begin{tcolorbox}[colback=white!5!white,colframe=cyan!75!black,title=Query sottoposta]
+\begin{center}
+\begin{verbatim}
+let 
+    v = fact k;
+    k = j - 2;
+    j = 2 * 2 in 
+  take (5 - k)(v : map fact [j - k, v, v, error "q",v])
+\end{verbatim}
+\end{center}
+\end{tcolorbox}
+
+\subsubsection*{Esecuzione in notazione lineare}
+Per rendere univoca l'applicazione delle occorrenze dei metodi di classe, riscriviamo quindi la query come segue:
+\begin{tcolorbox}[colback=white!5!white,colframe=cyan!75!black,]
+\begin{center}
+\begin{lstlisting}
+take 
+ (-#Int 5#Int $\kappa$)
+ (
+   $\nu$ : 
+   map fact [-#Int $\iota$ $\kappa$, $\nu$, $nu$, error "q"#[Char], $\nu$]
+ )
+\end{lstlisting}
+\end{center}
+\end{tcolorbox}
+Dove abbiamo:
+\begin{itemize}
+    \item $\nu = $\texttt{v}, con \texttt{v = fact} $\kappa$;
+    \item $\kappa = $ \texttt{k}, con \texttt{k = -\#Int }$\iota$ \texttt{2\#Int};
+    \item $\iota = $ \texttt{j}, con \texttt{j = *\#Int 2\#Int 2\#Int}.
+\end{itemize}
+
+Possiamo passare alla sua esecuzione.
+~\\
+
+[Valuto \texttt{R2}, ma non matcha.]
+
+[Provo ad applicare \texttt{R3}, devo prima valutare il valore da passare alla guardia]
+\begin{lstlisting}
+(-#Int 5#Int $\kappa$)
+\end{lstlisting}
+
+[Dobbiamo valutare prima $\kappa$]\label{kappa}
+\begin{lstlisting}
+k = -\#Int $\iota$ 2\#Int
+\end{lstlisting}
+
+[Dobbiamo prima valutare $\iota$]\label{iota}\\
+\lstinline{j = *#Int 2#Int 2#Int} $\rightarrow$ Viene valutato \texttt{4\#Int}.\\
+
+[Torno a $\kappa$\ref{kappa}]\\
+\lstinline{k = -#Int 4#Int 2#Int} $\rightarrow$ Viene valutato \texttt{2\#Int}.\\
+
+[Torno a valutare il valore da passare alla guardia di \texttt{R3}]\\
+\lstinline{-#Int 5#Int 2#Int} $\rightarrow$ Viene valutato \texttt{3\#Int}.\\
+
+[Passo a valutare la guardia di \texttt{R3}]\\
+\lstinline{<=#Int 2#Int 0#Int} $\rightarrow$ Viene valutato \texttt{False}.\\
+
+[Procedo con la regola R4, matcha e produce]
+\begin{lstlisting}
+$\nu$ : take (-#Int 3#Int 1#Int) 
+             (map fact [-#Int 4#Int 2#Int, $\nu$, $\nu$, error "q"#[Char], $\nu$])
+\end{lstlisting}
+
+[Devo ora valutare $\nu$]\label{nu}
+\begin{lstlisting}
+v = fact $\kappa$
+\end{lstlisting}
+
+[I passi per valutare $\kappa$ sono sopra\ref{kappa}]
+
+[Applico \texttt{R1} per calcolare $\nu$]
+\begin{lstlisting}
+v = if (==#Int 2#Int 0#Int) then 
+        1#Int 
+        else (*#Int 2#Int (fact (-#Int 2#Int 1#Int)))
+\end{lstlisting}
+
+[Provo ad applicare \texttt{R7}, che mi obbliga a valutare la guardia dell'\texttt{if}]\\
+\lstinline{==#Int 2#Int 0#Int} $\rightarrow$ Viene valutato \texttt{False}.\\
+
+[\texttt{R7} fallisce, applico \texttt{R8} per la valutazione di $\nu$]
+\begin{lstlisting}
+v = (*#Int 2#Int (fact (-#Int 2#Int 1#Int)))
+\end{lstlisting}
+
+[Devo valutare l'operazione per la chiamata di \texttt{fact}]\\
+\lstinline{-#Int 2#Int 1#Int} $\rightarrow$ Viene valutato \texttt{1\#Int}.\\
+
+[Devo valutare la seconda chiamata a \texttt{fact} applicando \texttt{R1}]
+\begin{lstlisting}
+if (==#Int 1#Int 0#Int) then 
+    1#Int 
+    else (*#Int 1#Int (fact (-#Int 1#Int 1#Int)))
+\end{lstlisting}
+
+[Provo ad applicare \texttt{R7}, che mi obbliga a valutare la guardia dell'\texttt{if}]\\
+\lstinline{==#Int 1#Int 0#Int} $\rightarrow$ Viene valutato \texttt{False}.\\
+
+[\texttt{R7} fallisce, applico \texttt{R8} per la valutazione di $\nu$]
+\begin{lstlisting}
+v = (*#Int 2#Int (*#Int 1#Int (fact (-#Int 1#Int 1#Int))))
+\end{lstlisting}
+
+[Devo valutare il valore da passare a \texttt{fact}]\\
+\lstinline{-#Int 1#Int 1#Int} $\rightarrow$ Viene valutato \texttt{0\#Int}.\\
+
+[Devo valutare la terza chiamata a \texttt{fact} applicando \texttt{R1}]
+\begin{lstlisting}
+if (==#Int 0#Int 0#Int) then 
+    1#Int 
+    else (*#Int 0#Int (fact (-#Int 0#Int 1#Int)))
+\end{lstlisting}
+
+[Provo ad applicare \texttt{R7}, che mi obbliga a valutare la guardia dell'\texttt{if}]\\
+\lstinline{==#Int 0#Int 0#Int} $\rightarrow$ Viene valutato \texttt{True}.\\
+
+[Applico \texttt{R7} ed ottengo]
+\begin{lstlisting}
+v = (*#Int 2#Int (*#Int 1#Int (1#Int)))
+\end{lstlisting}
+
+[Devo valutare il primo fattore dell'operazione esterna \texttt{*\#Int}]\\
+\lstinline{*#Int 1#Int 1#Int} $\rightarrow$ Viene valutato \texttt{1\#Int}.\\
+
+[Devo valutare l'espressione da assegnare a $\nu$]\\
+\lstinline{v = (*#Int 2#Int 1#Int)} $\rightarrow$ Viene valutato \texttt{2\#Int}.\\
+
+[Al termine della valutazione di $\nu$ avrò]
+\begin{lstlisting}
+2#Int : 
+  take (-#Int 3#Int 1#Int) 
+    (map fact [-#Int 4#Int 2#Int, 2#Int, 2#Int, error "q"#[Char], 2#Int])
+\end{lstlisting}
+
+[Applico \texttt{R2} e non matcha, applico \texttt{R3} e devo valutare l'arg. di guardia]\\
+\lstinline{-#Int 3#Int 1#Int} $\rightarrow$ Viene valutato \texttt{2\#Int}.
+
+[Valuto quindi la guardia per \texttt{R3}]\\
+\lstinline{<=#Int 2#Int 0#Int} $\rightarrow$ Viene valutato \texttt{False}.
+
+[Applico quindi \texttt{R4}, devo valutare quindi \texttt{map} con regola \texttt{R5}]
+\begin{lstlisting}
+map fact [-#Int 4#Int 2#Int, 2#Int, 2#Int, error "q"#[Char], 2#Int]
+\end{lstlisting}
+
+[In uscita da \texttt{R5} avrò]
+\begin{lstlisting}
+(fact -#Int 4#Int 2#Int) : map fact [2#Int, 2#Int, error "q"#[Char], 2#Int]
+\end{lstlisting}
+
+[Posso quindi valutare \texttt{R4}]
+\begin{lstlisting}
+2#Int : 
+  take (-#Int 2#Int 1#Int) 
+    fact (-#Int 4#Int 2#Int) :
+      map fact [2#Int, 2#Int, error "q"#[Char], 2#Int]
+\end{lstlisting}
+
+[che ottengo in uscita da \texttt{R4}]
+\begin{lstlisting}
+2#Int : fact (-#Int 4#Int 2#Int) : 
+    take (-#Int 2#Int 1#Int) 
+        map fact [2#Int, 2#Int, error "q"#[Char], 2#Int]
+\end{lstlisting}
+
+[Valuto il valore da passare a \texttt{fact}]\\
+\lstinline{k = -#Int 4#Int 2#Int} $\rightarrow$ Viene valutato \texttt{2\#Int}.\\
+
+[Si rimanda sopra per vedere la valutazione di \texttt{fact 2\#Int}]
+
+[All'uscita di \texttt{fact 2} avrò]\\
+\lstinline{fact 2#Int} $\rightarrow$ Viene valutato \texttt{2\#Int}.
+
+[che diventa]
+\begin{lstlisting}
+ 2#Int :2#Int :
+    take (-#Int 2#Int 1#Int) 
+        map fact [2#Int, 2#Int, error "q"#[Char], 2#Int]
+\end{lstlisting}
+
+[A questo punto, come prima si passa a rivalutare take.]\\
+
+[Applico \texttt{R2} e non matcha, applico \texttt{R3} e devo valutare l'arg. di guardia]\\
+\lstinline{-#Int 2#Int 1#Int} $\rightarrow$ Viene valutato \texttt{1\#Int}.
+
+[Valuto quindi la guardia per \texttt{R3}]\\
+\lstinline{<=#Int 1#Int 0#Int} $\rightarrow$ Viene valutato \texttt{False}.
+
+[Applico quindi \texttt{R4}, devo valutare quindi \texttt{map} con regola \texttt{R5}]
+\begin{lstlisting}
+map fact [2#Int, 2#Int, error "q"#[Char], 2#Int]
+\end{lstlisting}
+
+[In uscita da \texttt{R5} avrò]
+\begin{lstlisting}
+2#Int : 2#Int : 
+  take (-#Int 1#Int 1#Int) 
+    fact 2#Int :
+      map fact [2#Int, error "q"#[Char], 2#Int]
+\end{lstlisting}
+
+[Ed ottengo in uscita da \texttt{R4}]
+\begin{lstlisting}
+2#Int : 2#Int : fact 2#Int : 
+    take (-#Int 1#Int 1#Int) 
+        map fact [2#Int, error "q"#[Char], 2#Int]
+\end{lstlisting}
+
+[Si rimanda sopra per vedere la valutazione di \texttt{fact 2\#Int}]
+
+[All'uscita di \texttt{fact 2} avrò]\\
+\lstinline{fact 2#Int} $\rightarrow$ Viene valutato \texttt{2\#Int}.\\
+
+[Otterrò quindi]
+\begin{lstlisting}
+2#Int : 2#Int : 2#Int : 
+    take (-#Int 1#Int 1#Int) 
+        map fact [2#Int, error "q"#[Char], 2#Int]
+\end{lstlisting}
+
+[Applico \texttt{R2} e non matcha, applico \texttt{R3} e devo valutare l'arg. di guardia]\\
+\lstinline{-#Int 1#Int 1#Int} $\rightarrow$ Viene valutato \texttt{0\#Int}.\\
+
+[Valuto quindi la guardia per \texttt{R3}]\\
+\lstinline{<=#Int 0#Int 0#Int} $\rightarrow$ Viene valutato \texttt{True}.
+
+[Applico \texttt{R3} dopo valutazione della guardia positiva]
+\begin{lstlisting}
+2#Int : 2#Int : 2#Int : []
+\end{lstlisting}
+
+
+\paragraph*{Risultato}
+Il risultato della valutazione della query quindi è:
+\begin{tcolorbox}[colback=white!5!white,colframe=cyan!75!black]
+\begin{center}
+\begin{verbatim}
+2#Int : 2#Int : 2#Int : []
+\end{verbatim}
+\end{center}
+\end{tcolorbox}
+
+\subsection*{Esercizio 2}
+\paragraph*{Esercizio 1 parte 2b.}
+Di seguito la tabella riassuntiva di calcolo del testimone più generale dell'esercizio 1 parte 2b.
+\begin{tcolorbox}[colback=white!5!white,colframe=lime!75!black]
+\begin{center}
+\begin{tabular}{cl}
+mgu(\texttt{Ri, Rj}) & Testimone più generale \\
+\hline
+\hline
+ \texttt{R2, R3} & \texttt{take n []} \\ 
+ \texttt{R2, R4} & nessun overlap \\ 
+ \texttt{R3, R4} & \texttt{take n (x : xs)} \\ 
+ \texttt{R5, R6} & nessun overlap \\ 
+ \texttt{R7, R8} & nessun overlap \\ 
+\hline 
+\end{tabular}
+\end{center}
+La regola \texttt{R1} non viene presa in considerazione in quanto non può avere overlap.
+\end{tcolorbox}
+
+\paragraph*{Esercizio 1 parte 2a.}
+Di seguito presentiamo le regole dell'esercizio preso in considerazione:
+\begin{tcolorbox}[colback=white!5!white,colframe=lime!75!black]
+\begin{center}
+\begin{verbatim}
+fmap :: (a -> b) -> [a] -> [b]
+R1:    fmap f (C x) = C $ f x
+R2:    fmap f (Q ss sd is id) = Q (fmap f ss) (fmap f sd)
+                                  (fmap f is) (fmap f id)
+
+bound :: a -> a -> a -> a
+R3:    bound cm cM a 
+         | a > cM = cM
+         | a < cm = cm
+         | otherwise = a
+
+boundPicture :: Integral t => t -> t -> QT t -> QT t
+R4:    boundPicture cm cM a = fmap (bound cm cM) a
+\end{verbatim}
+\end{center}
+\end{tcolorbox}
+
+Di seguito la tabella riassuntiva di calcolo del testimone più generale per questo esercizio.
+\begin{tcolorbox}[colback=white!5!white,colframe=lime!75!black]
+\begin{center}
+\begin{tabular}{cl}
+mgu(\texttt{Ri, Rj}) & Testimone più generale \\
+\hline
+\hline
+ \texttt{R1, R2} & nessun overlap \\
+\hline 
+\end{tabular}
+\end{center}
+Le regole \texttt{R3} ed \texttt{R4} non vengono prese in considerazione in quanto non possono avere overlap.
+\end{tcolorbox}
+\end{document}
